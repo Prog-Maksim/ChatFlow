@@ -1,5 +1,4 @@
 ﻿using System.ComponentModel.DataAnnotations;
-using API.Models.ValidateData;
 
 namespace API.Models.Requests;
 

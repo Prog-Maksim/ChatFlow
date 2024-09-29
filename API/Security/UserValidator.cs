@@ -1,12 +1,11 @@
-﻿using API.Models.DB;
-using API.Models.Responce;
+﻿using API.Models.Responce;
 using Microsoft.AspNetCore.Mvc;
 
 namespace API.Security;
 
 public static class UserValidator
 {
-    public static async Task<IActionResult?> ValidateUser(HttpContext httpContext, List<Person> clients, string? action = null, string? name = null)
+    public static async Task<IActionResult?> ValidateUser(HttpContext httpContext, ApplicationContext context, string? action = null, string? name = null)
     {
         var userIpAddress = httpContext.Request.Headers["X-Forwarded-For"].FirstOrDefault() ?? httpContext.Connection.RemoteIpAddress?.ToString();
 
@@ -48,7 +47,7 @@ public static class UserValidator
         if (action == null || name == null)
             return null;
 
-        if (action == "registration" && clients.Any(c => c.Name == name))
+        if (action == "registration" && context.person.Any(c => c.Name == name))
         {
             return new ObjectResult(new RegistrationRequests
             {
@@ -60,7 +59,7 @@ public static class UserValidator
             { StatusCode = 403 };
         }
 
-        if (action == "authorization" && clients.All(c => c.Name != name))
+        if (action == "authorization" && context.person.All(c => c.Name != name))
         {
             return new BadRequestObjectResult(new RegistrationRequests
             {

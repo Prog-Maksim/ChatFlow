@@ -1,18 +1,18 @@
-﻿namespace API;
+﻿using Microsoft.EntityFrameworkCore;
+
+namespace API.Scripts;
 
 public class RefreshTokenService
 {
-    private static Dictionary<string, string> _refreshTokens = new();
-
-    public static string GenerateRefreshToken(string userId)
+    public static string GenerateRefreshToken()
     {
         var refreshToken = Guid.NewGuid().ToString();
-        _refreshTokens[userId] = refreshToken;
         return refreshToken;
     }
 
-    public static bool ValidateRefreshToken(string userId, string refreshToken)
+    public static async Task<bool> ValidateRefreshToken(string userId, string refreshToken, ApplicationContext context)
     {
-        return _refreshTokens.TryGetValue(userId, out var storedToken) && storedToken == refreshToken;
+        var sessions = await context.session.Where(s => s.PersonId == userId).ToListAsync();
+        return sessions.Any(s => s.SessionToken == refreshToken);
     }
 }

@@ -3,6 +3,7 @@ using System.Net;
 using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.EntityFrameworkCore;
 using Serilog;
 using Serilog.Events;
 
@@ -62,12 +63,34 @@ builder.Services.Configure<ForwardedHeadersOptions>(options =>
     options.KnownProxies.Add(IPAddress.Parse("::ffff:172.17.0.1")); // IP прокси/контейнера
 });
 
+// Подключает БД
+string? connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
+builder.Services.AddDbContext<ApplicationContext>(options => options.UseMySql(connectionString, ServerVersion.AutoDetect(connectionString)));
+
+
 // Добавляем контроллеры
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
+// Добавляем CORS
+builder.Services.AddCors();
+
 var app = builder.Build();
+
+app.UseCors(policyBuilder => policyBuilder
+    .WithOrigins(
+    "http://localhost:5173", 
+    "http://localhost:5174", 
+    "http://localhost:5175", 
+    "https://chimp-hot-racer.ngrok-free.app", 
+    "https://careful-quick-swift.ngrok-free.app"
+    )
+    .AllowAnyHeader()
+    .WithMethods("GET", "POST", "PUT", "DELETE")
+    .AllowCredentials()
+);
+
 
 app.UseForwardedHeaders();
 

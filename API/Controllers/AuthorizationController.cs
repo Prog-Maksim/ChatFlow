@@ -2,48 +2,39 @@
 using API.Models.DB;
 using API.Models.Requests;
 using API.Models.Responce;
+using API.Scripts;
 using API.Security;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.IdentityModel.Tokens;
 
 namespace API.Controllers;
 
-
 [ApiController]
 [Route("api/auth")]
-public class AuthorizationController: ControllerBase
+public class AuthorizationController(ApplicationContext context): ControllerBase
 {
-    private static List<Person> _clients = new();
-    private static Dictionary<string, List<Models.DB.Security>> _sessions = new();
-
     [HttpPost("registration")]
     public async Task<IActionResult> RegistrationUser(RegisteredUser registeredUser)
     {
-        Random rnd = new Random();
-        int personId = rnd.Next(1111111, 9999999);
-        var userIpAddress = HttpContext.Request.Headers["X-Forwarded-For"].FirstOrDefault() ?? HttpContext.Connection.RemoteIpAddress?.ToString();
+        string personId = UserIdentifierGenerator.GenerateUid();
         
-        var validationResponse = await UserValidator.ValidateUser(HttpContext, _clients, "registration", registeredUser.Name);
+        var userIpAddress = HttpContext.Request.Headers["X-Forwarded-For"].FirstOrDefault() ?? HttpContext.Connection.RemoteIpAddress?.ToString();
+        var validationResponse = await UserValidator.ValidateUser(HttpContext, context, "registration", registeredUser.Name);
         
         if (validationResponse != null)
             return validationResponse;
-
-        var security = new Models.DB.Security
-        {
-            UserAgent = HttpContext.Request.Headers["User-Agent"]!,
-            LoginTime = DateTime.Now,
-            PersonIpAdress = userIpAddress,
-            LoginCountry = await DeterminingIPAddress.GetPositionUser(userIpAddress!),
-            LoginDevice = HttpContext.Request.Headers["User-Agent"]!
-        };
+        
         var person = new Person
         {
-            Id = personId.ToString(),
+            PersonId = personId,
             Name = registeredUser.Name,
             Password = registeredUser.Password,
-            Security = security
+            RegistrationTime = DateTime.Now,
+            Country = await DeterminingIPAddress.GetPositionUser(userIpAddress!)
         };
-        _clients.Add(person);
+        
+        await context.person.AddAsync(person);
+        await context.SaveChangesAsync();
         
         var responceResult = new RegistrationRequests
         {
@@ -59,11 +50,11 @@ public class AuthorizationController: ControllerBase
     {
         var userIpAddress = HttpContext.Request.Headers["X-Forwarded-For"].FirstOrDefault() ?? HttpContext.Connection.RemoteIpAddress?.ToString();
 
-        IActionResult? validationResponse = await UserValidator.ValidateUser(HttpContext, _clients, "authorization", authorizationUser.Name);
+        IActionResult? validationResponse = await UserValidator.ValidateUser(HttpContext, context, "authorization", authorizationUser.Name);
         if (validationResponse != null)
             return validationResponse;
 
-        var person = _clients.FirstOrDefault(p => p.Name == authorizationUser.Name && p.Password == authorizationUser.Password);
+        var person = context.person.FirstOrDefault(p => p.Name == authorizationUser.Name && p.Password == authorizationUser.Password);
 
         if (person == null)
         {
@@ -77,20 +68,20 @@ public class AuthorizationController: ControllerBase
             return StatusCode(403, responce);
         }
 
-        var refreshToken = RefreshTokenService.GenerateRefreshToken(person.Id);
-        
-        var security = new Models.DB.Security
+        var refreshToken = RefreshTokenService.GenerateRefreshToken();
+
+        var security = new Session
         {
-            SessionId = new Random().Next(1111111, 9999999).ToString(),
-            UserAgent = HttpContext.Request.Headers["User-Agent"]!,
-            LoginTime = DateTime.Now,
-            PersonIpAdress = userIpAddress,
+            IpAdress = userIpAddress!,
+            PersonId = person.PersonId,
             LoginCountry = await DeterminingIPAddress.GetPositionUser(userIpAddress!),
             LoginDevice = HttpContext.Request.Headers["User-Agent"]!,
-            Token = refreshToken
+            LoginTime = DateTime.Now,
+            SessionId = UserIdentifierGenerator.GenerateUid(),
+            SessionToken = refreshToken
         };
         
-        var claims = new List<Claim> { new(ClaimTypes.Authentication, person.Id) };
+        var claims = new List<Claim> { new(ClaimTypes.Authentication, person.PersonId) };
         var identity = new ClaimsIdentity(claims);
         var principal = new ClaimsPrincipal(identity);
         var encodedJwt = JwtController.GenerateNewToken(principal);
@@ -104,14 +95,8 @@ public class AuthorizationController: ControllerBase
             refresh_token = refreshToken
         };
 
-        try
-        {
-            _sessions[person.Id].Add(security);
-        }
-        catch
-        {
-            _sessions[person.Id] = [ security ];
-        }
+        await context.session.AddAsync(security);
+        await context.SaveChangesAsync();
         
         return StatusCode(200, responceResult);
     }
@@ -119,7 +104,7 @@ public class AuthorizationController: ControllerBase
     [HttpPost("refresh-token")]
     public async Task<IActionResult> RefreshToken(RefreshData data)
     {
-        var validationResponse = await UserValidator.ValidateUser(HttpContext, _clients);
+        var validationResponse = await UserValidator.ValidateUser(HttpContext, context);
         
         if (validationResponse != null)
             return validationResponse;
@@ -132,7 +117,7 @@ public class AuthorizationController: ControllerBase
             if (authClaim == null)
                 throw new SecurityTokenException("Invalid token");
             
-            if (!RefreshTokenService.ValidateRefreshToken(authClaim.Value, data.refresh_token))
+            if (!await RefreshTokenService.ValidateRefreshToken(authClaim.Value, data.refresh_token, context))
                 throw new SecurityTokenException("Invalid token");
             
             var newJwtToken = JwtController.GenerateNewToken(principal);

@@ -10,4 +10,5 @@ public class Person
     public string? Description { get; set; }
     public DateTime RegistrationTime { get; set; }
     public string Country { get; set; }
+    public string? NumberPhone { get; set; }
 }

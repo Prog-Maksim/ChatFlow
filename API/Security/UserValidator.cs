@@ -17,7 +17,8 @@ public static class UserValidator
                 message = "Не удалось определить IP-адрес пользователя",
                 ErrorCode = "400",
                 Error = "Bad Request"
-            });
+            })
+            { StatusCode = 400 };
         }
 
         bool isFromRussia = await DeterminingIPAddress.IsUserFromRussia(userIpAddress);
@@ -41,7 +42,8 @@ public static class UserValidator
                 message = "Отсутствует параметр 'User-Agent'",
                 ErrorCode = "400",
                 Error = "Bad Request"
-            });
+            })
+            { StatusCode = 400 };
         }
 
         if (action == null || name == null)
@@ -67,7 +69,8 @@ public static class UserValidator
                 message = "Данный пользователь не найден",
                 ErrorCode = "400",
                 Error = "Bad Request"
-            });
+            })
+            { StatusCode = 400 };
         }
 
         return null; 

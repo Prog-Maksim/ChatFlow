@@ -4,6 +4,7 @@ using API.Models.Requests;
 using API.Models.Responce;
 using API.Scripts;
 using API.Security;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.IdentityModel.Tokens;
 
@@ -13,6 +14,8 @@ namespace API.Controllers;
 [Route("api/auth")]
 public class AuthorizationController(ApplicationContext context): ControllerBase
 {
+    private readonly PasswordHasher<Person> _passwordHasher = new();
+    
     [HttpPost("registration")]
     public async Task<IActionResult> RegistrationUser(RegisteredUser registeredUser)
     {
@@ -23,15 +26,18 @@ public class AuthorizationController(ApplicationContext context): ControllerBase
         
         if (validationResponse != null)
             return validationResponse;
+
+        string tag = "@" + registeredUser.Name.Replace(" ", "");
         
         var person = new Person
         {
             PersonId = personId,
             Name = registeredUser.Name,
-            Password = registeredUser.Password,
+            Tag = tag,
             RegistrationTime = DateTime.Now,
             Country = await DeterminingIPAddress.GetPositionUser(userIpAddress!)
         };
+        person.Password = _passwordHasher.HashPassword(person, registeredUser.Password);
         
         await context.person.AddAsync(person);
         await context.SaveChangesAsync();
@@ -53,10 +59,23 @@ public class AuthorizationController(ApplicationContext context): ControllerBase
         IActionResult? validationResponse = await UserValidator.ValidateUser(HttpContext, context, "authorization", authorizationUser.Name);
         if (validationResponse != null)
             return validationResponse;
-
-        var person = context.person.FirstOrDefault(p => p.Name == authorizationUser.Name && p.Password == authorizationUser.Password);
-
+        
+        var person = context.person.FirstOrDefault(p => p.Name == authorizationUser.Name);
+        
         if (person == null)
+        {
+            var responce = new RegistrationRequests
+            {
+                Success = false,
+                message = "Данный пользователь не найден",
+                ErrorCode = 404.ToString(),
+                Error = "Not Found"
+            };
+            return StatusCode(404, responce);
+        }
+        
+        var result = _passwordHasher.VerifyHashedPassword(person, person.Password, authorizationUser.Password);
+        if (result != PasswordVerificationResult.Success)
         {
             var responce = new RegistrationRequests
             {

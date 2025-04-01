@@ -1,6 +1,9 @@
 using System.Net;
 using System.Reflection;
 using AuthService;
+using AuthService.Repository;
+using AuthService.Repository.Interfaces;
+using AuthService.Scripts;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.Mvc;
@@ -19,11 +22,11 @@ var builder = WebApplication.CreateBuilder(args);
 // Настройка логирования
 Log.Logger = new LoggerConfiguration()
     .MinimumLevel.Debug()
-    .WriteTo.Elasticsearch(new ElasticsearchSinkOptions(new Uri(builder.Configuration.GetConnectionString("ElasticSearch")))
+    .WriteTo.Elasticsearch(new ElasticsearchSinkOptions(new Uri(builder.Configuration.GetConnectionString("ElasticSearch") ?? throw new InvalidOperationException("`ElasticSearch` is not set in configuration.")))
     {
         AutoRegisterTemplate = true,
         IndexFormat = "logs-{0:yyyy.MM.dd}",
-        FailureCallback = (_, exception) => Console.WriteLine($"Не удалось отправить лог в Elasticsearch: {exception.Message}"),
+        FailureCallback = exception => Console.WriteLine($"Не удалось отправить лог в Elasticsearch: {exception.Exception.Message}"),
         MinimumLogEventLevel = LogEventLevel.Information
     })
     .WriteTo.File("Logs/log-.txt", rollingInterval: RollingInterval.Hour,
@@ -37,6 +40,12 @@ builder.Host.UseSerilog();
 builder.Services.AddSingleton<AuthOptions>(sp =>
     new AuthOptions(sp.GetRequiredService<IConfiguration>()));
 
+// Добавление сервисов
+builder.Services.AddScoped<IAuthRepository, AuthRepository>();
+builder.Services.AddScoped<AuthService.Service.AuthService>();
+
+builder.Services.AddSingleton<IEncryptionService, EncryptionService>();
+builder.Services.AddScoped<JwtTokenService>();
 
 // Swagger
 builder.Services.AddApiVersioning(options =>
@@ -142,6 +151,7 @@ if (app.Environment.IsDevelopment())
 
 // Включаем Prometheus middleware
 app.UseRouting();
+app.UseMetricServer();
 app.UseHttpMetrics();
 
 // Эндпоинт для метрик (Prometheus будет его запрашивать)

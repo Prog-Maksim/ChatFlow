@@ -47,4 +47,10 @@
         <PackageReference Include="System.Drawing.Common" Version="9.0.3" />
     </ItemGroup>
 
+    <ItemGroup>
+      <Content Include="..\.dockerignore">
+        <Link>.dockerignore</Link>
+      </Content>
+    </ItemGroup>
+
 </Project>

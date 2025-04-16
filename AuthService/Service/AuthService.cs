@@ -147,22 +147,18 @@ public class AuthService
             var data = await _authRepository.GetTotpDataByCodeAsync(code);
 
             if (data == null)
-            {
-                _logger.LogInformation("Пользователь не подключил сервис");
                 throw new NullReferenceException("Вы не создали подключение");
-            }
 
             if (data.TotpCode == null)
-            {
-                _logger.LogWarning("Секрет TOTP не найден");
                 throw new NullReferenceException("Подключаемый сервис не найден");
-            }
+
 
             var userData = data.PersonData.Email ?? data.PersonData.NumberPhone;
             string url = GoogleAuthenticatorService.GenerateUrl(data.TotpCode, userData);
             return GoogleAuthenticatorService.GenerateQrCode(url);
         }
-        _logger.LogWarning("Код аутентификации пользователя не найден");
+        
+
         throw new NullReferenceException("Данный код не найден");
     }
     

@@ -17,8 +17,16 @@ public class AuthController(ILogger<AuthController> logger, Service.AuthService 
     /// </summary>
     /// <param name="registrationUser"></param>
     /// <returns></returns>
+    /// <response code="200">Успешная регистрация нового пользователя</response>
+    /// <response code="406">Не удалось определить Ip адрес пользователя</response>
+    /// <response code="400">Ошибка валидации данных</response>
+    /// <response code="403">Номер телефона занят</response>
     [AllowAnonymous]
     [HttpPost("registration")]
+    [ProducesResponseType(typeof(BaseResponse),StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(BaseResponse),StatusCodes.Status406NotAcceptable)]
+    [ProducesResponseType(typeof(ValidationProblemDetails), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(BaseResponse),StatusCodes.Status403Forbidden)]
     public async Task<IActionResult> RegistrationUser([FromBody][Required] RegistrationUser registrationUser)
     {
         string? userIpAddress = HttpContext.Request.Headers["X-Forwarded-For"].FirstOrDefault() ?? HttpContext.Connection.RemoteIpAddress?.ToString();
@@ -29,8 +37,8 @@ public class AuthController(ILogger<AuthController> logger, Service.AuthService 
             {
                 Message = "Невозможно определить ip адрес",
                 Success = false,
-                StatusCode = 400,
-                Error = "Bad Request"
+                StatusCode = 406,
+                Error = "Not Acceptable"
             };
             logger.LogError("Невозможно определить ip адрес");
             return StatusCode(error.StatusCode, error);
@@ -44,9 +52,18 @@ public class AuthController(ILogger<AuthController> logger, Service.AuthService 
         return Ok(response);
     }
 
+    /// <summary>
+    /// Добавление двухфакторной аутентификации через Google Authenticator
+    /// </summary>
+    /// <param name="code">Код авторизации</param>
+    /// <returns></returns>
+    /// <response code="200">Успешно</response>
+    /// <response code="404">Код авторизации не найден</response>
     [AllowAnonymous]
     [HttpPost("add-google-authenticator")]
-    public async Task<IActionResult> CreateGoogleAuthenticator(string code)
+    [ProducesResponseType(typeof(BaseResponse),StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(BaseResponse),StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> CreateGoogleAuthenticator([Required][FromQuery] string code)
     {
         var response =  await authService.AddGoogleAuthenticatorAsync(code);
         
@@ -56,9 +73,20 @@ public class AuthController(ILogger<AuthController> logger, Service.AuthService 
         return Ok(response);
     }
 
+    /// <summary>
+    /// Проверяет код полученный из Google Authenticator
+    /// </summary>
+    /// <param name="code">Код авторизации</param>
+    /// <param name="key">Проверочный код</param>
+    /// <returns></returns>
+    /// <response code="200">Успешно</response>
+    /// <response code="404">Код авторизации не найден</response>
     [AllowAnonymous]
     [HttpGet("check-code")]
-    public async Task<IActionResult> CheckCode(string code, string key)
+    [ProducesResponseType(typeof(BaseResponse),StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(BaseResponse),StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(typeof(BaseResponse),StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> CheckCode([Required][FromQuery] string code, [Required][FromQuery] string key)
     {
         var response = await authService.CheckGoogleAuthenticatorAsync(code, key);
         
@@ -68,11 +96,28 @@ public class AuthController(ILogger<AuthController> logger, Service.AuthService 
         return Ok(response);
     }
 
+    /// <summary>
+    /// Генерирует qr-code для Google Authenticator
+    /// </summary>
+    /// <param name="code">Код авторизации</param>
+    /// <returns></returns>
+    /// <response code="200">Успешно</response>
+    /// <response code="404">Данные не найдены</response>
     [AllowAnonymous]
     [HttpGet("qr-code")]
-    public async Task<IActionResult> GetQrCode(string code)
+    [ProducesResponseType(typeof(BaseResponse),StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(BaseResponse),StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> GetQrCode([Required][FromQuery] string code)
     {
-        var response = await authService.GetQrCodeGoogleAuthenticatorAsync(code);
-        return File(response, "image/png");
+        try
+        {
+            var response = await authService.GetQrCodeGoogleAuthenticatorAsync(code);
+            return File(response, "image/png");
+        }
+        catch (NullReferenceException error)
+        {
+            logger.LogError(error.Message);
+            return StatusCode(StatusCodes.Status404NotFound, error.Message);
+        }
     }
 }

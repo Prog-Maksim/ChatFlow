@@ -119,6 +119,7 @@ public class AuthService
 
             if (result)
             {
+                
                 if (data.TotpCode != null)
                 {
                     Person? person = await _authRepository.GetUserByIdAsync(data.PersonId);

@@ -149,11 +149,11 @@ if (app.Environment.IsDevelopment())
     });
 }
 
-// Включаем Prometheus middleware
 app.UseRouting();
 app.UseMetricServer();
 app.UseHttpMetrics();
 
+// Включаем Prometheus middleware
 // Эндпоинт для метрик (Prometheus будет его запрашивать)
 app.UseEndpoints(endpoints =>
 {

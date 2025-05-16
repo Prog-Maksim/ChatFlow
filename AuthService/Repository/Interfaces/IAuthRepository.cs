@@ -6,11 +6,18 @@ namespace AuthService.Repository.Interfaces;
 public interface IAuthRepository
 {
     /// <summary>
-    /// Выдает данные пользователя
+    /// Выдает данные пользователя по номеру телефона
     /// </summary>
     /// <param name="phoneNumber">Номер телефона</param>
     /// <returns></returns>
     public Task<Person?> GetUserByPhoneNumberAsync(string phoneNumber);
+    
+    /// <summary>
+    /// Выдает данные пользователя по ID
+    /// </summary>
+    /// <param name="personId">Идентификатор пользователя</param>
+    /// <returns></returns>
+    public Task<Person?> GetUserByIdAsync(string personId);
     
     /// <summary>
     /// Добавляет нового пользователя

@@ -17,10 +17,16 @@ public class AuthRepository: IAuthRepository
         _context = context;
         _database = connection.GetDatabase();
     }
+    
 
     public async Task<Person?> GetUserByPhoneNumberAsync(string phoneNumber)
     {
         return await _context.Persons.FirstOrDefaultAsync(p => p.NumberPhone == phoneNumber);
+    }
+    
+    public async Task<Person?> GetUserByIdAsync(string personId)
+    {
+        return await _context.Persons.FirstOrDefaultAsync(p => p.PersonId == personId);
     }
 
     public async Task<bool> AddUserAsync(Person person)

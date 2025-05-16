@@ -119,8 +119,16 @@ public class AuthService
 
             if (result)
             {
-                if (data.TotpCode == null)
-                    await AddTotpCode(data.PersonData, data.TotpCode);
+                if (data.TotpCode != null)
+                {
+                    Person? person = await _authRepository.GetUserByIdAsync(data.PersonId);
+                    if (person != null)
+                        await AddTotpCode(person, data.TotpCode);
+                }
+                else
+                {
+                    _logger.LogInformation("Пользователь уже зарегистрирован");
+                }
                 
                 var tokens = _jwtTokenService.CreateJwtToken(data.PersonId, data.PersonData.PasswordVersion);
                 await _authRepository.DeleteTotpDataByCodeAsync(code);
@@ -164,8 +172,15 @@ public class AuthService
     
     private async Task AddTotpCode(Person person, string totpCode)
     {
-        person.TotpCode = _encryptionService.Encrypt(totpCode);
-        _authRepository.UpdateUserAsync(person);
-        await _authRepository.SaveChangesAsync();
+        try
+        {
+            person.TotpCode = _encryptionService.Encrypt(totpCode);
+            person.AccountState = AccountState.Active;
+            await _authRepository.SaveChangesAsync();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError("Произошла ошибка {@ex}", ex);
+        }
     }
 }

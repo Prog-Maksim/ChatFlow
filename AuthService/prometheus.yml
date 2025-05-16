@@ -1,0 +1,9 @@
+global:
+  scrape_interval: 5s
+
+scrape_configs:
+  - job_name: 'aspnet_core_app'
+    metrics_path: '/metrics'
+    
+    static_configs:
+      - targets: ['host.docker.internal:5231']

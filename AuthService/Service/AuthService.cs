@@ -1,5 +1,5 @@
-﻿using System.Net;
-using AuthService.Enums;
+﻿using AuthService.Enums;
+using AuthService.Extensions;
 using AuthService.Models.DB;
 using AuthService.Models.Other;
 using AuthService.Models.Requests;
@@ -8,7 +8,6 @@ using AuthService.Monitoring;
 using AuthService.Repository.Interfaces;
 using AuthService.Scripts;
 using Microsoft.AspNetCore.Identity;
-using Microsoft.AspNetCore.Mvc;
 using Prometheus;
 
 namespace AuthService.Service;
@@ -75,6 +74,43 @@ public class AuthService
     }
 
     /// <summary>
+    ///  Авторизирует пользователя
+    /// </summary>
+    /// <param name="login">Номер телефона или почта</param>
+    /// <param name="password">Пароль</param>
+    /// <param name="userIpAddress">Ip адрес пользователя</param>
+    /// <returns></returns>
+    public async Task<BaseResponse> AuthorizationUserAsync(string login, string password, string userIpAddress)
+    {
+        _logger.LogInformation("Начало авторизации пользователя");
+
+        if (login.IsNumberPhone())
+        {
+            var person = await _authRepository.GetUserByPhoneNumberAsync(login);
+            
+            if (person == null)
+                return new BaseResponse{StatusCode = 404, Message = "Пользователь не найден", Error = "Not Found", Success = false};
+            
+            if (person.AccountState == AccountState.Registration)
+                return new BaseResponse{StatusCode = 403, Message = "Требуется сначало завершить регистрацию аккаунта", Error = "Forbidden", Success = false};
+            
+            if (person.AccountState == AccountState.Blocked)
+                return new BaseResponse{StatusCode = 403, Message = "Данный аккаунт заблокирован", Error = "Forbidden", Success = false};
+
+            if (_passwordHasher.VerifyHashedPassword(person, person.PasswordHash, password) != PasswordVerificationResult.Success)
+                return new BaseResponse{ StatusCode = 403, Message = "Пароль не верен", Error = "Forbidden", Success = false};
+            
+            
+            var code = await _authRepository.GenerateCodeAndSaveAsync(person.PersonId, person, _encryptionService.Decrypt(person.TotpCode));
+            return new RegistrationCode { Message = "Последний шаг, подтвердите личность", Success = true, StatusCode = 200, Code = code};
+        }
+        if (login.IsEmail())
+            return new BaseResponse{ StatusCode = 400, Message = "Вход по электронной почте сейчас не поддерживается", Error = "Bad Request", Success = false};
+        
+        return new BaseResponse{ StatusCode = 400, Message = "Некорректная строка", Error = "Bad Request", Success = false};
+    }
+    
+    /// <summary>
     /// Создает Secret для добавления в GoogleAuthenticator
     /// </summary>
     /// <param name="code">Код создания</param>
@@ -83,6 +119,11 @@ public class AuthService
     {
         if (await _authRepository.CheckCodeAsync(code))
         {
+            var data = await _authRepository.GetTotpDataByCodeAsync(code);
+
+            if (data.TotpCode != null && !data.IsUpdate)
+                return new BaseResponse { Message = "Код уже был создан", Success = false, StatusCode = 403, Error = "Forbidden" };
+            
             var key = GoogleAuthenticatorService.GenerateKey();
             await _authRepository.UpdateTotpDataByCodeAsync(code, key);
             return new RegistrationCode { Message = "Ваш код аутентификации", Success = true, StatusCode = 200, Code = key };
@@ -155,6 +196,9 @@ public class AuthService
         {
             var data = await _authRepository.GetTotpDataByCodeAsync(code);
 
+            if (!data.IsRead)
+                throw new UnauthorizedAccessException("Qr-code не может быть создан!");
+            
             if (data == null)
                 throw new NullReferenceException("Вы не создали подключение");
 
@@ -183,5 +227,26 @@ public class AuthService
         {
             _logger.LogError("Произошла ошибка {@ex}", ex);
         }
+    }
+
+    /// <summary>
+    /// Обновляет Refesh токен
+    /// </summary>
+    /// <param name="refreshToken">refresh токен</param>
+    /// <returns></returns>
+    public async Task<BaseResponse> RefreshAccessToken(string refreshToken)
+    {
+        var dataToken = _jwtTokenService.GetJwtTokenData(refreshToken);
+        var person = await _authRepository.GetUserByIdAsync(dataToken.PersonId);
+        
+        if (person == null || person.AccountState == AccountState.Blocked)
+            return new BaseResponse { Message = "Пользователь не найден или был заблокирован!", Error = "Forbidden", StatusCode = 423, Success = false };
+
+        if (await _jwtTokenService.ValidateJwtRefreshToken(dataToken, person))
+        {
+            var tokens = _jwtTokenService.CreateJwtToken(person.PersonId, person.PasswordVersion, refreshToken);
+            return new AuthTokens { Message = "Токены успешно обновлены", Success = true, StatusCode = 200, AccessToken = tokens.AccessToken, RefreshToken = tokens.RefreshToken};
+        }
+        return new BaseResponse { Message = "Не удалось проверить корректность jwt токена", Error = "Forbidden", StatusCode = 403, Success = false };
     }
 }

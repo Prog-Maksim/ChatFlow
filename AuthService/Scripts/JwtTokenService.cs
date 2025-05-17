@@ -72,6 +72,16 @@ public class JwtTokenService
         return new Tokens { AccessToken = accessToken, RefreshToken = refreshToken };
     }
 
+    public Tokens CreateJwtToken(string personId, int passwordVersion, string oldRefreshToken)
+    {
+        _ = _authRepository.AddJwtTokenToBanAsync(personId, oldRefreshToken);
+        
+        var accessToken = GenerateJwtAccessToken(personId);
+        var refreshToken = GenerateJwtRefreshToken(personId, passwordVersion);
+
+        return new Tokens { AccessToken = accessToken, RefreshToken = refreshToken };
+    }
+
     public JwtTokenData GetJwtTokenData(string token)
     {
         var handler = new JwtSecurityTokenHandler();

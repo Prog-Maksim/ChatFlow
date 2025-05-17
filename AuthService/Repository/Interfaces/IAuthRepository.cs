@@ -40,6 +40,15 @@ public interface IAuthRepository
     /// <param name="personData">Номер телефона</param>
     /// <returns>Код для доступа к данным</returns>
     public Task<string> GenerateCodeAndSaveAsync(string personId, Person personData);
+
+    /// <summary>
+    /// Сохраняет данные для двухфакторной аутентификации с кодом авторизации
+    /// </summary>
+    /// <param name="personId">Идентификатор пользователя</param>
+    /// <param name="personData">Номер телефона</param>
+    /// <param name="totpCode">Код авторизации</param>
+    /// <returns>Код для доступа к данным</returns>
+    public Task<string> GenerateCodeAndSaveAsync(string personId, Person personData, string totpCode);
     
     /// <summary>
     /// Проверяет наличие кода в БД

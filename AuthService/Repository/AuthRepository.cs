@@ -52,7 +52,30 @@ public class AuthRepository: IAuthRepository
         {
             PersonId = personId,
             PersonData = personData,
-            TotpCode = null
+            TotpCode = null,
+            IsUpdate = true,
+            IsRead = true
+        };
+        
+        var redisKey = $"TOTP:{code}";
+        var redisValue = System.Text.Json.JsonSerializer.Serialize(totpData);
+        
+        await _database.StringSetAsync(redisKey, redisValue);
+        return code;
+    }
+
+    public async Task<string> GenerateCodeAndSaveAsync(string personId, Person personData, string totpCode)
+    {
+        var random = new Random();
+        var code = random.Next(10000000, 999999999).ToString();
+
+        var totpData = new TotpData
+        {
+            PersonId = personId,
+            PersonData = personData,
+            TotpCode = totpCode,
+            IsUpdate = false,
+            IsRead = false
         };
         
         var redisKey = $"TOTP:{code}";

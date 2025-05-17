@@ -53,6 +53,38 @@ public class AuthController(ILogger<AuthController> logger, Service.AuthService 
     }
 
     /// <summary>
+    /// Авторизация пользователя
+    /// </summary>
+    /// <param name="authUser">Данные пользователя</param>
+    /// <returns></returns>
+    [AllowAnonymous]
+    [HttpPost("authorization")]
+    public async Task<IActionResult> AuthorizationUser([FromBody][Required] AuthUser authUser)
+    {
+        string? userIpAddress = HttpContext.Request.Headers["X-Forwarded-For"].FirstOrDefault() ?? HttpContext.Connection.RemoteIpAddress?.ToString();
+        
+        if (userIpAddress == null)
+        {
+            var error = new BaseResponse
+            {
+                Message = "Невозможно определить ip адрес",
+                Success = false,
+                StatusCode = 406,
+                Error = "Not Acceptable"
+            };
+            logger.LogError("Невозможно определить ip адрес");
+            return StatusCode(error.StatusCode, error);
+        }
+        
+        var response = await authService.AuthorizationUserAsync(authUser.Login, authUser.Password, userIpAddress);
+        
+        if (!response.Success)
+            return StatusCode(response.StatusCode, response);
+        
+        return Ok(response);
+    }
+
+    /// <summary>
     /// Добавление двухфакторной аутентификации через Google Authenticator
     /// </summary>
     /// <param name="code">Код авторизации</param>
@@ -119,5 +151,29 @@ public class AuthController(ILogger<AuthController> logger, Service.AuthService 
             logger.LogError(error.Message);
             return StatusCode(StatusCodes.Status404NotFound, error.Message);
         }
+        catch (UnauthorizedAccessException error)
+        {
+            logger.LogError(error.Message);
+            return StatusCode(StatusCodes.Status403Forbidden, error.Message);
+        }
+    }
+
+    /// <summary>
+    /// Обновление токена
+    /// </summary>
+    /// <returns></returns>
+    [Authorize]
+    [HttpPost("refresh-token")]
+    public async Task<IActionResult> RefreshToken()
+    {
+        var authHeader = HttpContext.Request.Headers["Authorization"].ToString();
+        var token = authHeader.Substring("Bearer ".Length);
+        
+        var response = await authService.RefreshAccessToken(token);
+        
+        if (!response.Success)
+            return StatusCode(response.StatusCode, response);
+        
+        return Ok(response);
     }
 }

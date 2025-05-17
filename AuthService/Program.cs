@@ -150,11 +150,13 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseRouting();
+
+app.UseAuthentication();
+app.UseAuthorization();
+
 app.UseMetricServer();
 app.UseHttpMetrics();
 
-// Включаем Prometheus middleware
-// Эндпоинт для метрик (Prometheus будет его запрашивать)
 app.UseEndpoints(endpoints =>
 {
     endpoints.MapMetrics(); // /metrics
@@ -163,7 +165,7 @@ app.UseEndpoints(endpoints =>
 app.MapGet("/", () => "Hello World!");
 
 app.UseHttpsRedirection();
-app.UseAuthorization();
+
 app.MapControllers();
 
 app.Run();

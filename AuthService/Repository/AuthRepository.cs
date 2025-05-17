@@ -11,6 +11,9 @@ public class AuthRepository: IAuthRepository
 {
     private readonly ApplicationContext _context;
     private readonly IDatabase _database;
+    
+    private const int MaxAttempts = 5;
+    private static readonly TimeSpan AttemptPeriod = TimeSpan.FromMinutes(1);
 
     public AuthRepository(ApplicationContext context, IConnectionMultiplexer connection)
     {
@@ -153,6 +156,28 @@ public class AuthRepository: IAuthRepository
         var tag = $"ban:{personId}";
         bool isBanned = await _database.SetContainsAsync(tag, token);
         return isBanned;
+    }
+
+    public async Task<bool> IsBlockedAsync(string ip)
+    {
+        string redisKey = $"login_attempts:{ip}";
+
+        var attempts = await _database.StringGetAsync(redisKey);
+
+        if (attempts.HasValue && int.Parse(attempts) >= MaxAttempts)
+            return true; // Заблокировать IP
+
+        return false;
+    }
+
+    public async Task IncrementLoginAttemptsAsync(string ip)
+    {
+        string redisKey = $"login_attempts:{ip}";
+
+        var newCount = await _database.StringIncrementAsync(redisKey);
+
+        if (newCount == 1)
+            await _database.KeyExpireAsync(redisKey, AttemptPeriod);
     }
 
     public async Task SaveChangesAsync()

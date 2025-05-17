@@ -78,6 +78,9 @@ public class AuthService
 
         if (login.IsNumberPhone())
         {
+            if (await _authRepository.IsBlockedAsync(userIpAddress))
+                return new BaseResponse { StatusCode = 429, Message = "Слишком много попыток входа. Попробуйте еще раз позже.", Error = "Too Many Requests", Success = false};
+            
             var person = await _authRepository.GetUserByPhoneNumberAsync(login);
             
             if (person == null)
@@ -91,6 +94,7 @@ public class AuthService
 
             if (_passwordHasher.VerifyHashedPassword(person, person.PasswordHash, password) != PasswordVerificationResult.Success)
             {
+                await _authRepository.IncrementLoginAttemptsAsync(userIpAddress);
                 TrackFailedLogin(userIpAddress);
                 return new BaseResponse { StatusCode = 403, Message = "Пароль не верен", Error = "Forbidden", Success = false };
             }

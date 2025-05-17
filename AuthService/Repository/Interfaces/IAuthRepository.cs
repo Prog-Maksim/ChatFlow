@@ -102,6 +102,20 @@ public interface IAuthRepository
     /// <param name="token">Токен</param>
     /// <returns></returns>
     public Task<bool> IsBannedTokenAsync(string personId, string token);
+
+    /// <summary>
+    /// Проверка не заблокирован ли ip адрес за частый перебор пароля
+    /// </summary>
+    /// <param name="ip"></param>
+    /// <returns></returns>
+    public Task<bool> IsBlockedAsync(string ip);
+
+    /// <summary>
+    ///  Увеличиваем счетчик неправильных попыток ввода пароля
+    /// </summary>
+    /// <param name="ip"></param>
+    /// <returns></returns>
+    public Task IncrementLoginAttemptsAsync(string ip);
     
     /// <summary>
     /// Сохраняет данные в БД

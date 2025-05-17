@@ -1,8 +1,10 @@
 ﻿using System.ComponentModel.DataAnnotations;
 using AuthService.Models.Requests;
 using AuthService.Models.Response;
+using AuthService.Monitoring;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Prometheus;
 
 namespace AuthService.Controllers;
 
@@ -29,27 +31,35 @@ public class AuthController(ILogger<AuthController> logger, Service.AuthService 
     [ProducesResponseType(typeof(BaseResponse),StatusCodes.Status403Forbidden)]
     public async Task<IActionResult> RegistrationUser([FromBody][Required] RegistrationUser registrationUser)
     {
-        string? userIpAddress = HttpContext.Request.Headers["X-Forwarded-For"].FirstOrDefault() ?? HttpContext.Connection.RemoteIpAddress?.ToString();
+        MetricsRegistry.EndpointRequestCounter
+            .WithLabels("registration", "POST", "auth", Environment.MachineName).Inc();
         
-        if (userIpAddress == null)
+        using (MetricsRegistry.EndpointDuration
+                   .WithLabels("registration", "POST", "auth", Environment.MachineName)
+                   .NewTimer())
         {
-            var error = new BaseResponse
+            string? userIpAddress = HttpContext.Request.Headers["X-Forwarded-For"].FirstOrDefault() ?? HttpContext.Connection.RemoteIpAddress?.ToString();
+        
+            if (userIpAddress == null)
             {
-                Message = "Невозможно определить ip адрес",
-                Success = false,
-                StatusCode = 406,
-                Error = "Not Acceptable"
-            };
-            logger.LogError("Невозможно определить ip адрес");
-            return StatusCode(error.StatusCode, error);
+                var error = new BaseResponse
+                {
+                    Message = "Невозможно определить ip адрес",
+                    Success = false,
+                    StatusCode = 406,
+                    Error = "Not Acceptable"
+                };
+                logger.LogError("Невозможно определить ip адрес");
+                return StatusCode(error.StatusCode, error);
+            }
+        
+            var response = await authService.RegistrationUserAsync(registrationUser, userIpAddress);
+        
+            if (!response.Success)
+                return StatusCode(response.StatusCode, response);
+        
+            return Ok(response);
         }
-        
-        var response = await authService.RegistrationUserAsync(registrationUser, userIpAddress);
-        
-        if (!response.Success)
-            return StatusCode(response.StatusCode, response);
-        
-        return Ok(response);
     }
 
     /// <summary>
@@ -61,27 +71,35 @@ public class AuthController(ILogger<AuthController> logger, Service.AuthService 
     [HttpPost("authorization")]
     public async Task<IActionResult> AuthorizationUser([FromBody][Required] AuthUser authUser)
     {
-        string? userIpAddress = HttpContext.Request.Headers["X-Forwarded-For"].FirstOrDefault() ?? HttpContext.Connection.RemoteIpAddress?.ToString();
+        MetricsRegistry.EndpointRequestCounter
+            .WithLabels("authorization", "POST", "auth", Environment.MachineName).Inc();
         
-        if (userIpAddress == null)
+        using (MetricsRegistry.EndpointDuration
+                   .WithLabels("authorization", "POST", "auth", Environment.MachineName)
+                   .NewTimer())
         {
-            var error = new BaseResponse
+            string? userIpAddress = HttpContext.Request.Headers["X-Forwarded-For"].FirstOrDefault() ?? HttpContext.Connection.RemoteIpAddress?.ToString();
+        
+            if (userIpAddress == null)
             {
-                Message = "Невозможно определить ip адрес",
-                Success = false,
-                StatusCode = 406,
-                Error = "Not Acceptable"
-            };
-            logger.LogError("Невозможно определить ip адрес");
-            return StatusCode(error.StatusCode, error);
+                var error = new BaseResponse
+                {
+                    Message = "Невозможно определить ip адрес",
+                    Success = false,
+                    StatusCode = 406,
+                    Error = "Not Acceptable"
+                };
+                logger.LogError("Невозможно определить ip адрес");
+                return StatusCode(error.StatusCode, error);
+            }
+        
+            var response = await authService.AuthorizationUserAsync(authUser.Login, authUser.Password, userIpAddress);
+        
+            if (!response.Success)
+                return StatusCode(response.StatusCode, response);
+        
+            return Ok(response);
         }
-        
-        var response = await authService.AuthorizationUserAsync(authUser.Login, authUser.Password, userIpAddress);
-        
-        if (!response.Success)
-            return StatusCode(response.StatusCode, response);
-        
-        return Ok(response);
     }
 
     /// <summary>
@@ -92,17 +110,25 @@ public class AuthController(ILogger<AuthController> logger, Service.AuthService 
     /// <response code="200">Успешно</response>
     /// <response code="404">Код авторизации не найден</response>
     [AllowAnonymous]
-    [HttpPost("add-google-authenticator")]
+    [HttpPost("enable-2fa")]
     [ProducesResponseType(typeof(BaseResponse),StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(BaseResponse),StatusCodes.Status404NotFound)]
     public async Task<IActionResult> CreateGoogleAuthenticator([Required][FromQuery] string code)
     {
-        var response =  await authService.AddGoogleAuthenticatorAsync(code);
+        MetricsRegistry.EndpointRequestCounter
+            .WithLabels("2FA", "POST", "auth", Environment.MachineName).Inc();
         
-        if (!response.Success)
-            return StatusCode(response.StatusCode, response);
+        using (MetricsRegistry.EndpointDuration
+                   .WithLabels("2FA", "POST", "auth", Environment.MachineName)
+                   .NewTimer())
+        {
+            var response =  await authService.AddGoogleAuthenticatorAsync(code);
         
-        return Ok(response);
+            if (!response.Success)
+                return StatusCode(response.StatusCode, response);
+        
+            return Ok(response);
+        }
     }
 
     /// <summary>
@@ -114,18 +140,26 @@ public class AuthController(ILogger<AuthController> logger, Service.AuthService 
     /// <response code="200">Успешно</response>
     /// <response code="404">Код авторизации не найден</response>
     [AllowAnonymous]
-    [HttpGet("check-code")]
+    [HttpPost("verify-code")]
     [ProducesResponseType(typeof(BaseResponse),StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(BaseResponse),StatusCodes.Status403Forbidden)]
     [ProducesResponseType(typeof(BaseResponse),StatusCodes.Status404NotFound)]
     public async Task<IActionResult> CheckCode([Required][FromQuery] string code, [Required][FromQuery] string key)
     {
-        var response = await authService.CheckGoogleAuthenticatorAsync(code, key);
+        MetricsRegistry.EndpointRequestCounter
+            .WithLabels("check-code", "POST", "auth", Environment.MachineName).Inc();
         
-        if (!response.Success)
-            return StatusCode(response.StatusCode, response);
+        using (MetricsRegistry.EndpointDuration
+                   .WithLabels("check-code", "POST", "auth", Environment.MachineName)
+                   .NewTimer())
+        {
+            var response = await authService.CheckGoogleAuthenticatorAsync(code, key);
         
-        return Ok(response);
+            if (!response.Success)
+                return StatusCode(response.StatusCode, response);
+        
+            return Ok(response);
+        }
     }
 
     /// <summary>
@@ -141,20 +175,28 @@ public class AuthController(ILogger<AuthController> logger, Service.AuthService 
     [ProducesResponseType(typeof(BaseResponse),StatusCodes.Status404NotFound)]
     public async Task<IActionResult> GetQrCode([Required][FromQuery] string code)
     {
-        try
+        MetricsRegistry.EndpointRequestCounter
+            .WithLabels("generate-qrcode", "GET", "auth", Environment.MachineName).Inc();
+        
+        using (MetricsRegistry.EndpointDuration
+                   .WithLabels("generate-qrcode", "POST", "auth", Environment.MachineName)
+                   .NewTimer())
         {
-            var response = await authService.GetQrCodeGoogleAuthenticatorAsync(code);
-            return File(response, "image/png");
-        }
-        catch (NullReferenceException error)
-        {
-            logger.LogError(error.Message);
-            return StatusCode(StatusCodes.Status404NotFound, error.Message);
-        }
-        catch (UnauthorizedAccessException error)
-        {
-            logger.LogError(error.Message);
-            return StatusCode(StatusCodes.Status403Forbidden, error.Message);
+            try
+            {
+                var response = await authService.GetQrCodeGoogleAuthenticatorAsync(code);
+                return File(response, "image/png");
+            }
+            catch (NullReferenceException error)
+            {
+                logger.LogError(error.Message);
+                return StatusCode(StatusCodes.Status404NotFound, error.Message);
+            }
+            catch (UnauthorizedAccessException error)
+            {
+                logger.LogError(error.Message);
+                return StatusCode(StatusCodes.Status403Forbidden, error.Message);
+            }
         }
     }
 
@@ -166,14 +208,22 @@ public class AuthController(ILogger<AuthController> logger, Service.AuthService 
     [HttpPost("refresh-token")]
     public async Task<IActionResult> RefreshToken()
     {
-        var authHeader = HttpContext.Request.Headers["Authorization"].ToString();
-        var token = authHeader.Substring("Bearer ".Length);
+        MetricsRegistry.EndpointRequestCounter
+            .WithLabels("refresh-token", "POST", "auth", Environment.MachineName).Inc();
         
-        var response = await authService.RefreshAccessToken(token);
+        using (MetricsRegistry.EndpointDuration
+                   .WithLabels("refresh-token", "POST", "auth", Environment.MachineName)
+                   .NewTimer())
+        {
+            var authHeader = HttpContext.Request.Headers["Authorization"].ToString();
+            var token = authHeader.Substring("Bearer ".Length);
         
-        if (!response.Success)
-            return StatusCode(response.StatusCode, response);
+            var response = await authService.RefreshAccessToken(token);
         
-        return Ok(response);
+            if (!response.Success)
+                return StatusCode(response.StatusCode, response);
+        
+            return Ok(response);
+        }
     }
 }

@@ -38,39 +38,31 @@ public class AuthService
     public async Task<BaseResponse> RegistrationUserAsync(RegistrationUser registrationUser, string userIpAddress)
     {
         _logger.LogInformation("Начало регистрации нового пользователя");
+        
+        var person = await _authRepository.GetUserByPhoneNumberAsync(registrationUser.NumberPhone);
+        
+        if (person != null)
+            return new BaseResponse { Message = "Данный номер телефона занят", Success = false, StatusCode = 403, Error = "Forbidden" };
 
-        using (AuthMetrics.RegistrationDurationHistogram.NewTimer())
+        PersonRegion region = await DeterminingIpAddress.GetPositionUser(userIpAddress);
+        
+        var user = new Person
         {
-            var person = await _authRepository.GetUserByPhoneNumberAsync(registrationUser.NumberPhone);
-        
-            if (person != null)
-            {
-                AuthMetrics.RegistrationFailureCounter.Inc();
-                return new BaseResponse { Message = "Данный номер телефона занят", Success = false, StatusCode = 403, Error = "Forbidden" };
-            }
+            PersonId = Guid.NewGuid().ToString(),
+            NumberPhone = registrationUser.NumberPhone,
+            PasswordVersion = 1,
+            RegistrationIp = _encryptionService.Encrypt(userIpAddress),
+            RegistrationCity = _encryptionService.Encrypt(region.City),
+            RegistrationCountry = _encryptionService.Encrypt(region.Country),
+            AccountState = AccountState.Registration
+        };
+        user.PasswordHash = _passwordHasher.HashPassword(user, registrationUser.Password);
 
-            PersonRegion region = await DeterminingIpAddress.GetPositionUser(userIpAddress);
-        
-            var user = new Person
-            {
-                PersonId = Guid.NewGuid().ToString(),
-                NumberPhone = registrationUser.NumberPhone,
-                PasswordVersion = 1,
-                RegistrationIp = _encryptionService.Encrypt(userIpAddress),
-                RegistrationCity = _encryptionService.Encrypt(region.City),
-                RegistrationCountry = _encryptionService.Encrypt(region.Country),
-                AccountState = AccountState.Registration
-            };
-            user.PasswordHash = _passwordHasher.HashPassword(user, registrationUser.Password);
-
-            await _authRepository.AddUserAsync(user);
-            await _authRepository.SaveChangesAsync();
+        await _authRepository.AddUserAsync(user);
+        await _authRepository.SaveChangesAsync();
             
-            AuthMetrics.RegistrationSuccessCounter.Inc();
-            var code = await _authRepository.GenerateCodeAndSaveAsync(user.PersonId, user);
-        
-            return new RegistrationCode { Message = "Пользователь успешно создан", Success = true, StatusCode = 200, Code = code};
-        }
+        var code = await _authRepository.GenerateCodeAndSaveAsync(user.PersonId, user);
+        return new RegistrationCode { Message = "Пользователь успешно создан", Success = true, StatusCode = 200, Code = code};
     }
 
     /// <summary>
@@ -98,7 +90,10 @@ public class AuthService
                 return new BaseResponse{StatusCode = 403, Message = "Данный аккаунт заблокирован", Error = "Forbidden", Success = false};
 
             if (_passwordHasher.VerifyHashedPassword(person, person.PasswordHash, password) != PasswordVerificationResult.Success)
-                return new BaseResponse{ StatusCode = 403, Message = "Пароль не верен", Error = "Forbidden", Success = false};
+            {
+                TrackFailedLogin(userIpAddress);
+                return new BaseResponse { StatusCode = 403, Message = "Пароль не верен", Error = "Forbidden", Success = false };
+            }
             
             
             var code = await _authRepository.GenerateCodeAndSaveAsync(person.PersonId, person, _encryptionService.Decrypt(person.TotpCode));
@@ -108,6 +103,13 @@ public class AuthService
             return new BaseResponse{ StatusCode = 400, Message = "Вход по электронной почте сейчас не поддерживается", Error = "Bad Request", Success = false};
         
         return new BaseResponse{ StatusCode = 400, Message = "Некорректная строка", Error = "Bad Request", Success = false};
+    }
+    
+    private void TrackFailedLogin(string ip)
+    {
+        MetricsRegistry.BruteForceDetection
+            .WithLabels(ip, "auth", Environment.MachineName)
+            .Inc();
     }
     
     /// <summary>

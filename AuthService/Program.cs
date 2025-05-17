@@ -1,6 +1,7 @@
 using System.Net;
 using System.Reflection;
 using AuthService;
+using AuthService.Enums;
 using AuthService.Repository;
 using AuthService.Repository.Interfaces;
 using AuthService.Scripts;
@@ -10,6 +11,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.ApiExplorer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
+using Microsoft.OpenApi.Any;
 using Microsoft.OpenApi.Models;
 using Prometheus;
 using Serilog;
@@ -113,7 +115,6 @@ builder.Services.AddSwaggerGen(options => {
 
     var xmlFileName = $"{Assembly.GetExecutingAssembly().GetName().Name}.xml";
     options.IncludeXmlComments(Path.Combine(AppContext.BaseDirectory, xmlFileName));
-    
 });
 builder.Services.ConfigureOptions<ConfigureSwaggerOptions>();
 

@@ -8,7 +8,6 @@ using AuthService.Monitoring;
 using AuthService.Repository.Interfaces;
 using AuthService.Scripts;
 using Microsoft.AspNetCore.Identity;
-using Prometheus;
 
 namespace AuthService.Service;
 
@@ -35,21 +34,21 @@ public class AuthService
     /// <param name="registrationUser">Данные о пользователе</param>
     /// <param name="userIpAddress">Ip адрес пользователя</param>
     /// <returns></returns>
-    public async Task<BaseResponse> RegistrationUserAsync(RegistrationUser registrationUser, string userIpAddress)
+    public async Task<BaseResponse<string, RegistrationCode>> RegistrationUserAsync(RegistrationUser registrationUser, string userIpAddress)
     {
         _logger.LogInformation("Начало регистрации нового пользователя");
         
-        var person = await _authRepository.GetUserByPhoneNumberAsync(registrationUser.NumberPhone);
+        var person = await _authRepository.GetUserByPhoneNumberAsync(registrationUser.Login);
         
         if (person != null)
-            return new BaseResponse { Message = "Данный номер телефона занят", Success = false, StatusCode = 403, Error = "Forbidden" };
+            return new BaseResponse<string, RegistrationCode> { Message = "Данный номер телефона занят", Successfully = false, Type = ResponseType.PhoneNumberInUse, Status = 403, Errors = "Forbidden", Data = null};
 
         PersonRegion region = await DeterminingIpAddress.GetPositionUser(userIpAddress);
         
         var user = new Person
         {
             PersonId = Guid.NewGuid().ToString(),
-            NumberPhone = registrationUser.NumberPhone,
+            NumberPhone = registrationUser.Login,
             PasswordVersion = 1,
             RegistrationIp = _encryptionService.Encrypt(userIpAddress),
             RegistrationCity = _encryptionService.Encrypt(region.City),
@@ -62,7 +61,19 @@ public class AuthService
         await _authRepository.SaveChangesAsync();
             
         var code = await _authRepository.GenerateCodeAndSaveAsync(user.PersonId, user);
-        return new RegistrationCode { Message = "Пользователь успешно создан", Success = true, StatusCode = 200, Code = code};
+
+        var codeResult = new RegistrationCode { Code = code };
+        var result = new BaseResponse<string, RegistrationCode>
+        {
+            Message = "Пользователь успешно создан",
+            Successfully = true,
+            Status = 200,
+            Type = ResponseType.Ok,
+            Data = codeResult,
+            Errors = null
+        };
+        
+        return result;
     }
 
     /// <summary>
@@ -72,41 +83,61 @@ public class AuthService
     /// <param name="password">Пароль</param>
     /// <param name="userIpAddress">Ip адрес пользователя</param>
     /// <returns></returns>
-    public async Task<BaseResponse> AuthorizationUserAsync(string login, string password, string userIpAddress)
+    public async Task<BaseResponse<string, RegistrationCode>> AuthorizationUserAsync(string login, string password, string userIpAddress)
     {
+        if (await _authRepository.IsBlockedAsync(userIpAddress))
+            return new BaseResponse<string, RegistrationCode>
+            {
+                Status = 429, 
+                Message = "Слишком много попыток входа. Попробуйте еще раз позже.", 
+                Type = ResponseType.TooManyRequests, 
+                Errors = "Too Many Requests", 
+                Successfully = false, 
+                Data = null
+            };
+        
         _logger.LogInformation("Начало авторизации пользователя");
 
         if (login.IsNumberPhone())
         {
-            if (await _authRepository.IsBlockedAsync(userIpAddress))
-                return new BaseResponse { StatusCode = 429, Message = "Слишком много попыток входа. Попробуйте еще раз позже.", Error = "Too Many Requests", Success = false};
-            
             var person = await _authRepository.GetUserByPhoneNumberAsync(login);
             
             if (person == null)
-                return new BaseResponse{StatusCode = 404, Message = "Пользователь не найден", Error = "Not Found", Success = false};
+                return new BaseResponse<string, RegistrationCode>{Status = 404, Message = "Пользователь не найден", Errors = "Not Found", Type = ResponseType.PersonNotFound, Successfully = false, Data = null };
             
             if (person.AccountState == AccountState.Registration)
-                return new BaseResponse{StatusCode = 403, Message = "Требуется сначало завершить регистрацию аккаунта", Error = "Forbidden", Success = false};
+                return new BaseResponse<string, RegistrationCode>{Status = 403, Message = "Требуется сначало завершить регистрацию аккаунта", Type = ResponseType.AccountRegistrationIncomplete, Errors = "Forbidden", Successfully = false, Data = null };
             
             if (person.AccountState == AccountState.Blocked)
-                return new BaseResponse{StatusCode = 403, Message = "Данный аккаунт заблокирован", Error = "Forbidden", Success = false};
+                return new BaseResponse<string, RegistrationCode>{Status = 403, Message = "Данный аккаунт заблокирован", Errors = "Forbidden", Type = ResponseType.AccountIsBlocked, Successfully = false, Data = null };
 
             if (_passwordHasher.VerifyHashedPassword(person, person.PasswordHash, password) != PasswordVerificationResult.Success)
             {
                 await _authRepository.IncrementLoginAttemptsAsync(userIpAddress);
                 TrackFailedLogin(userIpAddress);
-                return new BaseResponse { StatusCode = 403, Message = "Пароль не верен", Error = "Forbidden", Success = false };
+                return new BaseResponse<string, RegistrationCode>{ Status = 403, Message = "Пароль не верен", Type = ResponseType.InvalidPasswordError, Errors = "Forbidden", Successfully = false, Data = null };
             }
             
             
             var code = await _authRepository.GenerateCodeAndSaveAsync(person.PersonId, person, _encryptionService.Decrypt(person.TotpCode));
-            return new RegistrationCode { Message = "Последний шаг, подтвердите личность", Success = true, StatusCode = 200, Code = code};
+            
+            var codeResult = new RegistrationCode { Code = code };
+            var result = new BaseResponse<string, RegistrationCode>
+            {
+                Message = "Последний шаг, подтвердите личность",
+                Successfully = true,
+                Status = 200,
+                Type = ResponseType.Ok,
+                Data = codeResult,
+                Errors = null
+            };
+        
+            return result;
         }
         if (login.IsEmail())
-            return new BaseResponse{ StatusCode = 400, Message = "Вход по электронной почте сейчас не поддерживается", Error = "Bad Request", Success = false};
+            return new BaseResponse<string, RegistrationCode>{ Status = 400, Message = "Вход по электронной почте сейчас не поддерживается", Type = ResponseType.EmailLoginNotSupported, Errors = "Bad Request", Successfully = false, Data = null};
         
-        return new BaseResponse{ StatusCode = 400, Message = "Некорректная строка", Error = "Bad Request", Success = false};
+        return new BaseResponse<string, RegistrationCode>{ Status = 400, Message = "Некорректная строка", Type = ResponseType.InvalidString, Errors = "Bad Request", Successfully = false, Data = null };
     }
     
     private void TrackFailedLogin(string ip)
@@ -121,21 +152,33 @@ public class AuthService
     /// </summary>
     /// <param name="code">Код создания</param>
     /// <returns></returns>
-    public async Task<BaseResponse> AddGoogleAuthenticatorAsync(string code)
+    public async Task<BaseResponse<string, RegistrationCode>> AddGoogleAuthenticatorAsync(string code)
     {
         if (await _authRepository.CheckCodeAsync(code))
         {
             var data = await _authRepository.GetTotpDataByCodeAsync(code);
 
             if (data.TotpCode != null && !data.IsUpdate)
-                return new BaseResponse { Message = "Код уже был создан", Success = false, StatusCode = 403, Error = "Forbidden" };
+                return new BaseResponse<string, RegistrationCode> { Message = "Код уже был создан", Successfully = false, Status = 403, Type = ResponseType.CodeIsCreated, Errors = "Forbidden", Data = null };
             
             var key = GoogleAuthenticatorService.GenerateKey();
             await _authRepository.UpdateTotpDataByCodeAsync(code, key);
-            return new RegistrationCode { Message = "Ваш код аутентификации", Success = true, StatusCode = 200, Code = key };
+            
+            var codeResult = new RegistrationCode { Code = key };
+            var result = new BaseResponse<string, RegistrationCode>
+            {
+                Message = "Ваш код аутентификации",
+                Successfully = true,
+                Status = 200,
+                Type = ResponseType.Ok,
+                Data = codeResult,
+                Errors = null
+            };
+        
+            return result;
         }
         _logger.LogWarning("Код аутентификации пользователя не найден");
-        return new BaseResponse { Message = "Данный код не найден", Success = false, StatusCode = 404, Error = "Not Found" };
+        return new BaseResponse<string, RegistrationCode> { Message = "Данный код не найден", Successfully = false, Status = 404, Type = ResponseType.CodeNotFount, Errors = "Not Found", Data = null};
     }
 
     /// <summary>
@@ -144,7 +187,7 @@ public class AuthService
     /// <param name="code">Код создания</param>
     /// <param name="key">Код из Google Authenticator</param>
     /// <returns></returns>
-    public async Task<BaseResponse> CheckGoogleAuthenticatorAsync(string code, string key)
+    public async Task<BaseResponse<string, AuthTokens>> CheckGoogleAuthenticatorAsync(string code, string key)
     {
         if (await _authRepository.CheckCodeAsync(code))
         {
@@ -153,13 +196,13 @@ public class AuthService
             if (data == null)
             {
                 _logger.LogInformation("Пользователь не подключил сервис");
-                return new BaseResponse { Message = "Вы не создали подключение", Success = false, StatusCode = 404, Error = "Not Found" };
+                return new BaseResponse<string, AuthTokens> { Message = "Вы не подключили сервис", Successfully = false, Status = 404, Type = ResponseType.ServiceNotConnected, Errors = "Not Found", Data = null};
             }
 
             if (data.TotpCode == null)
             {
                 _logger.LogWarning("Секрет TOTP не найден");
-                return new BaseResponse { Message = "Подключаемый сервис не найден", Success = false, StatusCode = 404, Error = "Not Found" };
+                return new BaseResponse<string, AuthTokens> { Message = "Подключаемый сервис не найден", Successfully = false, Status = 404, Type = ResponseType.ServiceConnectedNotFound, Errors = "Not Found", Data = null};
             }         
             
             var result = GoogleAuthenticatorService.CheckValidKey(key, data.TotpCode);
@@ -181,13 +224,21 @@ public class AuthService
                 var tokens = _jwtTokenService.CreateJwtToken(data.PersonId, data.PersonData.PasswordVersion);
                 await _authRepository.DeleteTotpDataByCodeAsync(code);
 
-                return new AuthTokens { Message = "Вы успешно авторизовались", Success = true, StatusCode = 200, AccessToken = tokens.AccessToken, RefreshToken = tokens.RefreshToken};
+                var tokensResult = new AuthTokens { AccessToken = tokens.AccessToken, RefreshToken = tokens.RefreshToken};
+                return new BaseResponse<string, AuthTokens>
+                {
+                    Message = "Вы успешно авторизовались",
+                    Successfully = true,
+                    Status = 200,
+                    Type = ResponseType.Ok,
+                    Errors = null,
+                    Data = tokensResult,
+                };
             }
-            
-            return new CheckAuthenticationResult { Message = "Код не верен", Success = false, StatusCode = 403, Result = false, Error = "Forbidden" };
+            return new BaseResponse<string, AuthTokens> { Message = "Код не верен", Successfully = false, Status = 403, Type = ResponseType.CodeIsNotValid, Errors = "Forbidden", Data = null};
         }
         _logger.LogWarning("Код аутентификации пользователя не найден");
-        return new BaseResponse { Message = "Данный код не найден", Success = false, StatusCode = 404, Error = "Not Found" };
+        return new BaseResponse<string, AuthTokens> { Message = "Данный код не найден", Successfully = false, Status = 404, Type = ResponseType.CodeNotFount, Errors = "Not Found", Data = null};
     }
 
     /// <summary>
@@ -196,6 +247,7 @@ public class AuthService
     /// <param name="code"></param>
     /// <returns></returns>
     /// <exception cref="NullReferenceException"></exception>
+    /// <exception cref="UnauthorizedAccessException"></exception>
     public async Task<byte[]> GetQrCodeGoogleAuthenticatorAsync(string code)
     {
         if (await _authRepository.CheckCodeAsync(code))
@@ -240,19 +292,29 @@ public class AuthService
     /// </summary>
     /// <param name="refreshToken">refresh токен</param>
     /// <returns></returns>
-    public async Task<BaseResponse> RefreshAccessToken(string refreshToken)
+    public async Task<BaseResponse<string, AuthTokens>> RefreshAccessToken(string refreshToken)
     {
         var dataToken = _jwtTokenService.GetJwtTokenData(refreshToken);
         var person = await _authRepository.GetUserByIdAsync(dataToken.PersonId);
         
         if (person == null || person.AccountState == AccountState.Blocked)
-            return new BaseResponse { Message = "Пользователь не найден или был заблокирован!", Error = "Forbidden", StatusCode = 423, Success = false };
+            return new BaseResponse<string, AuthTokens> { Message = "Пользователь не найден или был заблокирован!", Type = ResponseType.PersonNotFoundOrBlocked, Errors = "Forbidden", Status = 423, Successfully = false, Data = null};
 
         if (await _jwtTokenService.ValidateJwtRefreshToken(dataToken, person))
         {
             var tokens = _jwtTokenService.CreateJwtToken(person.PersonId, person.PasswordVersion, refreshToken);
-            return new AuthTokens { Message = "Токены успешно обновлены", Success = true, StatusCode = 200, AccessToken = tokens.AccessToken, RefreshToken = tokens.RefreshToken};
+            
+            var tokensResult = new AuthTokens { AccessToken = tokens.AccessToken, RefreshToken = tokens.RefreshToken};
+            return new BaseResponse<string, AuthTokens>
+            {
+                Message = "Токены успешно обновлены",
+                Successfully = true,
+                Status = 200,
+                Type = ResponseType.Ok,
+                Errors = null,
+                Data = tokensResult,
+            };
         }
-        return new BaseResponse { Message = "Не удалось проверить корректность jwt токена", Error = "Forbidden", StatusCode = 403, Success = false };
+        return new BaseResponse<string, AuthTokens> { Message = "Не удалось проверить корректность jwt токена", Type = ResponseType.JwtTokenVerificationFailed, Errors = "Forbidden", Status = 403, Successfully = false, Data = null};
     }
 }

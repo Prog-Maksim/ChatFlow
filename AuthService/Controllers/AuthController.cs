@@ -1,4 +1,5 @@
 ﻿using System.ComponentModel.DataAnnotations;
+using AuthService.Enums;
 using AuthService.Models.Requests;
 using AuthService.Models.Response;
 using AuthService.Monitoring;
@@ -25,10 +26,10 @@ public class AuthController(ILogger<AuthController> logger, Service.AuthService 
     /// <response code="403">Номер телефона занят</response>
     [AllowAnonymous]
     [HttpPost("registration")]
-    [ProducesResponseType(typeof(RegistrationCode),StatusCodes.Status200OK)]
-    [ProducesResponseType(typeof(BaseResponse),StatusCodes.Status406NotAcceptable)]
+    [ProducesResponseType(typeof(BaseResponse<string, RegistrationCode>),StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(BaseResponse<string, object>),StatusCodes.Status406NotAcceptable)]
     [ProducesResponseType(typeof(ValidationProblemDetails), StatusCodes.Status400BadRequest)]
-    [ProducesResponseType(typeof(BaseResponse),StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(typeof(BaseResponse<object, object>),StatusCodes.Status403Forbidden)]
     public async Task<IActionResult> RegistrationUser([FromBody][Required] RegistrationUser registrationUser)
     {
         MetricsRegistry.EndpointRequestCounter
@@ -42,21 +43,23 @@ public class AuthController(ILogger<AuthController> logger, Service.AuthService 
         
             if (userIpAddress == null)
             {
-                var error = new BaseResponse
+                var error = new BaseResponse<string, object>
                 {
                     Message = "Невозможно определить ip адрес",
-                    Success = false,
-                    StatusCode = 406,
-                    Error = "Not Acceptable"
+                    Successfully = false,
+                    Status = 406,
+                    Type = ResponseType.IpAddressResolutionFailed,
+                    Errors = "Not Acceptable",
+                    Data = null
                 };
                 logger.LogError("Невозможно определить ip адрес");
-                return StatusCode(error.StatusCode, error);
+                return StatusCode(error.Status, error);
             }
         
             var response = await authService.RegistrationUserAsync(registrationUser, userIpAddress);
         
-            if (!response.Success)
-                return StatusCode(response.StatusCode, response);
+            if (!response.Successfully)
+                return StatusCode(response.Status, response);
         
             return Ok(response);
         }
@@ -75,12 +78,12 @@ public class AuthController(ILogger<AuthController> logger, Service.AuthService 
     /// <response code="429">Слишком много попыток входа</response>
     [AllowAnonymous]
     [HttpPost("authorization")]
-    [ProducesResponseType(typeof(RegistrationCode),StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(BaseResponse<string, RegistrationCode>),StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ValidationProblemDetails),StatusCodes.Status400BadRequest)]
-    [ProducesResponseType(typeof(BaseResponse),StatusCodes.Status403Forbidden)]
-    [ProducesResponseType(typeof(BaseResponse),StatusCodes.Status404NotFound)]
-    [ProducesResponseType(typeof(BaseResponse),StatusCodes.Status406NotAcceptable)]
-    [ProducesResponseType(typeof(BaseResponse),StatusCodes.Status429TooManyRequests)]
+    [ProducesResponseType(typeof(BaseResponse<string, RegistrationCode>),StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(typeof(BaseResponse<string, RegistrationCode>),StatusCodes.Status404NotFound)]
+    [ProducesResponseType(typeof(BaseResponse<string, object>),StatusCodes.Status406NotAcceptable)]
+    [ProducesResponseType(typeof(BaseResponse<string, RegistrationCode>),StatusCodes.Status429TooManyRequests)]
     public async Task<IActionResult> AuthorizationUser([FromBody][Required] AuthUser authUser)
     {
         MetricsRegistry.EndpointRequestCounter
@@ -94,21 +97,23 @@ public class AuthController(ILogger<AuthController> logger, Service.AuthService 
         
             if (userIpAddress == null)
             {
-                var error = new BaseResponse
+                var error = new BaseResponse<string, object>
                 {
                     Message = "Невозможно определить ip адрес",
-                    Success = false,
-                    StatusCode = 406,
-                    Error = "Not Acceptable"
+                    Successfully = false,
+                    Status = 406,
+                    Type = ResponseType.IpAddressResolutionFailed,
+                    Errors = "Not Acceptable",
+                    Data = null
                 };
                 logger.LogError("Невозможно определить ip адрес");
-                return StatusCode(error.StatusCode, error);
+                return StatusCode(error.Status, error);
             }
         
             var response = await authService.AuthorizationUserAsync(authUser.Login, authUser.Password, userIpAddress);
         
-            if (!response.Success)
-                return StatusCode(response.StatusCode, response);
+            if (!response.Successfully)
+                return StatusCode(response.Status, response);
         
             return Ok(response);
         }
@@ -124,7 +129,7 @@ public class AuthController(ILogger<AuthController> logger, Service.AuthService 
     [AllowAnonymous]
     [HttpPost("enable-2fa")]
     [ProducesResponseType(typeof(RegistrationCode),StatusCodes.Status200OK)]
-    [ProducesResponseType(typeof(BaseResponse),StatusCodes.Status404NotFound)]
+    [ProducesResponseType(typeof(BaseResponse<string, RegistrationCode>),StatusCodes.Status404NotFound)]
     public async Task<IActionResult> CreateGoogleAuthenticator([Required][FromQuery] string code)
     {
         MetricsRegistry.EndpointRequestCounter
@@ -136,8 +141,8 @@ public class AuthController(ILogger<AuthController> logger, Service.AuthService 
         {
             var response =  await authService.AddGoogleAuthenticatorAsync(code);
         
-            if (!response.Success)
-                return StatusCode(response.StatusCode, response);
+            if (!response.Successfully)
+                return StatusCode(response.Status, response);
         
             return Ok(response);
         }
@@ -154,8 +159,8 @@ public class AuthController(ILogger<AuthController> logger, Service.AuthService 
     [AllowAnonymous]
     [HttpPost("verify-code")]
     [ProducesResponseType(typeof(AuthTokens),StatusCodes.Status200OK)]
-    [ProducesResponseType(typeof(BaseResponse),StatusCodes.Status403Forbidden)]
-    [ProducesResponseType(typeof(BaseResponse),StatusCodes.Status404NotFound)]
+    [ProducesResponseType(typeof(BaseResponse<string, AuthTokens>),StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(typeof(BaseResponse<string, AuthTokens>),StatusCodes.Status404NotFound)]
     public async Task<IActionResult> CheckCode([Required][FromQuery] string code, [Required][FromQuery] string key)
     {
         MetricsRegistry.EndpointRequestCounter
@@ -167,8 +172,8 @@ public class AuthController(ILogger<AuthController> logger, Service.AuthService 
         {
             var response = await authService.CheckGoogleAuthenticatorAsync(code, key);
         
-            if (!response.Success)
-                return StatusCode(response.StatusCode, response);
+            if (!response.Successfully)
+                return StatusCode(response.Status, response);
         
             return Ok(response);
         }
@@ -180,11 +185,13 @@ public class AuthController(ILogger<AuthController> logger, Service.AuthService 
     /// <param name="code">Код авторизации</param>
     /// <returns></returns>
     /// <response code="200">Успешно (картинка)</response>
+    /// <response code="403">Qr-code не может быть создан!</response>
     /// <response code="404">Данные не найдены</response>
     [AllowAnonymous]
     [HttpGet("qr-code")]
     [ProducesResponseType(typeof(byte[]),StatusCodes.Status200OK)]
-    [ProducesResponseType(typeof(BaseResponse),StatusCodes.Status404NotFound)]
+    [ProducesResponseType(typeof(string),StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(typeof(string),StatusCodes.Status404NotFound)]
     public async Task<IActionResult> GetQrCode([Required][FromQuery] string code)
     {
         MetricsRegistry.EndpointRequestCounter
@@ -222,8 +229,8 @@ public class AuthController(ILogger<AuthController> logger, Service.AuthService 
     [Authorize]
     [HttpPost("refresh-token")]
     [ProducesResponseType(typeof(AuthTokens),StatusCodes.Status200OK)]
-    [ProducesResponseType(typeof(BaseResponse),StatusCodes.Status403Forbidden)]
-    [ProducesResponseType(typeof(BaseResponse),StatusCodes.Status423Locked)]
+    [ProducesResponseType(typeof(BaseResponse<string, AuthTokens>),StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(typeof(BaseResponse<string, AuthTokens>),StatusCodes.Status423Locked)]
     public async Task<IActionResult> RefreshToken()
     {
         MetricsRegistry.EndpointRequestCounter
@@ -238,8 +245,8 @@ public class AuthController(ILogger<AuthController> logger, Service.AuthService 
         
             var response = await authService.RefreshAccessToken(token);
         
-            if (!response.Success)
-                return StatusCode(response.StatusCode, response);
+            if (!response.Successfully)
+                return StatusCode(response.Status, response);
         
             return Ok(response);
         }

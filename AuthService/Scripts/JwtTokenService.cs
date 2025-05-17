@@ -3,7 +3,6 @@ using System.Security.Claims;
 using AuthService.Enums;
 using AuthService.Models.DB;
 using AuthService.Models.Other;
-using AuthService.Repository;
 using AuthService.Repository.Interfaces;
 using Microsoft.IdentityModel.Tokens;
 

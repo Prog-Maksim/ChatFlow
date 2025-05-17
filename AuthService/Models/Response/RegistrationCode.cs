@@ -1,6 +1,6 @@
 ﻿namespace AuthService.Models.Response;
 
-public class RegistrationCode: BaseResponse
+public class RegistrationCode
 {
     /// <summary>
     /// Код для подключения двухфакторной аутентификации

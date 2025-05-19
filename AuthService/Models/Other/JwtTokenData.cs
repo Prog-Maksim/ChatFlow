@@ -10,6 +10,16 @@ public class JwtTokenData
     public required string PersonId { get; set; }
     
     /// <summary>
+    /// Идентификатор сессии
+    /// </summary>
+    public required string SessionId { get; set; }
+    
+    /// <summary>
+    /// Id токена к сессии
+    /// </summary>
+    public required int Id { get; set; }
+    
+    /// <summary>
     /// Тип токена
     /// </summary>
     public required TokenType TokenType { get; set; }

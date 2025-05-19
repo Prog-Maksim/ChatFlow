@@ -32,6 +32,9 @@ public class AuthController(ILogger<AuthController> logger, Service.AuthService 
     [ProducesResponseType(typeof(BaseResponse<object, object>),StatusCodes.Status403Forbidden)]
     public async Task<IActionResult> RegistrationUser([FromBody][Required] RegistrationUser registrationUser)
     {
+        if (!Request.Headers.TryGetValue("User-Agent", out var userAgent) || string.IsNullOrWhiteSpace(userAgent))
+            return BadRequest("User-Agent header is missing.");
+        
         MetricsRegistry.EndpointRequestCounter
             .WithLabels("registration", "POST", "auth", Environment.MachineName).Inc();
         
@@ -86,6 +89,9 @@ public class AuthController(ILogger<AuthController> logger, Service.AuthService 
     [ProducesResponseType(typeof(BaseResponse<string, RegistrationCode>),StatusCodes.Status429TooManyRequests)]
     public async Task<IActionResult> AuthorizationUser([FromBody][Required] AuthUser authUser)
     {
+        if (!Request.Headers.TryGetValue("User-Agent", out var userAgent) || string.IsNullOrWhiteSpace(userAgent))
+            return BadRequest("User-Agent header is missing.");
+        
         MetricsRegistry.EndpointRequestCounter
             .WithLabels("authorization", "POST", "auth", Environment.MachineName).Inc();
         
@@ -128,10 +134,14 @@ public class AuthController(ILogger<AuthController> logger, Service.AuthService 
     /// <response code="404">Код авторизации не найден</response>
     [AllowAnonymous]
     [HttpPost("enable-2fa")]
-    [ProducesResponseType(typeof(RegistrationCode),StatusCodes.Status200OK)]
-    [ProducesResponseType(typeof(BaseResponse<string, RegistrationCode>),StatusCodes.Status404NotFound)]
+    [ProducesResponseType(typeof(BaseResponse<string, Token2Fa>),StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(BaseResponse<string, Token2Fa>),StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(typeof(BaseResponse<string, Token2Fa>),StatusCodes.Status404NotFound)]
     public async Task<IActionResult> CreateGoogleAuthenticator([Required][FromQuery] string code)
     {
+        if (!Request.Headers.TryGetValue("User-Agent", out var userAgent) || string.IsNullOrWhiteSpace(userAgent))
+            return BadRequest("User-Agent header is missing.");
+        
         MetricsRegistry.EndpointRequestCounter
             .WithLabels("2FA", "POST", "auth", Environment.MachineName).Inc();
         
@@ -139,7 +149,24 @@ public class AuthController(ILogger<AuthController> logger, Service.AuthService 
                    .WithLabels("2FA", "POST", "auth", Environment.MachineName)
                    .NewTimer())
         {
-            var response =  await authService.AddGoogleAuthenticatorAsync(code);
+            string? userIpAddress = HttpContext.Request.Headers["X-Forwarded-For"].FirstOrDefault() ?? HttpContext.Connection.RemoteIpAddress?.ToString();
+        
+            if (userIpAddress == null)
+            {
+                var error = new BaseResponse<string, object>
+                {
+                    Message = "Невозможно определить ip адрес",
+                    Successfully = false,
+                    Status = 406,
+                    Type = ResponseType.IpAddressResolutionFailed,
+                    Errors = "Not Acceptable",
+                    Data = null
+                };
+                logger.LogError("Невозможно определить ip адрес");
+                return StatusCode(error.Status, error);
+            }
+            
+            var response =  await authService.AddGoogleAuthenticatorAsync(code, userIpAddress);
         
             if (!response.Successfully)
                 return StatusCode(response.Status, response);
@@ -155,14 +182,18 @@ public class AuthController(ILogger<AuthController> logger, Service.AuthService 
     /// <param name="key">Проверочный код</param>
     /// <returns></returns>
     /// <response code="200">Успешно</response>
+    /// <response code="403">Код не верен или достигнуто максимальное кол-во устройств</response>
     /// <response code="404">Код авторизации не найден</response>
     [AllowAnonymous]
     [HttpPost("verify-code")]
-    [ProducesResponseType(typeof(AuthTokens),StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(BaseResponse<string, AuthTokens>),StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(BaseResponse<string, AuthTokens>),StatusCodes.Status403Forbidden)]
     [ProducesResponseType(typeof(BaseResponse<string, AuthTokens>),StatusCodes.Status404NotFound)]
     public async Task<IActionResult> CheckCode([Required][FromQuery] string code, [Required][FromQuery] string key)
     {
+        if (!Request.Headers.TryGetValue("User-Agent", out var userAgent) || string.IsNullOrWhiteSpace(userAgent))
+            return BadRequest("User-Agent header is missing.");
+        
         MetricsRegistry.EndpointRequestCounter
             .WithLabels("check-code", "POST", "auth", Environment.MachineName).Inc();
         
@@ -170,7 +201,24 @@ public class AuthController(ILogger<AuthController> logger, Service.AuthService 
                    .WithLabels("check-code", "POST", "auth", Environment.MachineName)
                    .NewTimer())
         {
-            var response = await authService.CheckGoogleAuthenticatorAsync(code, key);
+            string? userIpAddress = HttpContext.Request.Headers["X-Forwarded-For"].FirstOrDefault() ?? HttpContext.Connection.RemoteIpAddress?.ToString();
+        
+            if (userIpAddress == null)
+            {
+                var error = new BaseResponse<string, object>
+                {
+                    Message = "Невозможно определить ip адрес",
+                    Successfully = false,
+                    Status = 406,
+                    Type = ResponseType.IpAddressResolutionFailed,
+                    Errors = "Not Acceptable",
+                    Data = null
+                };
+                logger.LogError("Невозможно определить ip адрес");
+                return StatusCode(error.Status, error);
+            }
+            
+            var response = await authService.CheckGoogleAuthenticatorAsync(code, key, userIpAddress, userAgent);
         
             if (!response.Successfully)
                 return StatusCode(response.Status, response);
@@ -201,9 +249,26 @@ public class AuthController(ILogger<AuthController> logger, Service.AuthService 
                    .WithLabels("generate-qrcode", "POST", "auth", Environment.MachineName)
                    .NewTimer())
         {
+            string? userIpAddress = HttpContext.Request.Headers["X-Forwarded-For"].FirstOrDefault() ?? HttpContext.Connection.RemoteIpAddress?.ToString();
+        
+            if (userIpAddress == null)
+            {
+                var error = new BaseResponse<string, object>
+                {
+                    Message = "Невозможно определить ip адрес",
+                    Successfully = false,
+                    Status = 406,
+                    Type = ResponseType.IpAddressResolutionFailed,
+                    Errors = "Not Acceptable",
+                    Data = null
+                };
+                logger.LogError("Невозможно определить ip адрес");
+                return StatusCode(error.Status, error);
+            }
+            
             try
             {
-                var response = await authService.GetQrCodeGoogleAuthenticatorAsync(code);
+                var response = await authService.GetQrCodeGoogleAuthenticatorAsync(code, userIpAddress);
                 return File(response, "image/png");
             }
             catch (NullReferenceException error)
@@ -228,11 +293,14 @@ public class AuthController(ILogger<AuthController> logger, Service.AuthService 
     /// <response code="423">Пользователь не найден или был заблокирован</response>
     [Authorize]
     [HttpPost("refresh-token")]
-    [ProducesResponseType(typeof(AuthTokens),StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(BaseResponse<string, AuthTokens>),StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(BaseResponse<string, AuthTokens>),StatusCodes.Status403Forbidden)]
     [ProducesResponseType(typeof(BaseResponse<string, AuthTokens>),StatusCodes.Status423Locked)]
     public async Task<IActionResult> RefreshToken()
     {
+        if (!Request.Headers.TryGetValue("User-Agent", out var userAgent) || string.IsNullOrWhiteSpace(userAgent))
+            return BadRequest("User-Agent header is missing.");
+        
         MetricsRegistry.EndpointRequestCounter
             .WithLabels("refresh-token", "POST", "auth", Environment.MachineName).Inc();
         
@@ -245,6 +313,71 @@ public class AuthController(ILogger<AuthController> logger, Service.AuthService 
         
             var response = await authService.RefreshAccessToken(token);
         
+            if (!response.Successfully)
+                return StatusCode(response.Status, response);
+        
+            return Ok(response);
+        }
+    }
+
+    /// <summary>
+    /// Удаляет сессию или все если не передан id сессии
+    /// </summary>
+    /// <param name="session">Идентификатор сессии</param>
+    /// <returns></returns>
+    /// <response code="200">Успешно</response>
+    /// <response code="403">Невалидный jwt токен</response>
+    /// <response code="404">Активные сессии не найдены</response>
+    [Authorize]
+    [HttpDelete("sessions")]
+    [ProducesResponseType(typeof(BaseResponse<string, List<string>>),StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(BaseResponse<string, List<string>>),StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(typeof(BaseResponse<string, List<string>>),StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> DeleteSessions([FromQuery] string? session)
+    {
+        MetricsRegistry.EndpointRequestCounter
+            .WithLabels("delete-sessions", "DELETE", "auth", Environment.MachineName).Inc();
+
+        using (MetricsRegistry.EndpointDuration
+                   .WithLabels("delete-sessions", "DELETE", "auth", Environment.MachineName)
+                   .NewTimer())
+        {
+            var authHeader = HttpContext.Request.Headers["Authorization"].ToString();
+            var token = authHeader.Substring("Bearer ".Length);
+
+            var response = await authService.RevokeSession(token, session);
+            
+            if (!response.Successfully)
+                return StatusCode(response.Status, response);
+        
+            return Ok(response);
+        }
+    }
+
+    /// <summary>
+    /// Возвращает все активные сессии
+    /// </summary>
+    /// <returns></returns>
+    /// <response code="200">Успешно</response>
+    /// <response code="403">Невалидный jwt токен</response>
+    [Authorize]
+    [HttpGet("sessions")]
+    [ProducesResponseType(typeof(BaseResponse<string, List<DataSession>>),StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(BaseResponse<string, List<DataSession>>),StatusCodes.Status403Forbidden)]
+    public async Task<IActionResult> GetSessions()
+    {
+        MetricsRegistry.EndpointRequestCounter
+            .WithLabels("get-sessions", "GET", "auth", Environment.MachineName).Inc();
+
+        using (MetricsRegistry.EndpointDuration
+                   .WithLabels("get_sessions", "GET", "auth", Environment.MachineName)
+                   .NewTimer())
+        {
+            var authHeader = HttpContext.Request.Headers["Authorization"].ToString();
+            var token = authHeader.Substring("Bearer ".Length);
+            
+            var response = await authService.GetSessions(token);
+            
             if (!response.Successfully)
                 return StatusCode(response.Status, response);
         

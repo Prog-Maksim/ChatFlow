@@ -15,6 +15,8 @@ public class AuthRepository: IAuthRepository
     private const int MaxAttempts = 5;
     private static readonly TimeSpan AttemptPeriod = TimeSpan.FromMinutes(1);
 
+    public const int CodeLifetimeMinute = 15;
+
     public AuthRepository(ApplicationContext context, IConnectionMultiplexer connection)
     {
         _context = context;
@@ -46,7 +48,7 @@ public class AuthRepository: IAuthRepository
         return true;
     }
 
-    public async Task<string> GenerateCodeAndSaveAsync(string personId, Person personData)
+    public async Task<string> GenerateCodeAndSaveAsync(string personId, Person personData, string userIpAddress)
     {
         var random = new Random();
         var code = random.Next(10000000, 999999999).ToString();
@@ -55,6 +57,7 @@ public class AuthRepository: IAuthRepository
         {
             PersonId = personId,
             PersonData = personData,
+            IpAdress = userIpAddress,
             TotpCode = null,
             IsUpdate = true,
             IsRead = true
@@ -64,10 +67,11 @@ public class AuthRepository: IAuthRepository
         var redisValue = System.Text.Json.JsonSerializer.Serialize(totpData);
         
         await _database.StringSetAsync(redisKey, redisValue);
+        await _database.KeyExpireAsync(redisKey, TimeSpan.FromMinutes(CodeLifetimeMinute));
         return code;
     }
 
-    public async Task<string> GenerateCodeAndSaveAsync(string personId, Person personData, string totpCode)
+    public async Task<string> GenerateCodeAndSaveAsync(string personId, Person personData, string userIpAdress, string totpCode)
     {
         var random = new Random();
         var code = random.Next(10000000, 999999999).ToString();
@@ -76,6 +80,7 @@ public class AuthRepository: IAuthRepository
         {
             PersonId = personId,
             PersonData = personData,
+            IpAdress = userIpAdress,
             TotpCode = totpCode,
             IsUpdate = false,
             IsRead = false
@@ -85,6 +90,7 @@ public class AuthRepository: IAuthRepository
         var redisValue = System.Text.Json.JsonSerializer.Serialize(totpData);
         
         await _database.StringSetAsync(redisKey, redisValue);
+        await _database.KeyExpireAsync(redisKey, TimeSpan.FromMinutes(CodeLifetimeMinute));
         return code;
     }
 
@@ -151,13 +157,22 @@ public class AuthRepository: IAuthRepository
         await _database.KeyExpireAsync(tag, TimeSpan.FromDays(JwtTokenService.RefreshTokenLifetimeDay));
     }
 
-    public async Task<bool> IsBannedTokenAsync(string personId, string token)
+    public async Task AddSessionToBanAsync(string sessionId)
     {
-        var tag = $"ban:{personId}";
-        bool isBanned = await _database.SetContainsAsync(tag, token);
-        return isBanned;
+        var tag= "sessions";
+        await _database.SetAddAsync(tag, sessionId);
+        await _database.KeyExpireAsync(tag, TimeSpan.FromDays(JwtTokenService.RefreshTokenLifetimeDay));
     }
 
+    public async Task<bool> IsBannedTokenAsync(string personId, string token, string sessionId)
+    {
+        var tag = $"ban:{personId}";
+        var tagSession = "sessions";
+        bool isBanned = await _database.SetContainsAsync(tag, token);
+        bool isBannedSession = await _database.SetContainsAsync(tagSession, sessionId);
+        return isBanned || isBannedSession;
+    }
+    
     public async Task<bool> IsBlockedAsync(string ip)
     {
         string redisKey = $"login_attempts:{ip}";
@@ -183,5 +198,27 @@ public class AuthRepository: IAuthRepository
     public async Task SaveChangesAsync()
     {
         await _context.SaveChangesAsync();
+    }
+
+    public async Task<int> GetNumberSessionsAsync(string personId)
+    {
+        var sessions = await _context.Sessions.Where(p => p.PersonId == personId && p.IsRevoked == false).ToListAsync();
+        return sessions.Count;
+    }
+
+    public async Task<bool> AddSessionAsync(Session session)
+    {
+        await _context.Sessions.AddAsync(session);
+        return true;
+    }
+
+    public async Task<Session?> GetSessionByIdAsync(string personId, string sessionId)
+    {
+        return await _context.Sessions.FirstOrDefaultAsync(p => p.PersonId == personId && p.SessionId == sessionId);
+    }
+
+    public async Task<List<Session>?> GetSessionsAsync(string personId, bool state = false)
+    {
+        return await _context.Sessions.Where(p => p.PersonId == personId && p.IsRevoked == state).ToListAsync();
     }
 }

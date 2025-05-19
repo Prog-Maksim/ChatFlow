@@ -38,17 +38,19 @@ public interface IAuthRepository
     /// </summary>
     /// <param name="personId">Идентификатор пользователя</param>
     /// <param name="personData">Номер телефона</param>
+    /// <param name="userIpAdress">IP адрес пользователя</param>
     /// <returns>Код для доступа к данным</returns>
-    public Task<string> GenerateCodeAndSaveAsync(string personId, Person personData);
+    public Task<string> GenerateCodeAndSaveAsync(string personId, Person personData, string userIpAdress);
 
     /// <summary>
     /// Сохраняет данные для двухфакторной аутентификации с кодом авторизации
     /// </summary>
     /// <param name="personId">Идентификатор пользователя</param>
     /// <param name="personData">Номер телефона</param>
+    /// <param name="userIpAdress">IP адрес пользователя</param>
     /// <param name="totpCode">Код авторизации</param>
     /// <returns>Код для доступа к данным</returns>
-    public Task<string> GenerateCodeAndSaveAsync(string personId, Person personData, string totpCode);
+    public Task<string> GenerateCodeAndSaveAsync(string personId, Person personData, string userIpAdress, string totpCode);
     
     /// <summary>
     /// Проверяет наличие кода в БД
@@ -94,14 +96,21 @@ public interface IAuthRepository
     /// <param name="token">Токен</param>
     /// <returns></returns>
     public Task AddJwtTokenToBanAsync(string personId, string token);
+    
+    /// <summary>
+    /// Блокировка сессии
+    /// </summary>
+    /// <param name="sessionId">Идентификатор сессии</param>
+    /// <returns></returns>
+    public Task AddSessionToBanAsync(string sessionId);
 
     /// <summary>
     /// Проверка токена на блокировку
     /// </summary>
     /// <param name="personId">Идентификатор пользователя</param>
     /// <param name="token">Токен</param>
-    /// <returns></returns>
-    public Task<bool> IsBannedTokenAsync(string personId, string token);
+    /// <returns>true - токен не валиден</returns>
+    public Task<bool> IsBannedTokenAsync(string personId, string token, string sessionId);
 
     /// <summary>
     /// Проверка не заблокирован ли ip адрес за частый перебор пароля
@@ -122,4 +131,34 @@ public interface IAuthRepository
     /// </summary>
     /// <returns></returns>
     public Task SaveChangesAsync();
+    
+    /// <summary>
+    /// Возвращает кол-во сессий для пользователя
+    /// </summary>
+    /// <param name="personId">Идентификатор пользователя</param>
+    /// <returns></returns>
+    public Task<int> GetNumberSessionsAsync(string personId);
+    
+    /// <summary>
+    /// Добавляет новую сессию для пользователя
+    /// </summary>
+    /// <param name="session">Обьект сессии</param>
+    /// <returns></returns>
+    public Task<bool> AddSessionAsync(Session session);
+
+    /// <summary>
+    /// Возвращает объект сессии
+    /// </summary>
+    /// <param name="personId">Идентификатор пользователя</param>
+    /// <param name="sessionId">Идентификатор сессии</param>
+    /// <returns></returns>
+    public Task<Session?> GetSessionByIdAsync(string personId, string sessionId);
+
+    /// <summary>
+    /// Возвразает все сессии для пользователя 
+    /// </summary>
+    /// <param name="personId"></param>
+    /// <param name="state">Состояние сессии</param>
+    /// <returns></returns>
+    public Task<List<Session>?> GetSessionsAsync(string personId, bool state = false);
 }

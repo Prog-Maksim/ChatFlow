@@ -46,6 +46,7 @@ builder.Services.AddSingleton<AuthOptions>(sp =>
 builder.Services.AddScoped<IAuthRepository, AuthRepository>();
 builder.Services.AddScoped<AuthService.Service.AuthService>();
 
+builder.Services.AddSingleton<KafkaEventProducer>();
 builder.Services.AddSingleton<IEncryptionService, EncryptionService>();
 builder.Services.AddScoped<JwtTokenService>();
 

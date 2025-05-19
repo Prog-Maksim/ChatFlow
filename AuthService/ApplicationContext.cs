@@ -8,6 +8,7 @@ public class ApplicationContext: DbContext
 {
     // Таблицы
     public DbSet<Person> Persons { get; set; }
+    public DbSet<Session> Sessions { get; set; }
     
     public ApplicationContext(DbContextOptions<ApplicationContext> options) : base(options) { }
 

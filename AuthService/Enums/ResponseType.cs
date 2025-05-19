@@ -86,4 +86,19 @@ public enum ResponseType
     /// Не удается проверить корректность jwt токена
     /// </summary>
     JwtTokenVerificationFailed,
+    
+    /// <summary>
+    /// Отказано в доступе
+    /// </summary>
+    AccessDenied,
+    
+    /// <summary>
+    /// Достигнуто максимальное кол-во устройств
+    /// </summary>
+    DeviceLimitReached,
+    
+    /// <summary>
+    /// Сессии не найдены 
+    /// </summary>
+    SessionNotFound,
 }

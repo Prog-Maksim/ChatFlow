@@ -74,8 +74,6 @@ public class AuthServiceTests
             PersonId = Guid.NewGuid().ToString(),
             NumberPhone = "1234567890",
             RegistrationIp = ip,
-            RegistrationCountry = "Country",
-            RegistrationCity = "City",
             AccountState = AccountState.Registration
         };
 

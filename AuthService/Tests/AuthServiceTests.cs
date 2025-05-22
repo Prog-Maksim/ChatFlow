@@ -74,7 +74,8 @@ public class AuthServiceTests
             PersonId = Guid.NewGuid().ToString(),
             NumberPhone = "1234567890",
             RegistrationIp = ip,
-            AccountState = AccountState.Registration
+            AccountState = AccountState.Registration,
+            RegistrationTime = DateTime.UtcNow
         };
 
         _authRepositoryMock.Setup(r => r.GetUserByPhoneNumberAsync(registrationUser.Login))

@@ -55,4 +55,9 @@ public class Person
     /// Статус аккаунта
     /// </summary>
     public required AccountState AccountState { get; set; }
+    
+    /// <summary>
+    /// Дата и время создания аккаунта
+    /// </summary>
+    public required DateTime RegistrationTime { get; set; }
 }

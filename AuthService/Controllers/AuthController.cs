@@ -30,7 +30,7 @@ public class AuthController(ILogger<AuthController> logger, Service.AuthService 
     [ProducesResponseType(typeof(BaseResponse<string, object>),StatusCodes.Status406NotAcceptable)]
     [ProducesResponseType(typeof(ValidationProblemDetails), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(BaseResponse<object, object>),StatusCodes.Status403Forbidden)]
-    public async Task<IActionResult> RegistrationUser([FromBody][Required] RegistrationUser registrationUser)
+    public async Task<IActionResult> RegistrationUser([FromBody] [Required] RegistrationUser registrationUser)
     {
         if (!Request.Headers.TryGetValue("User-Agent", out var userAgent) || string.IsNullOrWhiteSpace(userAgent))
             return BadRequest("User-Agent header is missing.");
@@ -87,7 +87,7 @@ public class AuthController(ILogger<AuthController> logger, Service.AuthService 
     [ProducesResponseType(typeof(BaseResponse<string, RegistrationCode>),StatusCodes.Status404NotFound)]
     [ProducesResponseType(typeof(BaseResponse<string, object>),StatusCodes.Status406NotAcceptable)]
     [ProducesResponseType(typeof(BaseResponse<string, RegistrationCode>),StatusCodes.Status429TooManyRequests)]
-    public async Task<IActionResult> AuthorizationUser([FromBody][Required] AuthUser authUser)
+    public async Task<IActionResult> AuthorizationUser([FromBody] [Required] AuthUser authUser)
     {
         if (!Request.Headers.TryGetValue("User-Agent", out var userAgent) || string.IsNullOrWhiteSpace(userAgent))
             return BadRequest("User-Agent header is missing.");
@@ -137,7 +137,7 @@ public class AuthController(ILogger<AuthController> logger, Service.AuthService 
     [ProducesResponseType(typeof(BaseResponse<string, Token2Fa>),StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(BaseResponse<string, Token2Fa>),StatusCodes.Status403Forbidden)]
     [ProducesResponseType(typeof(BaseResponse<string, Token2Fa>),StatusCodes.Status404NotFound)]
-    public async Task<IActionResult> CreateGoogleAuthenticator([Required][FromQuery] string code)
+    public async Task<IActionResult> CreateGoogleAuthenticator([Required] [FromQuery] string code)
     {
         if (!Request.Headers.TryGetValue("User-Agent", out var userAgent) || string.IsNullOrWhiteSpace(userAgent))
             return BadRequest("User-Agent header is missing.");
@@ -189,7 +189,7 @@ public class AuthController(ILogger<AuthController> logger, Service.AuthService 
     [ProducesResponseType(typeof(BaseResponse<string, AuthTokens>),StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(BaseResponse<string, AuthTokens>),StatusCodes.Status403Forbidden)]
     [ProducesResponseType(typeof(BaseResponse<string, AuthTokens>),StatusCodes.Status404NotFound)]
-    public async Task<IActionResult> CheckCode([Required][FromQuery] string code, [Required][FromQuery] string key)
+    public async Task<IActionResult> CheckCode([Required] [FromQuery] string code, [Required] [FromQuery] string key)
     {
         if (!Request.Headers.TryGetValue("User-Agent", out var userAgent) || string.IsNullOrWhiteSpace(userAgent))
             return BadRequest("User-Agent header is missing.");
@@ -240,7 +240,7 @@ public class AuthController(ILogger<AuthController> logger, Service.AuthService 
     [ProducesResponseType(typeof(byte[]),StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(string),StatusCodes.Status403Forbidden)]
     [ProducesResponseType(typeof(string),StatusCodes.Status404NotFound)]
-    public async Task<IActionResult> GetQrCode([Required][FromQuery] string code)
+    public async Task<IActionResult> GetQrCode([Required] [FromQuery] string code)
     {
         MetricsRegistry.EndpointRequestCounter
             .WithLabels("generate-qrcode", "GET", "auth", Environment.MachineName).Inc();
@@ -377,6 +377,80 @@ public class AuthController(ILogger<AuthController> logger, Service.AuthService 
             var token = authHeader.Substring("Bearer ".Length);
             
             var response = await authService.GetSessions(token);
+            
+            if (!response.Successfully)
+                return StatusCode(response.Status, response);
+        
+            return Ok(response);
+        }
+    }
+
+    /// <summary>
+    /// Позволяет обновить номер телефона
+    /// </summary>
+    /// <param name="phoneNumber">Номер телефона</param>
+    /// <returns></returns>
+    [Authorize]
+    [HttpPatch("phonenumber")]
+    public async Task<IActionResult> UpdatePhoneNumber([Required] [FromBody] string phoneNumber)
+    {
+        MetricsRegistry.EndpointRequestCounter
+            .WithLabels("update-numberphone", "PATCH", "auth", Environment.MachineName).Inc();
+
+        using (MetricsRegistry.EndpointDuration
+                   .WithLabels("update-numberphone", "PATCH", "auth", Environment.MachineName)
+                   .NewTimer())
+        {
+            var authHeader = HttpContext.Request.Headers["Authorization"].ToString();
+            var token = authHeader.Substring("Bearer ".Length);
+            
+            var response = await authService.UpdateNumberPhone(token, phoneNumber);
+            
+            if (!response.Successfully)
+                return StatusCode(response.Status, response);
+        
+            return Ok(response);
+        }
+    }
+
+    /// <summary>
+    /// Позволяет обновить пароль
+    /// </summary>
+    /// <param name="data">Объект пароля</param>
+    /// <returns></returns>
+    [Authorize]
+    [HttpPatch("password")]
+    public async Task<IActionResult> UpdatePassword([Required] [FromBody] UpdatePassword data)
+    {
+        MetricsRegistry.EndpointRequestCounter
+            .WithLabels("update-password", "PATCH", "auth", Environment.MachineName).Inc();
+
+        using (MetricsRegistry.EndpointDuration
+                   .WithLabels("update-password", "PATCH", "auth", Environment.MachineName)
+                   .NewTimer())
+        {
+            string? userIpAddress = HttpContext.Request.Headers["X-Forwarded-For"].FirstOrDefault() ?? HttpContext.Connection.RemoteIpAddress?.ToString();
+        
+            if (userIpAddress == null)
+            {
+                var error = new BaseResponse<string, object>
+                {
+                    Message = "Невозможно определить ip адрес",
+                    Successfully = false,
+                    Status = 406,
+                    Type = ResponseType.IpAddressResolutionFailed,
+                    Errors = "Not Acceptable",
+                    Data = null
+                };
+                logger.LogError("Невозможно определить ip адрес");
+                return StatusCode(error.Status, error);
+            }
+
+            
+            var authHeader = HttpContext.Request.Headers["Authorization"].ToString();
+            var token = authHeader.Substring("Bearer ".Length);
+
+            var response = await authService.UpdatePassword(token, data.OldPassword, data.NewPassword, userIpAddress);
             
             if (!response.Successfully)
                 return StatusCode(response.Status, response);

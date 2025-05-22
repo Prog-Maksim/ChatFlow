@@ -36,21 +36,19 @@ public interface IAuthRepository
     /// <summary>
     /// Сохраняет данные для двухфакторной аутентификации
     /// </summary>
-    /// <param name="personId">Идентификатор пользователя</param>
-    /// <param name="personData">Номер телефона</param>
+    /// <param name="personData">Данные пользователя</param>
     /// <param name="userIpAdress">IP адрес пользователя</param>
     /// <returns>Код для доступа к данным</returns>
-    public Task<string> GenerateCodeAndSaveAsync(string personId, Person personData, string userIpAdress);
+    public Task<string> GenerateCodeAndSaveAsync(Person personData, string userIpAdress);
 
     /// <summary>
     /// Сохраняет данные для двухфакторной аутентификации с кодом авторизации
     /// </summary>
-    /// <param name="personId">Идентификатор пользователя</param>
-    /// <param name="personData">Номер телефона</param>
+    /// <param name="personData">Данные пользователя</param>
     /// <param name="userIpAdress">IP адрес пользователя</param>
     /// <param name="totpCode">Код авторизации</param>
     /// <returns>Код для доступа к данным</returns>
-    public Task<string> GenerateCodeAndSaveAsync(string personId, Person personData, string userIpAdress, string totpCode);
+    public Task<string> GenerateCodeAndSaveAsync(Person personData, string userIpAdress, string totpCode);
     
     /// <summary>
     /// Проверяет наличие кода в БД
@@ -103,6 +101,13 @@ public interface IAuthRepository
     /// <param name="sessionId">Идентификатор сессии</param>
     /// <returns></returns>
     public Task AddSessionToBanAsync(string sessionId);
+    
+    /// <summary>
+    /// Добавляет в бан список сессий
+    /// </summary>
+    /// <param name="sessionIds"></param>
+    /// <returns></returns>
+    public Task AddSessionsToBanAsync(IEnumerable<string> sessionIds);
 
     /// <summary>
     /// Проверка токена на блокировку
@@ -160,5 +165,7 @@ public interface IAuthRepository
     /// <param name="personId"></param>
     /// <param name="state">Состояние сессии</param>
     /// <returns></returns>
-    public Task<List<Session>?> GetSessionsAsync(string personId, bool state = false);
+    public Task<IQueryable<Session>?> GetSessionsAsync(string personId, bool state = false);
+    
+    public Task RevokeAllSessionsAsync(string personId);
 }

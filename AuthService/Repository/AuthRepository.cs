@@ -48,14 +48,14 @@ public class AuthRepository: IAuthRepository
         return true;
     }
 
-    public async Task<string> GenerateCodeAndSaveAsync(string personId, Person personData, string userIpAddress)
+    public async Task<string> GenerateCodeAndSaveAsync(Person personData, string userIpAddress)
     {
         var random = new Random();
         var code = random.Next(10000000, 999999999).ToString();
 
         var totpData = new TotpData
         {
-            PersonId = personId,
+            PersonId = personData.PersonId,
             PersonData = personData,
             IpAdress = userIpAddress,
             TotpCode = null,
@@ -71,14 +71,14 @@ public class AuthRepository: IAuthRepository
         return code;
     }
 
-    public async Task<string> GenerateCodeAndSaveAsync(string personId, Person personData, string userIpAdress, string totpCode)
+    public async Task<string> GenerateCodeAndSaveAsync(Person personData, string userIpAdress, string totpCode)
     {
         var random = new Random();
         var code = random.Next(10000000, 999999999).ToString();
 
         var totpData = new TotpData
         {
-            PersonId = personId,
+            PersonId = personData.PersonId,
             PersonData = personData,
             IpAdress = userIpAdress,
             TotpCode = totpCode,
@@ -163,6 +163,27 @@ public class AuthRepository: IAuthRepository
         await _database.SetAddAsync(tag, sessionId);
         await _database.KeyExpireAsync(tag, TimeSpan.FromDays(JwtTokenService.RefreshTokenLifetimeDay));
     }
+    
+    public async Task AddSessionsToBanAsync(IEnumerable<string> sessionIds)
+    {
+        var tag = "sessions";
+
+        // Преобразуем sessionIds в RedisValue[]
+        RedisValue[] redisValues = sessionIds
+            .Where(id => !string.IsNullOrWhiteSpace(id))
+            .Select(id => (RedisValue)id)
+            .ToArray();
+
+        if (redisValues.Length == 0)
+            return; // Нет данных — ничего не делаем
+
+        // Добавляем все значения в Redis Set за одну операцию
+        await _database.SetAddAsync(tag, redisValues);
+
+        // Устанавливаем TTL (обновляем срок жизни ключа)
+        await _database.KeyExpireAsync(tag, TimeSpan.FromDays(JwtTokenService.RefreshTokenLifetimeDay));
+    }
+
 
     public async Task<bool> IsBannedTokenAsync(string personId, string token, string sessionId)
     {
@@ -188,7 +209,6 @@ public class AuthRepository: IAuthRepository
     public async Task IncrementLoginAttemptsAsync(string ip)
     {
         string redisKey = $"login_attempts:{ip}";
-
         var newCount = await _database.StringIncrementAsync(redisKey);
 
         if (newCount == 1)
@@ -217,8 +237,17 @@ public class AuthRepository: IAuthRepository
         return await _context.Sessions.FirstOrDefaultAsync(p => p.PersonId == personId && p.SessionId == sessionId);
     }
 
-    public async Task<List<Session>?> GetSessionsAsync(string personId, bool state = false)
+    public async Task<IQueryable<Session>> GetSessionsAsync(string personId, bool state = false)
     {
-        return await _context.Sessions.Where(p => p.PersonId == personId && p.IsRevoked == state).ToListAsync();
+        return _context.Sessions.Where(p => p.PersonId == personId && p.IsRevoked == state);
+    }
+
+    public async Task RevokeAllSessionsAsync(string personId)
+    {
+        await _context.Sessions
+            .Where(p => p.PersonId == personId)
+            .ExecuteUpdateAsync(s => s.SetProperty(
+                r => r.IsRevoked,
+                r => r.IsRevoked == true));
     }
 }

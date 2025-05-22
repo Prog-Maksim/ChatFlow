@@ -18,6 +18,11 @@ public enum ResponseType
     PhoneNumberInUse,
     
     /// <summary>
+    /// Номер телефона не валиден
+    /// </summary>
+    PhoneNumberNotValid,
+    
+    /// <summary>
     /// Слишком много запросов
     /// </summary>
     TooManyRequests,

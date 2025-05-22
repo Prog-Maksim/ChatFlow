@@ -15,8 +15,7 @@ public class Person
     /// </summary>
     [StringLength(36)]
     public required string PersonId { get; set; }
-
-
+    
     /// <summary>
     /// Номер телефона пользователя
     /// </summary>
@@ -28,8 +27,7 @@ public class Person
     /// </summary>
     [StringLength(100)]
     public string? Email { get; set; }
-
-
+    
     /// <summary>
     /// Хеш пароля
     /// </summary>
@@ -40,15 +38,13 @@ public class Person
     /// Версия пароля
     /// </summary>
     public int PasswordVersion { get; set; }
-
-
+    
     /// <summary>
     /// TOTP код
     /// </summary>
     [StringLength(100)]
     public string? TotpCode { get; set; }
-
-
+    
     /// <summary>
     /// Ip адрес регистрации пользователя
     /// </summary>
@@ -56,16 +52,12 @@ public class Person
     public required string RegistrationIp { get; set; }
 
     /// <summary>
-    /// Страна регистрации пользователя
+    /// Статус аккаунта
     /// </summary>
-    [StringLength(50)]
-    public required string RegistrationCountry { get; set; }
-
-    /// <summary>
-    /// Город регистрации пользователя
-    /// </summary>
-    [StringLength(500)]
-    public required string RegistrationCity { get; set; }
-
     public required AccountState AccountState { get; set; }
+    
+    /// <summary>
+    /// Дата и время создания аккаунта
+    /// </summary>
+    public required DateTime RegistrationTime { get; set; }
 }

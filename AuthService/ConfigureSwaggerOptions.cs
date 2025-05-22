@@ -21,7 +21,7 @@ public class ConfigureSwaggerOptions: IConfigureOptions<SwaggerGenOptions>
                 {
                     Title = $"ChatFlow Api {description.ApiVersion}",
                     Version = description.ApiVersion.ToString(),
-                    Description = "An ASP.NET Core Web API for managing messenger ChatFlow.",
+                    Description = "ASP.NET Core RESTful Web API для управления мессенджером ChatFlow. \nmicroservice: auth",
                     Contact = new OpenApiContact
                     {
                         Name = "Telegram Contact",

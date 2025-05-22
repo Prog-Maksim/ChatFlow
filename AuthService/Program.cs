@@ -1,6 +1,7 @@
 using System.Net;
 using System.Reflection;
 using AuthService;
+using AuthService.Enums;
 using AuthService.Repository;
 using AuthService.Repository.Interfaces;
 using AuthService.Scripts;
@@ -10,6 +11,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.ApiExplorer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
+using Microsoft.OpenApi.Any;
 using Microsoft.OpenApi.Models;
 using Prometheus;
 using Serilog;
@@ -44,6 +46,7 @@ builder.Services.AddSingleton<AuthOptions>(sp =>
 builder.Services.AddScoped<IAuthRepository, AuthRepository>();
 builder.Services.AddScoped<AuthService.Service.AuthService>();
 
+builder.Services.AddSingleton<KafkaEventProducer>();
 builder.Services.AddSingleton<IEncryptionService, EncryptionService>();
 builder.Services.AddScoped<JwtTokenService>();
 
@@ -113,7 +116,6 @@ builder.Services.AddSwaggerGen(options => {
 
     var xmlFileName = $"{Assembly.GetExecutingAssembly().GetName().Name}.xml";
     options.IncludeXmlComments(Path.Combine(AppContext.BaseDirectory, xmlFileName));
-    
 });
 builder.Services.ConfigureOptions<ConfigureSwaggerOptions>();
 
@@ -150,11 +152,13 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseRouting();
+
+app.UseAuthentication();
+app.UseAuthorization();
+
 app.UseMetricServer();
 app.UseHttpMetrics();
 
-// Включаем Prometheus middleware
-// Эндпоинт для метрик (Prometheus будет его запрашивать)
 app.UseEndpoints(endpoints =>
 {
     endpoints.MapMetrics(); // /metrics
@@ -163,7 +167,7 @@ app.UseEndpoints(endpoints =>
 app.MapGet("/", () => "Hello World!");
 
 app.UseHttpsRedirection();
-app.UseAuthorization();
+
 app.MapControllers();
 
 app.Run();

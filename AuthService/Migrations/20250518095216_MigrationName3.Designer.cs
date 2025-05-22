@@ -4,6 +4,7 @@ using AuthService;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace AuthService.Migrations
 {
     [DbContext(typeof(ApplicationContext))]
-    partial class ApplicationContextModelSnapshot : ModelSnapshot
+    [Migration("20250518095216_MigrationName3")]
+    partial class MigrationName3
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -59,9 +62,6 @@ namespace AuthService.Migrations
                         .HasMaxLength(50)
                         .HasColumnType("varchar(50)");
 
-                    b.Property<DateTime>("RegistrationTime")
-                        .HasColumnType("datetime(6)");
-
                     b.Property<string>("TotpCode")
                         .HasMaxLength(100)
                         .HasColumnType("varchar(100)");
@@ -98,7 +98,7 @@ namespace AuthService.Migrations
                     b.Property<bool>("IsRevoked")
                         .HasColumnType("tinyint(1)");
 
-                    b.Property<DateTime>("LastUsedAt")
+                    b.Property<DateTime?>("LastUsedAt")
                         .HasColumnType("datetime(6)");
 
                     b.Property<string>("Os")
@@ -109,6 +109,10 @@ namespace AuthService.Migrations
                         .IsRequired()
                         .HasMaxLength(36)
                         .HasColumnType("varchar(36)");
+
+                    b.Property<string>("RefreshToken")
+                        .IsRequired()
+                        .HasColumnType("longtext");
 
                     b.Property<string>("SessionId")
                         .IsRequired()

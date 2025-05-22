@@ -37,10 +37,10 @@ public class AuthServiceTests
     public async Task RegistrationUserAsync_ShouldReturnSuccess_WhenUserIsNew()
     {
         // Arrange
-        var registrationUser = new RegistrationUser { NumberPhone = "1234567890", Password = "securepass", Name = "Name", Surname = "Surname" };
+        var registrationUser = new RegistrationUser { Login = "1234567890", Password = "securepass", Name = "Name", Surname = "Surname" };
         var ip = "192.168.1.1";
 
-        _authRepositoryMock.Setup(r => r.GetUserByPhoneNumberAsync(registrationUser.NumberPhone))
+        _authRepositoryMock.Setup(r => r.GetUserByPhoneNumberAsync(registrationUser.Login))
             .ReturnsAsync((Person)null);
 
         _authRepositoryMock.Setup(r => r.AddUserAsync(It.IsAny<Person>()))
@@ -53,8 +53,8 @@ public class AuthServiceTests
         var result = await _authService.RegistrationUserAsync(registrationUser, ip);
 
         // Assert
-        Assert.True(result.Success);
-        Assert.Equal(200, result.StatusCode);
+        Assert.True(result.Successfully);
+        Assert.Equal(200, result.Status);
         _authRepositoryMock.Verify(r => r.AddUserAsync(It.IsAny<Person>()), Times.Once);
         _authRepositoryMock.Verify(r => r.SaveChangesAsync(), Times.Once);
     }
@@ -66,7 +66,7 @@ public class AuthServiceTests
     public async Task RegistrationUserAsync_ShouldReturnFailure_WhenPhoneNumberExists()
     {
         // Arrange
-        var registrationUser = new RegistrationUser { NumberPhone = "1234567890", Password = "securepass", Name = "Name", Surname = "Surname" };
+        var registrationUser = new RegistrationUser { Login = "1234567890", Password = "securepass", Name = "Name", Surname = "Surname" };
         var ip = "192.168.1.1";
         
         var existingPerson = new Person
@@ -74,20 +74,19 @@ public class AuthServiceTests
             PersonId = Guid.NewGuid().ToString(),
             NumberPhone = "1234567890",
             RegistrationIp = ip,
-            RegistrationCountry = "Country",
-            RegistrationCity = "City",
-            AccountState = AccountState.Registration
+            AccountState = AccountState.Registration,
+            RegistrationTime = DateTime.UtcNow
         };
 
-        _authRepositoryMock.Setup(r => r.GetUserByPhoneNumberAsync(registrationUser.NumberPhone))
+        _authRepositoryMock.Setup(r => r.GetUserByPhoneNumberAsync(registrationUser.Login))
             .ReturnsAsync(existingPerson);
 
         // Act
         var result = await _authService.RegistrationUserAsync(registrationUser, ip);
 
         // Assert
-        Assert.False(result.Success);
-        Assert.Equal(403, result.StatusCode);
+        Assert.False(result.Successfully);
+        Assert.Equal(403, result.Status);
         _authRepositoryMock.Verify(r => r.AddUserAsync(It.IsAny<Person>()), Times.Never);
         _authRepositoryMock.Verify(r => r.SaveChangesAsync(), Times.Never);
     }

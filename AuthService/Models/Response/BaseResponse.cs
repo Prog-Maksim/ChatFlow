@@ -1,12 +1,12 @@
-﻿using System.ComponentModel;
-using System.Text.Json.Serialization;
+﻿using System.Text.Json.Serialization;
+using AuthService.Enums;
 
 namespace AuthService.Models.Response;
 
 /// <summary>
 /// Базовый класс о результате ответа
 /// </summary>
-public class BaseResponse
+public class BaseResponse<TError, TData>
 {
     /// <summary>
     /// Описание ответа
@@ -16,16 +16,27 @@ public class BaseResponse
     /// <summary>
     /// Статус выполнения
     /// </summary>
-    public required bool Success { get; set; }
+    public required bool Successfully { get; set; }
     
     /// <summary>
     /// Статус код ответа
     /// </summary>
-    public required int StatusCode { get; set; }
+    public required int Status { get; set; }
     
     /// <summary>
-    /// Название ошибки
+    /// Тип результата
+    /// </summary>
+    public required ResponseType Type { get; set; }
+    
+    /// <summary>
+    /// Описание ошибок
     /// </summary>
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-    public string? Error { get; set; }
+    public TError? Errors { get; set; }
+    
+    /// <summary>
+    /// Полезная нагрузка
+    /// </summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public TData? Data { get; set; }
 }

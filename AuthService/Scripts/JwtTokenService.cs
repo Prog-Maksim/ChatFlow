@@ -3,7 +3,6 @@ using System.Security.Claims;
 using AuthService.Enums;
 using AuthService.Models.DB;
 using AuthService.Models.Other;
-using AuthService.Repository;
 using AuthService.Repository.Interfaces;
 using Microsoft.IdentityModel.Tokens;
 
@@ -23,12 +22,14 @@ public class JwtTokenService
     public const int AccessTokenLifetimeMinute = 5;
     public const int RefreshTokenLifetimeDay = 30;
 
-    public string GenerateJwtAccessToken(string personId)
+    public string GenerateJwtAccessToken(string personId, string sessionId, int id)
     {        
         var claims = new List<Claim>
         {
             new (ClaimTypes.Name, personId),
+            new ("id", id.ToString()),
             new ("token_type", TokenType.AccessToken.ToString()),
+            new ("session", sessionId),
             new (JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()),
         };
 
@@ -43,12 +44,14 @@ public class JwtTokenService
         return new JwtSecurityTokenHandler().WriteToken(jwt);
     }
 
-    public string GenerateJwtRefreshToken(string personId, int passwordVersion)
+    public string GenerateJwtRefreshToken(string personId, int passwordVersion, string sessionId, int id)
     {
         var claims = new List<Claim>
         {
             new (ClaimTypes.Name, personId),
+            new ("id", id.ToString()),
             new ("token_type", TokenType.RefreshToken.ToString()),
+            new ("session", sessionId),
             new ("version", passwordVersion.ToString()),
             new (JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString())
         };
@@ -64,10 +67,20 @@ public class JwtTokenService
         return new JwtSecurityTokenHandler().WriteToken(jwt);
     }
 
-    public Tokens CreateJwtToken(string personId, int passwordVersion)
+    public Tokens CreateJwtToken(string personId, int passwordVersion, string sessionId, int id)
     {
-        var accessToken = GenerateJwtAccessToken(personId);
-        var refreshToken = GenerateJwtRefreshToken(personId, passwordVersion);
+        var accessToken = GenerateJwtAccessToken(personId, sessionId, id);
+        var refreshToken = GenerateJwtRefreshToken(personId, passwordVersion, sessionId, id);
+
+        return new Tokens { AccessToken = accessToken, RefreshToken = refreshToken };
+    }
+
+    public Tokens CreateJwtToken(string personId, int passwordVersion, string sessionId, int id, string oldRefreshToken)
+    {
+        _ = _authRepository.AddJwtTokenToBanAsync(personId, oldRefreshToken);
+        
+        var accessToken = GenerateJwtAccessToken(personId, sessionId, id);
+        var refreshToken = GenerateJwtRefreshToken(personId, passwordVersion, sessionId, id);
 
         return new Tokens { AccessToken = accessToken, RefreshToken = refreshToken };
     }
@@ -82,25 +95,39 @@ public class JwtTokenService
         var jwtToken = handler.ReadJwtToken(token);
         
         var userId = jwtToken.Claims.First(c => c.Type == ClaimTypes.Name).Value;
+        var id = jwtToken.Claims.First(c => c.Type == "id").Value;
         var tokenType = jwtToken.Claims.First(c => c.Type == "token_type").Value;
+        var sessionId = jwtToken.Claims.First(c => c.Type == "session").Value;
         var tokenTypeEnum = Enum.Parse<TokenType>(tokenType);
         var versionClaim = jwtToken.Claims.FirstOrDefault(c => c.Type == "version")?.Value;
         var jti = jwtToken.Claims.First(c => c.Type == JwtRegisteredClaimNames.Jti).Value;
         
         int version = 0;
-        if (int.TryParse(versionClaim, out var parsedVersion))
-            version = parsedVersion;
+        if(int.TryParse(versionClaim, out var data))
+            version = data;
+
+        int identificator = 0;
+        if(int.TryParse(id, out var data1))
+            identificator = data1;
         
         return new JwtTokenData
         {
             PersonId = userId,
             TokenType = tokenTypeEnum,
             PasswordVersion = version,
+            SessionId = sessionId,
             Jti = jti,
+            Id = identificator,
             Token = token
         };
     }
 
+    /// <summary>
+    /// Проверяет валидность токена
+    /// </summary>
+    /// <param name="token"></param>
+    /// <param name="person"></param>
+    /// <returns>true - токен валиден</returns>
     public async Task<bool> ValidateJwtRefreshToken(JwtTokenData token, Person person)
     {
         if (token.TokenType != TokenType.RefreshToken)
@@ -109,6 +136,19 @@ public class JwtTokenService
         if (token.PasswordVersion != person.PasswordVersion)
             return false;
 
-        return !await _authRepository.IsBannedTokenAsync(person.PersonId, token.Token);
+        return !await _authRepository.IsBannedTokenAsync(person.PersonId, token.Token, token.SessionId);
+    }
+
+    /// <summary>
+    /// Проверяет валидность токена
+    /// </summary>
+    /// <param name="token"></param>
+    /// <returns>true - токен валиден</returns>
+    public async Task<bool> ValidateJwtAccessToken(JwtTokenData token)
+    {
+        if (token.TokenType != TokenType.AccessToken)
+            return false;
+        
+        return !await _authRepository.IsBannedTokenAsync(token.PersonId, token.Token, token.SessionId);
     }
 }

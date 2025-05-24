@@ -411,7 +411,7 @@ public class AuthService
                 var address = await DeterminingIpAddress.GetPositionUser(session.IpAddress);
                 DataSession data = new DataSession
                 {
-                    IpAddress = session.IpAddress,
+                    IpAddress = _encryptionService.Decrypt(session.IpAddress),
                     City = address.City,
                     Country = address.Country,
                     Device = session.Device,

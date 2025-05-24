@@ -10,19 +10,28 @@
     </PropertyGroup>
 
     <ItemGroup>
+      <Content Include="..\.dockerignore">
+        <Link>.dockerignore</Link>
+      </Content>
+    </ItemGroup>
+
+    <ItemGroup>
+        <PackageReference Include="AWSSDK.S3" Version="3.7.410.12" />
+        <PackageReference Include="SixLabors.ImageSharp" Version="3.1.8" />
+
         <PackageReference Include="Confluent.Kafka" Version="2.10.0" />
         <PackageReference Include="prometheus-net.AspNetCore" Version="8.2.1" />
-        
+
         <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="8.0.10" />
 
         <PackageReference Include="StackExchange.Redis" Version="2.8.0" />
-        
+
         <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="8.0.3">
             <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
             <PrivateAssets>all</PrivateAssets>
         </PackageReference>
         <PackageReference Include="Pomelo.EntityFrameworkCore.MySql" Version="8.0.2" />
-        
+
         <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.13.0" />
         <PackageReference Include="Moq" Version="4.20.72" />
         <PackageReference Include="UAParser" Version="3.1.47" />
@@ -43,19 +52,8 @@
         <PackageReference Include="Serilog.Sinks.File" Version="6.0.0" />
         <PackageReference Include="Serilog.Extensions.Logging" Version="9.0.1" />
         <PackageReference Include="Serilog.Sinks.Elasticsearch" Version="8.6.0" />
-
-        <PackageReference Include="Otp.NET" Version="1.4.0" />
-        <PackageReference Include="QRCoder" Version="1.6.0" />
+        
         <PackageReference Include="System.Drawing.Common" Version="9.0.3" />
     </ItemGroup>
 
-    <ItemGroup>
-      <Content Include="..\.dockerignore">
-        <Link>.dockerignore</Link>
-      </Content>
-    </ItemGroup>
-
-    <ItemGroup>
-      <Folder Include="Logs\" />
-    </ItemGroup>
 </Project>

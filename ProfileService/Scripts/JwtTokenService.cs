@@ -2,11 +2,20 @@
 using System.Security.Claims;
 using ProfileService.Enums;
 using ProfileService.Models.Other;
+using StackExchange.Redis;
 
 namespace ProfileService.Scripts;
 
 public class JwtTokenService
 {
+    private readonly IDatabase _database;
+    public const int RefreshTokenLifetimeDay = 30;
+
+    public JwtTokenService(IConnectionMultiplexer connection)
+    {
+        _database = connection.GetDatabase();
+    }
+    
     public JwtTokenData GetJwtTokenData(string token)
     {
         var handler = new JwtSecurityTokenHandler();
@@ -43,6 +52,26 @@ public class JwtTokenService
             Token = token
         };
     }
+
+    public async Task RevokeSession(string sessionId)
+    {
+        var tag = "sessions";
+        
+        await _database.SetAddAsync(tag, sessionId);
+        await _database.KeyExpireAsync(tag, TimeSpan.FromDays(RefreshTokenLifetimeDay));
+    }
+    
+    /// <summary>
+    /// Проверяет статус сессии
+    /// </summary>
+    /// <param name="sessionId">Идентификатор сессии</param>
+    /// <returns>true - сессия не валидна</returns>
+    public async Task<bool> IsBannedTokenAsync(string sessionId)
+    {
+        var tagSession = "sessions";
+        bool isBannedSession = await _database.SetContainsAsync(tagSession, sessionId);
+        return isBannedSession;
+    }
     
     /// <summary>
     /// Проверяет валидность токена
@@ -53,10 +82,7 @@ public class JwtTokenService
     {
         if (token.TokenType != TokenType.AccessToken)
             return false;
-
-        return true;
-        // TODO: дописать метод валидации токена (локальный кеш заблокированных сессий)
         
-        // return !await _authRepository.IsBannedTokenAsync(token.PersonId, token.Token, token.SessionId);
+        return !await IsBannedTokenAsync(token.SessionId);
     }
 }

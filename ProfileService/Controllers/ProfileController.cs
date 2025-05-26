@@ -1,6 +1,8 @@
-using System.ComponentModel.DataAnnotations;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using ProfileService.Models.Requests;
+using ProfileService.Monitoring;
+using Prometheus;
 
 namespace ProfileService.Controllers;
 
@@ -8,116 +10,97 @@ namespace ProfileService.Controllers;
 [ApiVersion("1.0")]
 [Produces("application/json")]
 [Route("backend/v{version:apiVersion}/[controller]")]
-public class ProfileController(ILogger<ProfileController> _logger, Service.ProfileService _profileService): ControllerBase
+public class ProfileController(ILogger<ProfileController> _logger, Service.ProfileService profileService): ControllerBase
 {
-    // TODO: Дополнить документацию ручек
-    // TODO: Реализовать мониторинг сервисов
+    /// <summary>
+    /// Возвращает краткую информацию о пользователе
+    /// </summary>
+    /// <param name="personId">Идентификатор пользователя</param>
+    /// <returns></returns>
+    /// <remarks>
+    /// Если параметр <c>personId</c> не указан, метод вернёт информацию о текущем пользователе,
+    /// основываясь на идентификаторе из JWT токена.
+    /// </remarks>
+    [Authorize]
+    [HttpGet("profiles/{personId?}/summary")]
+    public async Task<IActionResult> GetProfileSummary([FromRoute] string? personId = null)
+    {
+        MetricsRegistry.EndpointRequestCounter
+            .WithLabels("summary-profile", "GET", "profile", Environment.MachineName).Inc();
+        
+        using (MetricsRegistry.EndpointDuration
+                   .WithLabels("summary-profile", "GET", "profile", Environment.MachineName)
+                   .NewTimer())
+        {
+            var authHeader = HttpContext.Request.Headers["Authorization"].ToString();
+            var token = authHeader.Substring("Bearer ".Length);
+
+            var response = await profileService.GetSummaryProfileData(token, personId);
+
+            if (!response.Successfully)
+                return StatusCode(response.Status, response);
+
+            return Ok(response);
+        }
+    }
     
     /// <summary>
-    /// Добавляет изображение профилю (до 25 штук)
-    /// </summary>
-    /// <param name="file">Изображение jpg</param>
-    /// <param name="top">Отступ сверху (в пикселях)</param>
-    /// <param name="left">Отступ слева (в пикселях)</param>
-    /// <returns></returns>
-    [Authorize]
-    [HttpPost("images")]
-    public async Task<IActionResult> UploadImages(IFormFile file, [FromQuery] double? top = 0, [FromQuery] double? left = 0)
-    {
-        if (file.Length == 0)
-            return BadRequest("Файл отсутствует.");
-
-        if (!file.ContentType.Equals("image/jpeg", StringComparison.OrdinalIgnoreCase))
-            return BadRequest("Поддерживается только формат JPG.");
-
-        var authHeader = HttpContext.Request.Headers["Authorization"].ToString();
-        var token = authHeader.Substring("Bearer ".Length);
-        
-        var response = await _profileService.UploadFile(file, token, top, left);
-        
-        if (!response.Successfully)
-            return StatusCode(response.Status, response);
-        
-        return Ok(response);
-    }
-
-    /// <summary>
-    /// Выдает кол-во изображений у пользователя
+    /// Возвращает полную информацию о пользователе
     /// </summary>
     /// <param name="personId">Идентификатор пользователя</param>
     /// <returns></returns>
+    /// <remarks>
+    /// Если параметр <c>personId</c> не указан, метод вернёт информацию о текущем пользователе,
+    /// основываясь на идентификаторе из JWT токена.
+    /// </remarks>
     [Authorize]
-    [HttpGet("count-images")]
-    public async Task<IActionResult> CountImages([FromQuery] string? personId = null)
+    [HttpGet("profiles/{personId?}")]
+    public async Task<IActionResult> GetFullProfile([FromRoute] string? personId = null)
     {
-        var authHeader = HttpContext.Request.Headers["Authorization"].ToString();
-        var token = authHeader.Substring("Bearer ".Length);
+        MetricsRegistry.EndpointRequestCounter
+            .WithLabels("profile", "GET", "profile", Environment.MachineName).Inc();
         
-        var response = await _profileService.GetCountImages(token, personId);
-        
-        if (!response.Successfully)
-            return StatusCode(response.Status, response);
-        
-        return Ok(response);
+        using (MetricsRegistry.EndpointDuration
+                   .WithLabels("profile", "GET", "profile", Environment.MachineName)
+                   .NewTimer())
+        {
+            var authHeader = HttpContext.Request.Headers["Authorization"].ToString();
+            var token = authHeader.Substring("Bearer ".Length);
+
+            var response = await profileService.GetProfileData(token, personId);
+
+            if (!response.Successfully)
+                return StatusCode(response.Status, response);
+
+            return Ok(response);
+        }
     }
 
     /// <summary>
-    /// Выдает главное изображение пользователя
+    /// Обновляет информацию в профиле
     /// </summary>
-    /// <param name="personId">Идентификатор пользователя</param>
+    /// <param name="profile">Данные профиля</param>
     /// <returns></returns>
     [Authorize]
-    [HttpGet("primary-images")]
-    public async Task<IActionResult> GetPrimaryImages([FromQuery] string? personId = null)
+    [HttpPut("profiles")]
+    public async Task<IActionResult> UpdateProfile([FromBody] Profile profile)
     {
-        var authHeader = HttpContext.Request.Headers["Authorization"].ToString();
-        var token = authHeader.Substring("Bearer ".Length);
+        MetricsRegistry.EndpointRequestCounter
+            .WithLabels("update-profile", "PUT", "profile", Environment.MachineName).Inc();
         
-        var response = await _profileService.GetPrimaryImage(token, personId);
-        
-        if (!response.Successfully)
-            return StatusCode(response.Status, response);
-        
-        return Ok(response);
-    }
+        using (MetricsRegistry.EndpointDuration
+                   .WithLabels("update-profile", "PUT", "profile", Environment.MachineName)
+                   .NewTimer())
+        {
+            var authHeader = HttpContext.Request.Headers["Authorization"].ToString();
+            var token = authHeader.Substring("Bearer ".Length);
 
-    /// <summary>
-    /// Делает изображение основным
-    /// </summary>
-    /// <param name="imageId">Идентификатор изображения</param>
-    /// <returns></returns>
-    [Authorize]
-    [HttpPut("primary-images")]
-    public async Task<IActionResult> UpdatePrimaryImages([Required] [FromQuery] string imageId)
-    {
-        var authHeader = HttpContext.Request.Headers["Authorization"].ToString();
-        var token = authHeader.Substring("Bearer ".Length);
-        
-        var response = await _profileService.SetImageIsPrimary(token, imageId);
-        
-        if (!response.Successfully)
-            return StatusCode(response.Status, response);
-        
-        return Ok(response);
-    }
+            var response = await profileService.UpdateProfileData(token, profile);
 
-    /// <summary>
-    /// Удаляет изображение
-    /// </summary>
-    /// <param name="imageId">Идентификатор изображения</param>
-    /// <returns></returns>
-    [Authorize]
-    [HttpDelete("images")]
-    public async Task<IActionResult> DeleteImages([Required] [FromQuery] string imageId)
-    {
-        var authHeader = HttpContext.Request.Headers["Authorization"].ToString();
-        var token = authHeader.Substring("Bearer ".Length);
-        
-        var response = await _profileService.DeleteImage(token, imageId);
-        
-        if (!response.Successfully)
-            return StatusCode(response.Status, response);
-        
-        return Ok(response);
+            if (!response.Successfully)
+                return StatusCode(response.Status, response);
+
+            return Ok(response);
+        }
     }
 }

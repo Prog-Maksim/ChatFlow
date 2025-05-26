@@ -1,7 +1,10 @@
 using Microsoft.EntityFrameworkCore;
 using ProfileService.Models.DB;
 using ProfileService.Models.Events;
+using ProfileService.Models.Other;
+using ProfileService.Models.Requests;
 using ProfileService.Repository.Interfaces;
+using ProfileService.Scripts;
 
 namespace ProfileService.Repository;
 
@@ -9,6 +12,7 @@ public class ProfileRepository: IProfileRepository
 {
     private readonly ApplicationContext _context;
     private readonly ILogger<ProfileRepository> _logger;
+    private IProfileRepository _profileRepositoryImplementation;
 
     public ProfileRepository(ApplicationContext context, ILogger<ProfileRepository> logger)
     {
@@ -35,6 +39,50 @@ public class ProfileRepository: IProfileRepository
         _logger.LogDebug("Пользователь успешно создан");
     }
     
+    public async Task<SummaryDataPerson?> GetSummaryPersonDataAsync(string personId)
+    {
+        var person = await _context.Persons
+            .Include(i => i.Images)
+            .FirstOrDefaultAsync(p => p.PersonId == personId);
+        
+        if (person is not null)
+        {
+            var image = person.Images.FirstOrDefault(i => i.IsPrimary);
+            
+            return new SummaryDataPerson
+            {
+                Name = person.Name,
+                Surname = person.Surname,
+                ImageUrl = S3Service.BaseFileUrl + image?.ImageId
+            };
+        }
+        
+        return null;
+    }
+
+    public async Task<DataPerson?> GetPersonDataAsync(string personId)
+    {
+        var person = await _context.Persons
+            .Include(i => i.Images)
+            .FirstOrDefaultAsync(p => p.PersonId == personId);
+
+        if (person is not null)
+        {
+            var images = person.Images.ToList();
+            
+            return new DataPerson
+            {
+                Name = person.Name,
+                Surname = person.Surname,
+                Tag = person.Tag,
+                Description = person.Description,
+                ImageUrls = images.Select(i => S3Service.BaseFileUrl + i.ImageId).ToList(),
+            };
+        }
+        
+        return null;
+    }
+
     public async Task<bool> UserExistsAsync(string personId)
     {
         return await _context.Persons.AnyAsync(u => u.PersonId == personId);
@@ -108,6 +156,26 @@ public class ProfileRepository: IProfileRepository
                 .ExecuteUpdateAsync(setters => setters
                     .SetProperty(p => p.IsPrimary, p => p.Id == primaryImageId));
     }
+
+    public async Task<bool> CheckTagAsync(string tag)
+    {
+        return !await _context.Persons.AnyAsync(p => p.Tag == tag);
+    }
+
+    public async Task<bool> UpdateProfileDataAsync(string personId, Profile profile)
+    {
+        var result = await _context.Persons
+            .Where(p => p.PersonId == personId)
+            .ExecuteUpdateAsync(setters => setters
+                .SetProperty(p => p.Name, profile.Name)
+                .SetProperty(p => p.Surname, profile.Surname)
+                .SetProperty(p => p.Tag, profile.Tag)
+                .SetProperty(p => p.Description, profile.Description)
+            );
+
+        return result > 0;
+    }
+
 
     public async Task SaveChangesAsync()
     {

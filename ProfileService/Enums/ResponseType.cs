@@ -33,6 +33,16 @@ public enum ResponseType
     ImageNotFound,
     
     /// <summary>
+    /// Данный тег занят
+    /// </summary>
+    TagAlreadyExists,
+    
+    /// <summary>
+    /// Не найдены данные для обновления
+    /// </summary>
+    UpdateDataNotFound,
+    
+    /// <summary>
     ///  Не удалось определить ip адрес
     /// </summary>
     IpAddressResolutionFailed,

@@ -2,6 +2,7 @@
 using AuthService.Models.Other;
 using AuthService.Repository.Interfaces;
 using AuthService.Scripts;
+using AuthService.Service;
 using Microsoft.EntityFrameworkCore;
 using StackExchange.Redis;
 
@@ -10,6 +11,7 @@ namespace AuthService.Repository;
 public class AuthRepository: IAuthRepository
 {
     private readonly ApplicationContext _context;
+    private readonly TokenPublisherService _tokenPublisherService;
     private readonly IDatabase _database;
     
     private const int MaxAttempts = 5;
@@ -17,10 +19,11 @@ public class AuthRepository: IAuthRepository
 
     public const int CodeLifetimeMinute = 15;
 
-    public AuthRepository(ApplicationContext context, IConnectionMultiplexer connection)
+    public AuthRepository(ApplicationContext context, IConnectionMultiplexer connection, TokenPublisherService tokenPublisherService)
     {
         _context = context;
         _database = connection.GetDatabase();
+        _tokenPublisherService = tokenPublisherService;
     }
     
 
@@ -37,14 +40,6 @@ public class AuthRepository: IAuthRepository
     public async Task<bool> AddUserAsync(Person person)
     {
         await _context.Persons.AddAsync(person);
-        return true;
-    }
-
-    public bool UpdateUserAsync(Person person)
-    {
-        _context.Persons.Attach(person);
-        _context.Entry(person).State = EntityState.Modified;
-
         return true;
     }
 
@@ -139,17 +134,6 @@ public class AuthRepository: IAuthRepository
         await _database.KeyDeleteAsync(redisKey);
     }
 
-    public async Task AddJwtTokensToBanAsync(string personId, List<string> tokens)
-    {
-        var tag = $"ban:{personId}";
-
-        if (tokens.Any())
-        {
-            await _database.SetAddAsync(tag, tokens.Select(t => (RedisValue)t).ToArray());
-            await _database.KeyExpireAsync(tag, TimeSpan.FromDays(JwtTokenService.RefreshTokenLifetimeDay));
-        }
-    }
-
     public async Task AddJwtTokenToBanAsync(string personId, string token)
     {
         var tag = $"ban:{personId}";
@@ -162,26 +146,22 @@ public class AuthRepository: IAuthRepository
         var tag= "sessions";
         await _database.SetAddAsync(tag, sessionId);
         await _database.KeyExpireAsync(tag, TimeSpan.FromDays(JwtTokenService.RefreshTokenLifetimeDay));
+        await _tokenPublisherService.PublishTokenRevokedAsync(sessionId);
     }
     
     public async Task AddSessionsToBanAsync(IEnumerable<string> sessionIds)
     {
         var tag = "sessions";
+        
+        var sessionsList = sessionIds.Where(id => !string.IsNullOrWhiteSpace(id)).ToList();
+        if (sessionsList.Count == 0)
+            return;
 
-        // Преобразуем sessionIds в RedisValue[]
-        RedisValue[] redisValues = sessionIds
-            .Where(id => !string.IsNullOrWhiteSpace(id))
-            .Select(id => (RedisValue)id)
-            .ToArray();
-
-        if (redisValues.Length == 0)
-            return; // Нет данных — ничего не делаем
-
-        // Добавляем все значения в Redis Set за одну операцию
+        RedisValue[] redisValues = sessionsList.Select(id => (RedisValue)id).ToArray();
+        
         await _database.SetAddAsync(tag, redisValues);
-
-        // Устанавливаем TTL (обновляем срок жизни ключа)
         await _database.KeyExpireAsync(tag, TimeSpan.FromDays(JwtTokenService.RefreshTokenLifetimeDay));
+        await _tokenPublisherService.PublishTokenRevokedAsync(sessionsList);
     }
 
 

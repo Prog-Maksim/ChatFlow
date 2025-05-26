@@ -1,5 +1,7 @@
 using ProfileService.Models.DB;
 using ProfileService.Models.Events;
+using ProfileService.Models.Other;
+using ProfileService.Models.Requests;
 
 namespace ProfileService.Repository.Interfaces;
 
@@ -18,6 +20,20 @@ public interface IProfileRepository
     /// <param name="person"></param>
     /// <returns></returns>
     public Task CreatePersonAsync(UserCreated person);
+    
+    /// <summary>
+    /// Возвращает краткую информацию пользователя
+    /// </summary>
+    /// <param name="personId">Идентификатор пользователя</param>
+    /// <returns></returns>
+    public Task<SummaryDataPerson?> GetSummaryPersonDataAsync(string personId);
+    
+    /// <summary>
+    /// Возвращает полную информацию пользователя
+    /// </summary>
+    /// <param name="personId">Идентификатор пользователя</param>
+    /// <returns></returns>
+    public Task<DataPerson?> GetPersonDataAsync(string personId);
 
     /// <summary>
     /// Проверяет существует ли пользователь в БД
@@ -92,6 +108,21 @@ public interface IProfileRepository
     /// <param name="personId"></param>
     /// <returns></returns>
     public Task SetFirstImageIsPrimaryAsync(string personId);
+    
+    /// <summary>
+    /// Проверяет занят ли тег 
+    /// </summary>
+    /// <param name="tag">Тег пользователя</param>
+    /// <returns>true - тег свободен</returns>
+    public Task<bool> CheckTagAsync(string tag);
+
+    /// <summary>
+    /// Обновляет данные в БД
+    /// </summary>
+    /// <param name="personId">Идентификатор пользователя</param>
+    /// <param name="profile">Данные профиля</param>
+    /// <returns>true - Одно или несколько полей были обновлены</returns>
+    public Task<bool> UpdateProfileDataAsync(string personId, Profile profile);
     
     /// <summary>
     /// Сохраняет изменения в БД

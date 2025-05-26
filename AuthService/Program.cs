@@ -5,6 +5,7 @@ using AuthService.Enums;
 using AuthService.Repository;
 using AuthService.Repository.Interfaces;
 using AuthService.Scripts;
+using AuthService.Service;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.Mvc;
@@ -48,6 +49,8 @@ builder.Services.AddScoped<AuthService.Service.AuthService>();
 
 builder.Services.AddSingleton<KafkaEventProducer>();
 builder.Services.AddSingleton<IEncryptionService, EncryptionService>();
+builder.Services.AddSingleton<TokenPublisherService>();
+
 builder.Services.AddScoped<JwtTokenService>();
 
 // Swagger
@@ -120,13 +123,15 @@ builder.Services.AddSwaggerGen(options => {
 builder.Services.ConfigureOptions<ConfigureSwaggerOptions>();
 
 // Подключаем Redis
-var redisConnectionString = builder.Configuration.GetConnectionString("RedisConnection") ?? throw new InvalidOperationException("Redis connection string is not configured.");
-builder.Services.AddSingleton<IConnectionMultiplexer>(ConnectionMultiplexer.Connect(redisConnectionString));
+var redisDefault = builder.Configuration.GetConnectionString("RedisDefault")
+                   ?? throw new InvalidOperationException("Default Redis connection is missing.");
+
+builder.Services.AddSingleton<IConnectionMultiplexer>(ConnectionMultiplexer.Connect(redisDefault));
+builder.Services.AddSingleton<ISecurityRedisConnection, SecurityRedisConnection>();
 
 // Подключает БД
 string? connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
 builder.Services.AddDbContext<ApplicationContext>(options => options.UseMySql(connectionString, ServerVersion.AutoDetect(connectionString)));
-
 
 var app = builder.Build();
 

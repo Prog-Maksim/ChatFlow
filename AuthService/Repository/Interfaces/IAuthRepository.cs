@@ -26,12 +26,6 @@ public interface IAuthRepository
     /// <returns></returns>
     public Task<bool> AddUserAsync(Person person);
     
-    /// <summary>
-    /// Обновление данных пользователя
-    /// </summary>
-    /// <param name="person">Данные пользователя</param>
-    /// <returns></returns>
-    public bool UpdateUserAsync(Person person);
 
     /// <summary>
     /// Сохраняет данные для двухфакторной аутентификации
@@ -78,14 +72,6 @@ public interface IAuthRepository
     /// <param name="code">Код с данными</param>
     /// <returns></returns>
     public Task DeleteTotpDataByCodeAsync(string code);
-
-    /// <summary>
-    /// Блокировка списка токенов
-    /// </summary>
-    /// <param name="personId">Идентификатор пользователя</param>
-    /// <param name="tokens">Список токенов</param>
-    /// <returns></returns>
-    public Task AddJwtTokensToBanAsync(string personId, List<string> tokens);
     
     /// <summary>
     /// Блокировка токена

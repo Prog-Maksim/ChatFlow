@@ -11,14 +11,14 @@ using ProfileService;
 using ProfileService.Repository;
 using ProfileService.Repository.Interfaces;
 using ProfileService.Scripts;
+using ProfileService.Service;
 using Prometheus;
 using Serilog;
 using Serilog.Events;
 using Serilog.Sinks.Elasticsearch;
+using StackExchange.Redis;
 
 var builder = WebApplication.CreateBuilder(args);
-
-// TODO: Написать скрипт получения невалидных токенов от сервиса аутентификации
 
 // Настройка логирования
 Log.Logger = new LoggerConfiguration()
@@ -43,12 +43,14 @@ builder.Services.AddSingleton<AuthOptions>(sp =>
     new AuthOptions(sp.GetRequiredService<IConfiguration>()));
 
 builder.Services.AddHostedService<KafkaEventConsumer>();
+builder.Services.AddHostedService<TokenSubscriberService>();
 
 builder.Services.AddScoped<IProfileRepository, ProfileRepository>();
 
-builder.Services.AddScoped<ProfileService.Service.ProfileService>();
+builder.Services.AddScoped<ImageService>();
 builder.Services.AddSingleton<JwtTokenService>();
 builder.Services.AddSingleton<S3Service>();
+builder.Services.AddSingleton<ISecurityRedisConnection, SecurityRedisConnection>();
 
 // Swagger
 builder.Services.AddApiVersioning(options =>
@@ -118,6 +120,13 @@ builder.Services.AddSwaggerGen(options => {
     options.IncludeXmlComments(Path.Combine(AppContext.BaseDirectory, xmlFileName));
 });
 builder.Services.ConfigureOptions<ConfigureSwaggerOptions>();
+
+// Подключаем Redis
+var redisDefault = builder.Configuration.GetConnectionString("RedisDefault")
+                   ?? throw new InvalidOperationException("Default Redis connection is missing.");
+
+builder.Services.AddSingleton<IConnectionMultiplexer>(ConnectionMultiplexer.Connect(redisDefault));
+builder.Services.AddSingleton<ISecurityRedisConnection, SecurityRedisConnection>();
 
 // Подключает БД
 string? connectionString = builder.Configuration.GetConnectionString("DefaultConnection");

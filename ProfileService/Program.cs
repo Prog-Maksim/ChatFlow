@@ -161,16 +161,49 @@ app.UseRouting();
 app.UseAuthentication();
 app.UseAuthorization();
 
-app.UseMetricServer();
 app.UseHttpMetrics();
 
 app.MapControllers();
-app.MapMetrics();
 
-// app.UseEndpoints(endpoints =>
-// {
-//     endpoints.MapMetrics();
-// });
+// Настройка метриков
+app.UseWhen(ctx => ctx.Request.Path.StartsWithSegments("/metrics"), appBuilder =>
+{
+    appBuilder.Use(async (context, next) =>
+    {
+        var username = builder.Configuration["MetricsAuth:Username"];
+        var password = builder.Configuration["MetricsAuth:Password"];
+        
+        var headers = context.Request.Headers;
+        if (!headers.ContainsKey("Authorization"))
+        {
+            context.Response.Headers["WWW-Authenticate"] = "Basic";
+            context.Response.StatusCode = 401;
+            await context.Response.WriteAsync("Unauthorized");
+            return;
+        }
+
+        var authHeader = headers["Authorization"].ToString();
+        var encodedUsernamePassword = authHeader.Substring("Basic ".Length).Trim();
+        var decodedBytes = Convert.FromBase64String(encodedUsernamePassword);
+        var decoded = System.Text.Encoding.UTF8.GetString(decodedBytes);
+        var parts = decoded.Split(':');
+        
+        if (parts.Length != 2 || parts[0] != username || parts[1] != password)
+        {
+            context.Response.StatusCode = 403;
+            await context.Response.WriteAsync("Forbidden");
+            return;
+        }
+        
+        await next(context);
+    });
+    
+    appBuilder.UseRouting();
+    appBuilder.UseEndpoints(endpoints =>
+    {
+        endpoints.MapMetrics();
+    });
+});
 
 app.MapGet("/", () => "Hello World!");
 

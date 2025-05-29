@@ -8,7 +8,7 @@ public class S3Service
 {
     private readonly AmazonS3Client _s3Client;
     private const string BucketName = "chatflow-avatar";
-    public const string BaseFileUrl = "https://storage.yandexcloud.net/jewelry/";
+    public const string BaseFileUrl = "https://storage.yandexcloud.net/chatflow-avatar/";
     
     private readonly IConfiguration _configuration;
 

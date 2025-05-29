@@ -50,6 +50,7 @@ builder.Services.AddScoped<IProfileRepository, ProfileRepository>();
 builder.Services.AddScoped<ImageService>();
 builder.Services.AddSingleton<JwtTokenService>();
 builder.Services.AddSingleton<S3Service>();
+builder.Services.AddScoped<ProfileService.Service.ProfileService>();
 builder.Services.AddSingleton<ISecurityRedisConnection, SecurityRedisConnection>();
 
 // Swagger

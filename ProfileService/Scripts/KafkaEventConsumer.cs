@@ -42,7 +42,7 @@ public class KafkaEventConsumer : BackgroundService
             while (!stoppingToken.IsCancellationRequested)
             {
                 var result = consumer.Consume(stoppingToken);
-                var userCreatedEvent = JsonSerializer.Deserialize<UserCreated>(result.Message.Value);
+                var userCreatedEvent = JsonSerializer.Deserialize<UserUpdated>(result.Message.Value);
 
                 if (userCreatedEvent == null)
                 {

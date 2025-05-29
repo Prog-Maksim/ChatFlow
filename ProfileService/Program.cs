@@ -52,6 +52,7 @@ builder.Services.AddSingleton<JwtTokenService>();
 builder.Services.AddSingleton<S3Service>();
 builder.Services.AddScoped<ProfileService.Service.ProfileService>();
 builder.Services.AddSingleton<ISecurityRedisConnection, SecurityRedisConnection>();
+builder.Services.AddSingleton<KafkaEventProducer>();
 
 // Swagger
 builder.Services.AddApiVersioning(options =>

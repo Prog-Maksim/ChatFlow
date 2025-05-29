@@ -7,12 +7,13 @@ using Microsoft.AspNetCore.Mvc.ApiExplorer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
-using ProfileService;
-using ProfileService.Repository;
-using ProfileService.Repository.Interfaces;
-using ProfileService.Scripts;
-using ProfileService.Service;
+using Nest;
 using Prometheus;
+using SearchService;
+using SearchService.Models.DB;
+using SearchService.Repository;
+using SearchService.Repository.Interfaces;
+using SearchService.Service;
 using Serilog;
 using Serilog.Events;
 using Serilog.Sinks.Elasticsearch;
@@ -42,16 +43,36 @@ builder.Host.UseSerilog();
 builder.Services.AddSingleton<AuthOptions>(sp =>
     new AuthOptions(sp.GetRequiredService<IConfiguration>()));
 
+builder.Services.AddSingleton<ISearchRepository, SearchRepository>();
+
 builder.Services.AddHostedService<KafkaEventConsumer>();
 builder.Services.AddHostedService<TokenSubscriberService>();
 
-builder.Services.AddScoped<IProfileRepository, ProfileRepository>();
-
-builder.Services.AddScoped<ImageService>();
+builder.Services.AddSingleton<SearchService.Service.SearchService>();
 builder.Services.AddSingleton<JwtTokenService>();
-builder.Services.AddSingleton<S3Service>();
-builder.Services.AddScoped<ProfileService.Service.ProfileService>();
 builder.Services.AddSingleton<ISecurityRedisConnection, SecurityRedisConnection>();
+
+// ElasticSearch
+var settings = new ConnectionSettings(new Uri(builder.Configuration.GetConnectionString("ElasticSearch")))
+    .DefaultIndex("chats")
+    .DefaultMappingFor<IndexPerson>(m => m
+        .PropertyName(p => p.ChatId, "chatId")
+        .PropertyName(p => p.Type, "type")
+        .PropertyName(p => p.Title, "title")
+        .PropertyName(p => p.Name, "name")
+        .PropertyName(p => p.Surname, "surname")
+        .PropertyName(p => p.Tag, "tag")
+    )
+    .DisableDirectStreaming()
+    .PrettyJson()
+    .OnRequestCompleted(details =>
+    {
+        Console.WriteLine(details.DebugInformation);
+    })
+    .DefaultFieldNameInferrer(p => p);
+
+var elasticClient = new ElasticClient(settings);
+builder.Services.AddSingleton<IElasticClient>(elasticClient);
 
 // Swagger
 builder.Services.AddApiVersioning(options =>
@@ -153,7 +174,7 @@ if (app.Environment.IsDevelopment())
                 description.GroupName.ToUpperInvariant());
         }
 
-        options.RoutePrefix = "swagger-ms2";
+        options.RoutePrefix = "swagger-ms3";
     });
 }
 

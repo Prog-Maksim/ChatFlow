@@ -34,13 +34,14 @@ public class ProfileService
 
         if (personId is not null)
         {
-            if (!await _profileRepository.UserExistsAsync(dataToken.PersonId))
+            if (!await _profileRepository.UserExistsAsync(personId))
             {
                 _logger.LogError("Пользователь под id: {personId} не найден!", dataToken.PersonId);
                 return new BaseResponse<string, SummaryDataPerson> { Message = "Пользователь не найден!", Successfully = false, Status = 404, Type = ResponseType.ImageLimitReached, Errors = "Not Found", Data = null };
             }
 
             var data = await _profileRepository.GetSummaryPersonDataAsync(personId);
+            
             return new BaseResponse<string, SummaryDataPerson>
             {
                 Message = "Краткие данные пользователя",
@@ -78,7 +79,7 @@ public class ProfileService
 
         if (personId is not null)
         {
-            if (!await _profileRepository.UserExistsAsync(dataToken.PersonId))
+            if (!await _profileRepository.UserExistsAsync(personId))
             {
                 _logger.LogError("Пользователь под id: {personId} не найден!", dataToken.PersonId);
                 return new BaseResponse<string, DataPerson> { Message = "Пользователь не найден!", Successfully = false, Status = 404, Type = ResponseType.ImageLimitReached, Errors = "Not Found", Data = null };

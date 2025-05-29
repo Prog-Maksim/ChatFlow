@@ -1,3 +1,4 @@
+using Nest;
 using SearchService.Models.DB;
 using SearchService.Models.Events;
 
@@ -12,6 +13,13 @@ public interface ISearchRepository
     /// <returns></returns>
     public Task CreatePersonAsync(UserCreated user);
     
+    /// <summary>
+    /// Производит поиск чатов
+    /// </summary>
+    /// <param name="query">Поисковой запрос</param>
+    /// <returns></returns>
+    /// <exception cref="Exception">Ошибка выполнения поиска</exception>
+    public Task<IReadOnlyCollection<IndexPerson>> SearchAsync(string query, int? size = 20);
     
     /// <summary>
     /// Сохранение

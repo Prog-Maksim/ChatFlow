@@ -1,5 +1,3 @@
-using System.Text.Json.Serialization;
-using Newtonsoft.Json.Converters;
 using SearchService.Enums;
 
 namespace SearchService.Models.DB;
@@ -14,7 +12,7 @@ public class IndexPerson
     /// <summary>
     /// Тип чата
     /// </summary>
-    [JsonConverter(typeof(StringEnumConverter))]
+    // [System.Text.Json.Serialization.JsonConverter(typeof(StringEnumConverter))]
     public ChatType Type { get; set; }
     
     /// <summary>

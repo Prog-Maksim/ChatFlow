@@ -8,8 +8,6 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 using Nest;
-using Newtonsoft.Json;
-using Newtonsoft.Json.Converters;
 using Prometheus;
 using SearchService;
 using SearchService.Models.DB;
@@ -45,11 +43,12 @@ builder.Host.UseSerilog();
 builder.Services.AddSingleton<AuthOptions>(sp =>
     new AuthOptions(sp.GetRequiredService<IConfiguration>()));
 
-builder.Services.AddScoped<ISearchRepository, SearchRepository>();
+builder.Services.AddSingleton<ISearchRepository, SearchRepository>();
 
 builder.Services.AddHostedService<KafkaEventConsumer>();
 builder.Services.AddHostedService<TokenSubscriberService>();
 
+builder.Services.AddSingleton<SearchService.Service.SearchService>();
 builder.Services.AddSingleton<JwtTokenService>();
 builder.Services.AddSingleton<ISecurityRedisConnection, SecurityRedisConnection>();
 
@@ -57,7 +56,12 @@ builder.Services.AddSingleton<ISecurityRedisConnection, SecurityRedisConnection>
 var settings = new ConnectionSettings(new Uri(builder.Configuration.GetConnectionString("ElasticSearch")))
     .DefaultIndex("chats")
     .DefaultMappingFor<IndexPerson>(m => m
-            .PropertyName(p => p.Type, "type") // для примера
+        .PropertyName(p => p.ChatId, "chatId")
+        .PropertyName(p => p.Type, "type")
+        .PropertyName(p => p.Title, "title")
+        .PropertyName(p => p.Name, "name")
+        .PropertyName(p => p.Surname, "surname")
+        .PropertyName(p => p.Tag, "tag")
     )
     .DisableDirectStreaming()
     .PrettyJson()

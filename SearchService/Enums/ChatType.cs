@@ -4,6 +4,6 @@ public enum ChatType
 {
     User,
     Group,
-    Chat,
+    Channel,
     Bot
 }

@@ -4,20 +4,17 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.ApiExplorer;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
-using Nest;
 using Prometheus;
-using SearchService;
-using SearchService.Models.DB;
-using SearchService.Repository;
-using SearchService.Repository.Interfaces;
-using SearchService.Service;
 using Serilog;
 using Serilog.Events;
 using Serilog.Sinks.Elasticsearch;
 using StackExchange.Redis;
+using WebSocketService;
+using WebSocketService.Repository;
+using WebSocketService.Repository.Interfaces;
+using WebSocketService.Service;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -42,36 +39,13 @@ builder.Host.UseSerilog();
 builder.Services.AddSingleton<AuthOptions>(sp =>
     new AuthOptions(sp.GetRequiredService<IConfiguration>()));
 
-builder.Services.AddSingleton<ISearchRepository, SearchRepository>();
+builder.Services.AddSingleton<IWebSocketConnectionManager, WebSocketConnectionManager>();
+builder.Services.AddSingleton<WebSocketService.Service.WebSocketService>();
 
-builder.Services.AddHostedService<KafkaEventConsumer>();
 builder.Services.AddHostedService<TokenSubscriberService>();
 
-builder.Services.AddSingleton<SearchService.Service.SearchService>();
 builder.Services.AddSingleton<JwtTokenService>();
 builder.Services.AddSingleton<ISecurityRedisConnection, SecurityRedisConnection>();
-
-// ElasticSearch
-var settings = new ConnectionSettings(new Uri(builder.Configuration.GetConnectionString("ElasticSearch")))
-    .DefaultIndex("chats")
-    .DefaultMappingFor<IndexPerson>(m => m
-        .PropertyName(p => p.ChatId, "chatId")
-        .PropertyName(p => p.Type, "type")
-        .PropertyName(p => p.Title, "title")
-        .PropertyName(p => p.Name, "name")
-        .PropertyName(p => p.Surname, "surname")
-        .PropertyName(p => p.Tag, "tag")
-    )
-    .DisableDirectStreaming()
-    .PrettyJson()
-    .OnRequestCompleted(details =>
-    {
-        Console.WriteLine(details.DebugInformation);
-    })
-    .DefaultFieldNameInferrer(p => p);
-
-var elasticClient = new ElasticClient(settings);
-builder.Services.AddSingleton<IElasticClient>(elasticClient);
 
 // Swagger
 builder.Services.AddApiVersioning(options =>
@@ -149,6 +123,11 @@ var redisDefault = builder.Configuration.GetConnectionString("RedisDefault")
 builder.Services.AddSingleton<IConnectionMultiplexer>(ConnectionMultiplexer.Connect(redisDefault));
 builder.Services.AddSingleton<ISecurityRedisConnection, SecurityRedisConnection>();
 
+// Подключает БД
+// string? connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
+// builder.Services.AddDbContext<ApplicationContext>(options => options.UseMySql(connectionString, ServerVersion.AutoDetect(connectionString)));
+
+
 var app = builder.Build();
 
 // Настройки среды
@@ -168,9 +147,11 @@ if (app.Environment.IsDevelopment())
                 description.GroupName.ToUpperInvariant());
         }
 
-        options.RoutePrefix = "swagger-ms3";
+        options.RoutePrefix = "swagger-ms6";
     });
 }
+
+app.UseWebSockets();
 
 app.UseRouting();
 

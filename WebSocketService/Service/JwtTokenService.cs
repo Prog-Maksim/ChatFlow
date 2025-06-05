@@ -1,19 +1,22 @@
 ﻿using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
-using SearchService.Models.Other;
-using SearchService.Enums;
+using WebSocketService.Models.Other;
+using WebSocketService.Enums;
 using StackExchange.Redis;
+using WebSocketService.Repository.Interfaces;
 
-namespace SearchService.Service;
+namespace WebSocketService.Service;
 
 public class JwtTokenService
 {
     private readonly IDatabase _database;
     public const int RefreshTokenLifetimeDay = 30;
+    private readonly IWebSocketConnectionManager _webSocketConnectionManager;
 
-    public JwtTokenService(IConnectionMultiplexer connection)
+    public JwtTokenService(IConnectionMultiplexer connection, IWebSocketConnectionManager webSocketConnectionManager)
     {
         _database = connection.GetDatabase();
+        _webSocketConnectionManager = webSocketConnectionManager;
     }
     
     public JwtTokenData GetJwtTokenData(string token)
@@ -53,12 +56,18 @@ public class JwtTokenService
         };
     }
 
-    public async Task RevokeSession(string sessionId)
+    /// <summary>
+    /// Отзывает заблокированную сессию
+    /// </summary>
+    /// <param name="sessionId">Идентификатор сессии</param>
+    /// <param name="personId">Идентификатор пользователя</param>
+    public async Task RevokeSession(string sessionId, string personId)
     {
         var tag = "sessions";
         
         await _database.SetAddAsync(tag, sessionId);
         await _database.KeyExpireAsync(tag, TimeSpan.FromDays(RefreshTokenLifetimeDay));
+        await _webSocketConnectionManager.RemoveConnection(personId, sessionId);
     }
     
     /// <summary>

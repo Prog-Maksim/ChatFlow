@@ -1,8 +1,8 @@
 using System.Text.Json;
-using SearchService.Repository.Interfaces;
 using StackExchange.Redis;
+using WebSocketService.Repository.Interfaces;
 
-namespace SearchService.Service;
+namespace WebSocketService.Service;
 
 public class TokenSubscriberService: BackgroundService
 {
@@ -26,7 +26,7 @@ public class TokenSubscriberService: BackgroundService
             var data = JsonSerializer.Deserialize<TokenRevokedMessage>(message);
             if (data is not null)
             {
-                _ = _jwtTokenService.RevokeSession(data.SessionId);
+                _ = _jwtTokenService.RevokeSession(data.SessionId, data.PersonId);
             }
             else
                 _logger.LogWarning("Не удалось преобразовать сообщение: {@message}", message);

@@ -1,6 +1,6 @@
-﻿using SearchService.Enums;
+﻿using WebSocketService.Enums;
 
-namespace SearchService.Models.Other;
+namespace WebSocketService.Models.Other;
 
 public class JwtTokenData
 {

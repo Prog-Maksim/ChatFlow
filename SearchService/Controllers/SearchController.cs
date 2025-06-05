@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using SearchService.Repository.Interfaces;
+using Prometheus;
+using SearchService.Monitoring;
 
 namespace SearchService.Controllers;
 
@@ -19,14 +20,22 @@ public class SearchController(ILogger<SearchController> logger, Service.SearchSe
     [HttpGet("search")]
     public async Task<IActionResult> Search([FromQuery] string query)
     {
-        var authHeader = HttpContext.Request.Headers["Authorization"].ToString();
-        var token = authHeader.Substring("Bearer ".Length);
+        MetricsRegistry.EndpointRequestCounter
+            .WithLabels("search", "GET", "search", Environment.MachineName).Inc();
+        
+        using (MetricsRegistry.EndpointDuration
+                   .WithLabels("search", "GET", "search", Environment.MachineName)
+                   .NewTimer())
+        {
+            var authHeader = HttpContext.Request.Headers["Authorization"].ToString();
+            var token = authHeader.Substring("Bearer ".Length);
 
-        var response = await searchService.SearchAsync(token, query);
+            var response = await searchService.SearchAsync(token, query);
 
-        if (!response.Successfully)
-            return StatusCode(response.Status, response);
+            if (!response.Successfully)
+                return StatusCode(response.Status, response);
 
-        return Ok(response);
+            return Ok(response);
+        }
     }
 }

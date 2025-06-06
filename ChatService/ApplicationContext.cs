@@ -1,13 +1,14 @@
-﻿using Microsoft.EntityFrameworkCore;
+﻿using ChatService.Models.DB;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Design;
 
-namespace SearchService;
+namespace ChatService;
 
 public class ApplicationContext: DbContext
 {
     // Таблицы
-    // public DbSet<Persons> Persons { get; set; }
-    // public DbSet<Images> Images { get; set; }
+    public DbSet<Person> Persons { get; set; }
+    // public DbSet<Session> Sessions { get; set; }
     
     public ApplicationContext(DbContextOptions<ApplicationContext> options) : base(options) { }
 

@@ -1,12 +1,12 @@
 using Prometheus;
 
-namespace SearchService.Monitoring;
+namespace MessageService.Monitoring;
 
 public static class MetricsRegistry
 {
     // Счетчик
     public static readonly Counter EndpointRequestCounter = Metrics
-        .CreateCounter("searchservice_requests_total",
+        .CreateCounter("messageservice_requests_total",
             "Total number of endpoint requests",
             new CounterConfiguration
             {
@@ -21,11 +21,12 @@ public static class MetricsRegistry
     
     // Гистограмма (время ответа)
     public static readonly Histogram EndpointDuration = Metrics.CreateHistogram(
-        "searchservice_request_duration_seconds",
+        "messageservice_request_duration_seconds",
         "Request duration by endpoint",
         new HistogramConfiguration
         {
             Buckets = Histogram.ExponentialBuckets(0.01, 2, 10), // от 10мс до ~10сек
             LabelNames = [ "endpoint", "method", "service", "instance" ]
         });
+
 }

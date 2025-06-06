@@ -365,7 +365,7 @@ public class AuthService
                     return new BaseResponse<string, List<string>> { Message = "Данная сессия не найдена", Successfully = false, Status = 404, Type = ResponseType.SessionNotFound, Errors = "Not Found", Data = null };
                     
                 session.IsRevoked = true;
-                await _authRepository.AddSessionToBanAsync(sessionId);
+                await _authRepository.AddSessionToBanAsync(sessionId, dataToken.PersonId);
                 await _authRepository.SaveChangesAsync();
 
                 return new BaseResponse<string, List<string>> { Message = "Сессия успешно отозвана", Successfully = true, Status = 200, Type = ResponseType.Ok, Errors = null, Data = new List<string> { sessionId } };
@@ -373,7 +373,7 @@ public class AuthService
 
             var sessionsRevoke = sessions.Where(s => s.PersonId == dataToken.PersonId && s.Id != dataToken.Id);
             
-            await _authRepository.AddSessionsToBanAsync(sessionsRevoke.Select(s => s.SessionId));
+            await _authRepository.AddSessionsToBanAsync(sessionsRevoke.Select(s => s.SessionId), dataToken.PersonId);
             await sessionsRevoke.ExecuteUpdateAsync(p => p.SetProperty(s => s.IsRevoked, s => true));
             
             return new BaseResponse<string, List<string>> { Message = "Сессии успешно отозваны", Successfully = true, Status = 200, Type = ResponseType.Ok, Errors = null, Data = sessionsRevoke.Select(s => s.SessionId).ToList() };
@@ -388,7 +388,7 @@ public class AuthService
         if (session == null) return;
         
         await _authRepository.RevokeAllSessionsAsync(personId);
-        await _authRepository.AddSessionsToBanAsync(session.Select(s => s.SessionId));
+        await _authRepository.AddSessionsToBanAsync(session.Select(s => s.SessionId), personId);
     }
     
     /// <summary>

@@ -20,6 +20,13 @@ public interface ISearchRepository
     /// <returns></returns>
     /// <exception cref="Exception">Ошибка выполнения поиска</exception>
     public Task<IReadOnlyCollection<IndexPerson>> SearchAsync(string query, int? size = 20);
+
+    /// <summary>
+    /// Обновляет данные пользователя
+    /// </summary>
+    /// <param name="data">Обновленные данные пользователя</param>
+    /// <returns></returns>
+    public Task<bool> UpdatePersonAsync(UserCreated data);
     
     /// <summary>
     /// Сохранение

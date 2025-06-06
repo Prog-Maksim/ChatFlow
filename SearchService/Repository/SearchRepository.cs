@@ -80,17 +80,34 @@ public class SearchRepository: ISearchRepository
         return searchResponse.Documents;
     }
 
+    public async Task<bool> UpdatePersonAsync(UserCreated data)
+    {
+        var response = await _elasticClient.UpdateAsync<IndexPerson>(
+            id: data.PersonId,
+            selector: u => u
+                .Index("chats")
+                .Doc(new IndexPerson
+                {
+                    ChatId = data.PersonId,
+                    Name = data.Name,
+                    Surname = data.Surname,
+                    Tag = data.Tag
+                })
+                .DocAsUpsert(false)
+        );
+
+        if (!response.IsValid)
+        {
+            Console.WriteLine($"Ошибка при обновлении: {response.ServerError?.Error?.Reason}");
+        }
+
+        _logger.LogInformation("Данные пользователя успешно обновлены");
+        return response.IsValid;
+    }
+
 
     public async Task SaveChangesAsync()
     {
         
     }
-}
-
-public class PersonSearchResult
-{
-    public string ChatId { get; set; } = null!;
-    public string? Name { get; set; }
-    public string? Surname { get; set; }
-    public ChatType Type { get; set; }
 }

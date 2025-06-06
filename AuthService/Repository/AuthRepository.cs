@@ -141,15 +141,15 @@ public class AuthRepository: IAuthRepository
         await _database.KeyExpireAsync(tag, TimeSpan.FromDays(JwtTokenService.RefreshTokenLifetimeDay));
     }
 
-    public async Task AddSessionToBanAsync(string sessionId)
+    public async Task AddSessionToBanAsync(string sessionId, string personId)
     {
         var tag= "sessions";
         await _database.SetAddAsync(tag, sessionId);
         await _database.KeyExpireAsync(tag, TimeSpan.FromDays(JwtTokenService.RefreshTokenLifetimeDay));
-        await _tokenPublisherService.PublishTokenRevokedAsync(sessionId);
+        await _tokenPublisherService.PublishTokenRevokedAsync(sessionId, personId);
     }
     
-    public async Task AddSessionsToBanAsync(IEnumerable<string> sessionIds)
+    public async Task AddSessionsToBanAsync(IEnumerable<string> sessionIds, string personId)
     {
         var tag = "sessions";
         
@@ -161,7 +161,7 @@ public class AuthRepository: IAuthRepository
         
         await _database.SetAddAsync(tag, redisValues);
         await _database.KeyExpireAsync(tag, TimeSpan.FromDays(JwtTokenService.RefreshTokenLifetimeDay));
-        await _tokenPublisherService.PublishTokenRevokedAsync(sessionsList);
+        await _tokenPublisherService.PublishTokenRevokedAsync(sessionsList, personId);
     }
 
 

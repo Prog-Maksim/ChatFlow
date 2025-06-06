@@ -39,7 +39,6 @@ Log.Logger = new LoggerConfiguration()
 builder.Host.UseSerilog();
 
 // Добавление сервисов
-
 builder.Services.AddSingleton<AuthOptions>(sp =>
     new AuthOptions(sp.GetRequiredService<IConfiguration>()));
 
@@ -149,11 +148,6 @@ var redisDefault = builder.Configuration.GetConnectionString("RedisDefault")
 
 builder.Services.AddSingleton<IConnectionMultiplexer>(ConnectionMultiplexer.Connect(redisDefault));
 builder.Services.AddSingleton<ISecurityRedisConnection, SecurityRedisConnection>();
-
-// Подключает БД
-string? connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
-builder.Services.AddDbContext<ApplicationContext>(options => options.UseMySql(connectionString, ServerVersion.AutoDetect(connectionString)));
-
 
 var app = builder.Build();
 

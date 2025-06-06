@@ -85,15 +85,17 @@ public interface IAuthRepository
     /// Блокировка сессии
     /// </summary>
     /// <param name="sessionId">Идентификатор сессии</param>
+    /// <param name="personId">Идентификатор пользователя</param>
     /// <returns></returns>
-    public Task AddSessionToBanAsync(string sessionId);
-    
+    public Task AddSessionToBanAsync(string sessionId, string personId);
+
     /// <summary>
     /// Добавляет в бан список сессий
     /// </summary>
-    /// <param name="sessionIds"></param>
+    /// <param name="sessionIds">Идентификаторы сессий</param>
+    /// <param name="personId">Идентификатор пользователя</param>
     /// <returns></returns>
-    public Task AddSessionsToBanAsync(IEnumerable<string> sessionIds);
+    public Task AddSessionsToBanAsync(IEnumerable<string> sessionIds, string personId);
 
     /// <summary>
     /// Проверка токена на блокировку

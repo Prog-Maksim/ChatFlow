@@ -9,7 +9,8 @@ public class KafkaEventConsumer : BackgroundService
 {
     private readonly IConfiguration _configuration;
     private readonly ILogger<KafkaEventConsumer> _logger;
-    private readonly string _topic = "user.created";
+    private readonly string _topic1 = "user.created";
+    private readonly string _topic2 = "user.updated";
     private readonly string _groupId = "search-service-consumer-group";
     
     private readonly IServiceScopeFactory _scopeFactory;
@@ -34,28 +35,48 @@ public class KafkaEventConsumer : BackgroundService
         };
 
         using var consumer = new ConsumerBuilder<Ignore, string>(config).Build();
-        consumer.Subscribe(_topic);
+        consumer.Subscribe(new List<string> { _topic1, _topic2 });
 
         try
         {
             while (!stoppingToken.IsCancellationRequested)
             {
                 var result = consumer.Consume(stoppingToken);
-                var userCreatedEvent = JsonSerializer.Deserialize<UserCreated>(result.Message.Value);
-
-                if (userCreatedEvent == null)
-                {
-                    _logger.LogError("Получено сообщение от kafka.\nНевозможно создать пользователя. \nСтруктура: \n\n{@result}", result.Message.Value);
-                    continue;
-                }
                 
-                _logger.LogDebug("[Kafka] Получен новый пользователь: {@user}", userCreatedEvent);
-
-                using (var scope = _scopeFactory.CreateScope())
+                using var scope = _scopeFactory.CreateScope();
+                var repository = scope.ServiceProvider.GetRequiredService<ISearchRepository>();
+                
+                if (result.Topic == _topic1)
                 {
-                    var repository = scope.ServiceProvider.GetRequiredService<ISearchRepository>();
+                    var userCreatedEvent = JsonSerializer.Deserialize<UserCreated>(result.Message.Value);
+
+                    if (userCreatedEvent == null)
+                    {
+                        _logger.LogError(
+                            "Получено сообщение от kafka.\nНевозможно создать пользователя. \nСтруктура: \n\n{@result}",
+                            result.Message.Value);
+                        continue;
+                    }
+
+                    _logger.LogDebug("[Kafka] Получен новый пользователь: {@user}", userCreatedEvent);
+
                     await repository.CreatePersonAsync(userCreatedEvent);
-                    await repository.SaveChangesAsync();
+                }
+                else if (result.Topic == _topic2)
+                {
+                    var userCreatedEvent = JsonSerializer.Deserialize<UserCreated>(result.Message.Value);
+
+                    if (userCreatedEvent == null)
+                    {
+                        _logger.LogError(
+                            "Получено сообщение от kafka.\nНевозможно обновить пользователя. \nСтруктура: \n\n{@result}",
+                            result.Message.Value);
+                        continue;
+                    }
+
+                    _logger.LogDebug("[Kafka] Получены данные для обновления пользователя: {@user}", userCreatedEvent);
+
+                    await repository.UpdatePersonAsync(userCreatedEvent);
                 }
             }
         }

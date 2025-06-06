@@ -26,13 +26,14 @@ public class ProfileRepository: IProfileRepository
         _logger.LogDebug("Пользователь успешно создан");
     }
 
-    public async Task CreatePersonAsync(UserCreated person)
+    public async Task CreatePersonAsync(UserUpdated person)
     {
         Persons personCreated = new Persons
         {
             PersonId = person.PersonId,
             Name = person.Name,
-            Surname = person.Surname
+            Surname = person.Surname,
+            Tag = person.Tag
         };
         
         await _context.Persons.AddAsync(personCreated);
@@ -156,13 +157,14 @@ public class ProfileRepository: IProfileRepository
                 .ExecuteUpdateAsync(setters => setters
                     .SetProperty(p => p.IsPrimary, p => p.Id == primaryImageId));
     }
+    
 
-    public async Task<bool> CheckTagAsync(string tag)
+    public async Task<Persons?> CheckTagAsync(string tag)
     {
-        return !await _context.Persons.AnyAsync(p => p.Tag == tag);
+        return await _context.Persons.FirstOrDefaultAsync(t => t.Tag == tag);
     }
 
-    public async Task<bool> UpdateProfileDataAsync(string personId, Profile profile)
+    public async Task UpdateProfileDataAsync(string personId, Profile profile)
     {
         var result = await _context.Persons
             .Where(p => p.PersonId == personId)
@@ -172,8 +174,6 @@ public class ProfileRepository: IProfileRepository
                 .SetProperty(p => p.Tag, profile.Tag)
                 .SetProperty(p => p.Description, profile.Description)
             );
-
-        return result > 0;
     }
 
 

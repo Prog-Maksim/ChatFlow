@@ -4,19 +4,17 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.ApiExplorer;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
-using ProfileService;
-using ProfileService.Repository;
-using ProfileService.Repository.Interfaces;
-using ProfileService.Scripts;
-using ProfileService.Service;
 using Prometheus;
 using Serilog;
 using Serilog.Events;
 using Serilog.Sinks.Elasticsearch;
 using StackExchange.Redis;
+using WebSocketService;
+using WebSocketService.Repository;
+using WebSocketService.Repository.Interfaces;
+using WebSocketService.Service;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -38,21 +36,16 @@ Log.Logger = new LoggerConfiguration()
 builder.Host.UseSerilog();
 
 // Добавление сервисов
-
 builder.Services.AddSingleton<AuthOptions>(sp =>
     new AuthOptions(sp.GetRequiredService<IConfiguration>()));
 
-builder.Services.AddHostedService<KafkaEventConsumer>();
+builder.Services.AddSingleton<IWebSocketConnectionManager, WebSocketConnectionManager>();
+builder.Services.AddSingleton<WebSocketService.Service.WebSocketService>();
+
 builder.Services.AddHostedService<TokenSubscriberService>();
 
-builder.Services.AddScoped<IProfileRepository, ProfileRepository>();
-
-builder.Services.AddScoped<ImageService>();
 builder.Services.AddSingleton<JwtTokenService>();
-builder.Services.AddSingleton<S3Service>();
-builder.Services.AddScoped<ProfileService.Service.ProfileService>();
 builder.Services.AddSingleton<ISecurityRedisConnection, SecurityRedisConnection>();
-builder.Services.AddSingleton<KafkaEventProducer>();
 
 // Swagger
 builder.Services.AddApiVersioning(options =>
@@ -131,8 +124,8 @@ builder.Services.AddSingleton<IConnectionMultiplexer>(ConnectionMultiplexer.Conn
 builder.Services.AddSingleton<ISecurityRedisConnection, SecurityRedisConnection>();
 
 // Подключает БД
-string? connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
-builder.Services.AddDbContext<ApplicationContext>(options => options.UseMySql(connectionString, ServerVersion.AutoDetect(connectionString)));
+// string? connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
+// builder.Services.AddDbContext<ApplicationContext>(options => options.UseMySql(connectionString, ServerVersion.AutoDetect(connectionString)));
 
 
 var app = builder.Build();
@@ -154,9 +147,11 @@ if (app.Environment.IsDevelopment())
                 description.GroupName.ToUpperInvariant());
         }
 
-        options.RoutePrefix = "swagger-ms2";
+        options.RoutePrefix = "swagger-ms6";
     });
 }
+
+app.UseWebSockets();
 
 app.UseRouting();
 

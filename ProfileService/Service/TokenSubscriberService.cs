@@ -47,6 +47,7 @@ public class TokenSubscriberService: BackgroundService
     
     private class TokenRevokedMessage
     {
+        public required string PersonId { get; set; }
         public required string SessionId { get; set; }
         public DateTime RevokedAt { get; set; }
     }

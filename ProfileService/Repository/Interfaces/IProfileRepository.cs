@@ -19,7 +19,7 @@ public interface IProfileRepository
     /// </summary>
     /// <param name="person"></param>
     /// <returns></returns>
-    public Task CreatePersonAsync(UserCreated person);
+    public Task CreatePersonAsync(UserUpdated person);
     
     /// <summary>
     /// Возвращает краткую информацию пользователя
@@ -114,7 +114,7 @@ public interface IProfileRepository
     /// </summary>
     /// <param name="tag">Тег пользователя</param>
     /// <returns>true - тег свободен</returns>
-    public Task<bool> CheckTagAsync(string tag);
+    public Task<Persons?> CheckTagAsync(string tag);
 
     /// <summary>
     /// Обновляет данные в БД
@@ -122,7 +122,7 @@ public interface IProfileRepository
     /// <param name="personId">Идентификатор пользователя</param>
     /// <param name="profile">Данные профиля</param>
     /// <returns>true - Одно или несколько полей были обновлены</returns>
-    public Task<bool> UpdateProfileDataAsync(string personId, Profile profile);
+    public Task UpdateProfileDataAsync(string personId, Profile profile);
     
     /// <summary>
     /// Сохраняет изменения в БД

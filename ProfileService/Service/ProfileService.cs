@@ -1,4 +1,5 @@
 using ProfileService.Enums;
+using ProfileService.Models.Events;
 using ProfileService.Models.Other;
 using ProfileService.Models.Requests;
 using ProfileService.Models.Response;
@@ -12,12 +13,14 @@ public class ProfileService
     private readonly ILogger<ProfileService> _logger;
     private readonly IProfileRepository _profileRepository;
     private readonly JwtTokenService _jwtTokenService;
+    private readonly KafkaEventProducer _kafkaEventProducer;
     
-    public ProfileService(ILogger<ProfileService> logger, IProfileRepository profileRepository, JwtTokenService jwtTokenService)
+    public ProfileService(ILogger<ProfileService> logger, IProfileRepository profileRepository, JwtTokenService jwtTokenService, KafkaEventProducer kafkaEventProducer)
     {
         _logger = logger;
         _profileRepository = profileRepository;
         _jwtTokenService = jwtTokenService;
+        _kafkaEventProducer = kafkaEventProducer;
     }
     
     /// <summary>
@@ -121,14 +124,25 @@ public class ProfileService
         if (!await _jwtTokenService.ValidateJwtAccessToken(dataToken))
             return new BaseResponse<string, string> { Message = "Не удалось проверить корректность jwt токена", Type = ResponseType.JwtTokenVerificationFailed, Errors = "Forbidden", Status = 403, Successfully = false, Data = null};
 
-        if (profile.Tag is not null && !await _profileRepository.CheckTagAsync(profile.Tag))
+        var personTag = await _profileRepository.CheckTagAsync(profile.Tag);
+        
+        if (profile.Tag is not null && (personTag != null && personTag.PersonId != dataToken.PersonId))
             return new BaseResponse<string, string> { Message = "Данный тег занят", Type = ResponseType.TagAlreadyExists, Errors = "Forbidden", Status = 403, Successfully = false, Data = null};
 
-        var result = await _profileRepository.UpdateProfileDataAsync(dataToken.PersonId, profile);
+        await _profileRepository.UpdateProfileDataAsync(dataToken.PersonId, profile);
         
-        if (result)
-            return new BaseResponse<string, string> { Message = "Данные были успешно обновлены", Type = ResponseType.Ok, Status = 200, Successfully = true, Data = null};
-
-        return new BaseResponse<string, string> { Message = "Не найдены данные для обновления", Type = ResponseType.UpdateDataNotFound, Errors = "NotFound", Status = 404, Successfully = false, Data = null};
+        await _kafkaEventProducer.PublishUserUpdateAsync(new UserUpdated
+        {
+            PersonId = dataToken.PersonId,
+            Name = profile.Name,
+            Surname = profile.Surname,
+            Tag = profile.Tag
+        });
+            
+        return new BaseResponse<string, string>
+        {
+            Message = "Данные были успешно обновлены", Type = ResponseType.Ok, Status = 200, Successfully = true,
+            Data = null
+        };
     }
 }

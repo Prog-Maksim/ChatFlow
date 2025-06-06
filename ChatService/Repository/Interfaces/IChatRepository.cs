@@ -29,4 +29,11 @@ public interface IChatRepository
     /// <param name="otherPersonId">Идентификатор второго пользователя</param>
     /// <returns></returns>
     public Task<ChatDocument> CreatePrivateChatAsync(string personId, string otherPersonId);
+    
+    /// <summary>
+    /// Возвращает все чаты пользователя
+    /// </summary>
+    /// <param name="personId">Идентификатор пользователя</param>
+    /// <returns></returns>
+    public Task<List<ChatDocument>?> GetChats(string personId);
 }

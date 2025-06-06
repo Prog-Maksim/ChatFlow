@@ -58,7 +58,7 @@ public class KafkaEventConsumer : BackgroundService
                         continue;
                     }
                     
-                    _logger.LogDebug("[Kafka] Получен новый пользователь: {@user}", userCreatedEvent);
+                    _logger.LogDebug("[Kafka] Получен новый чат: {@user}", userCreatedEvent);
                     
                     await repository.AddNewChatAsync(userCreatedEvent);
                 }

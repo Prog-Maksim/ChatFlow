@@ -23,16 +23,43 @@ public class ChatController(ILogger<ChatController> logger, Service.ChatService 
     public async Task<IActionResult> CreatePrivateChat([Required][FromQuery] string otherPersonId)
     {
         MetricsRegistry.EndpointRequestCounter
-            .WithLabels("search", "GET", "search", Environment.MachineName).Inc();
+            .WithLabels("create-private-chat", "POST", "chat", Environment.MachineName).Inc();
         
         using (MetricsRegistry.EndpointDuration
-                   .WithLabels("search", "GET", "search", Environment.MachineName)
+                   .WithLabels("create-private-chat", "POST", "chat", Environment.MachineName)
                    .NewTimer())
         {
             var authHeader = HttpContext.Request.Headers["Authorization"].ToString();
             var token = authHeader.Substring("Bearer ".Length);
 
             var response = await chatService.CreatePrivateChat(token, otherPersonId);
+
+            if (!response.Successfully)
+                return StatusCode(response.Status, response);
+
+            return Ok(response);
+        }
+    }
+
+    /// <summary>
+    /// Возвращает все чаты пользователя
+    /// </summary>
+    /// <returns></returns>
+    [Authorize]
+    [HttpGet("chats")]
+    public async Task<IActionResult> GetChats()
+    {
+        MetricsRegistry.EndpointRequestCounter
+            .WithLabels("get-chats", "POST", "chat", Environment.MachineName).Inc();
+        
+        using (MetricsRegistry.EndpointDuration
+                   .WithLabels("get-chats", "POST", "chat", Environment.MachineName)
+                   .NewTimer())
+        {
+            var authHeader = HttpContext.Request.Headers["Authorization"].ToString();
+            var token = authHeader.Substring("Bearer ".Length);
+
+            var response = await chatService.GetChats(token);
 
             if (!response.Successfully)
                 return StatusCode(response.Status, response);

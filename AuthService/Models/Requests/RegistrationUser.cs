@@ -8,12 +8,14 @@ public class RegistrationUser
     /// Имя пользователя
     /// </summary>
     [StringLength(35, MinimumLength = 2, ErrorMessage = "Поле 'Name' должен быть в пределах от 2 до 35 символов")]
+    [RegularExpression(@"^[^@]*$", ErrorMessage = "Поле 'Name' не должно содержать символ '@'")]
     public required string Name { get; set; }
     
     /// <summary>
     /// Фамилия пользователя
     /// </summary>
     [StringLength(35, MinimumLength = 2, ErrorMessage = "Поле 'Surname' должен быть в пределах от 2 до 35 символов")]
+    [RegularExpression(@"^[^@]*$", ErrorMessage = "Поле 'Surname' не должно содержать символ '@'")]
     public required string Surname { get; set; }
     
     /// <summary>

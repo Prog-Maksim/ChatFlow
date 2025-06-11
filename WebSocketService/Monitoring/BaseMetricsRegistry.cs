@@ -16,4 +16,21 @@ public static class MetricsRegistry
                     "instance"    // ИМя копии микросервиса
                 ]
             });
+    
+    // Страны подключения пользователей
+    public static readonly Gauge ActiveConnectionsByGeo = Metrics
+        .CreateGauge("websocket_active_connections_by_geo",
+            "Активные подключения к WebSocket по странам и городам",
+            new GaugeConfiguration
+            {
+                LabelNames = 
+                [
+                    "service",
+                    "instance",
+                    "country", 
+                    "city", 
+                    "Latitude", 
+                    "Longitude"
+                ]
+            });
 }

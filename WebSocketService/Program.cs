@@ -43,6 +43,7 @@ builder.Services.AddSingleton<IWebSocketConnectionManager, WebSocketConnectionMa
 builder.Services.AddSingleton<WebSocketService.Service.WebSocketService>();
 
 builder.Services.AddHostedService<TokenSubscriberService>();
+builder.Services.AddHostedService<KafkaEventConsumer>();
 
 builder.Services.AddSingleton<JwtTokenService>();
 builder.Services.AddSingleton<ISecurityRedisConnection, SecurityRedisConnection>();
@@ -122,11 +123,6 @@ var redisDefault = builder.Configuration.GetConnectionString("RedisDefault")
 
 builder.Services.AddSingleton<IConnectionMultiplexer>(ConnectionMultiplexer.Connect(redisDefault));
 builder.Services.AddSingleton<ISecurityRedisConnection, SecurityRedisConnection>();
-
-// Подключает БД
-// string? connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
-// builder.Services.AddDbContext<ApplicationContext>(options => options.UseMySql(connectionString, ServerVersion.AutoDetect(connectionString)));
-
 
 var app = builder.Build();
 

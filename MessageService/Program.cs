@@ -41,12 +41,14 @@ builder.Host.UseSerilog();
 builder.Services.AddSingleton<AuthOptions>(sp =>
     new AuthOptions(sp.GetRequiredService<IConfiguration>()));
 
-builder.Services.AddScoped<IMessageRepository, MessageRepository>();
+builder.Services.AddSingleton<IMessageRepository, MessageRepository>();
 
 builder.Services.AddHostedService<TokenSubscriberService>();
 builder.Services.AddHostedService<KafkaEventConsumer>();
 
 builder.Services.AddSingleton<JwtTokenService>();
+builder.Services.AddSingleton<KafkaEventProducer>();
+builder.Services.AddSingleton<MessageService.Service.MessageService>();
 builder.Services.AddSingleton<ISecurityRedisConnection, SecurityRedisConnection>();
 
 // Swagger

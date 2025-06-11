@@ -1,7 +1,9 @@
 using System.Net.WebSockets;
 using WebSocketService.Enums;
+using WebSocketService.Models.Other;
 using WebSocketService.Models.Response;
 using WebSocketService.Repository.Interfaces;
+using WebSocketService.Scripts;
 
 namespace WebSocketService.Service;
 
@@ -18,7 +20,7 @@ public class WebSocketService
         _jwtTokenService = jwtTokenService;
     }
 
-    public async Task<BaseResponse<string, string>> ConnectPersonAsync(string accessToken, WebSocket socket)
+    public async Task<BaseResponse<string, string>> ConnectPersonAsync(string userIpAdress, string accessToken, WebSocket socket)
     {
         var dataToken = _jwtTokenService.GetJwtTokenData(accessToken);
         if (!await _jwtTokenService.ValidateJwtAccessToken(dataToken))
@@ -29,13 +31,16 @@ public class WebSocketService
             return new BaseResponse<string, string>
                 { Message = "Соединение должно быть открытым", Type = ResponseType.WebSocketIsNotOpen, Successfully = false, Status = 403, Errors = "Bad Request", Data = null };
         
-        _connectionManager.AddConnection(dataToken.PersonId, dataToken.SessionId, socket);
-        await ListenAndHoldOpenConnectionAsync(dataToken.PersonId, dataToken.SessionId, socket);
+        PersonRegion region = await DeterminingIpAddress.GetPositionUser(userIpAdress);
+        
+        _connectionManager.AddConnection(region, dataToken.PersonId, dataToken.SessionId, socket);
+        await ListenAndHoldOpenConnectionAsync(region, dataToken.PersonId, dataToken.SessionId, socket);
         return new BaseResponse<string, string> 
             { Message = "Соединение закрыто", Type = ResponseType.Ok, Successfully = true, Status = 200, Errors = null, Data = null };
     }
 
-    public async Task ListenAndHoldOpenConnectionAsync(string personId, string sessionId, WebSocket ws)
+    public async Task ListenAndHoldOpenConnectionAsync(PersonRegion region, string personId, string sessionId, WebSocket ws)
+    
     {
         var buffer = new byte[1];
 
@@ -57,7 +62,7 @@ public class WebSocketService
         }
         finally
         {
-            await _connectionManager.RemoveConnection(personId, sessionId);
+            await _connectionManager.RemoveConnection(region, personId, sessionId);
         }
     }
 }

@@ -19,6 +19,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MediaService", "MediaServic
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "WebSocketService", "WebSocketService\WebSocketService.csproj", "{5F6353F3-F0CE-4297-85D7-AFB45370C9C3}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "WsLoadBalancer", "WsLoadBalancer\WsLoadBalancer.csproj", "{7B2338F3-0C64-4F2C-8299-529BB23EA726}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -53,5 +55,9 @@ Global
 		{5F6353F3-F0CE-4297-85D7-AFB45370C9C3}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{5F6353F3-F0CE-4297-85D7-AFB45370C9C3}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{5F6353F3-F0CE-4297-85D7-AFB45370C9C3}.Release|Any CPU.Build.0 = Release|Any CPU
+		{7B2338F3-0C64-4F2C-8299-529BB23EA726}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{7B2338F3-0C64-4F2C-8299-529BB23EA726}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{7B2338F3-0C64-4F2C-8299-529BB23EA726}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{7B2338F3-0C64-4F2C-8299-529BB23EA726}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 EndGlobal

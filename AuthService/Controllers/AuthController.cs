@@ -44,7 +44,7 @@ public class AuthController(ILogger<AuthController> logger, Service.AuthService 
         {
             string? userIpAddress = HttpContext.Request.Headers["X-Forwarded-For"].FirstOrDefault() ?? HttpContext.Connection.RemoteIpAddress?.ToString();
         
-            if (userIpAddress == null)
+            if (userIpAddress is null)
             {
                 var error = new BaseResponse<string, object>
                 {
@@ -101,7 +101,7 @@ public class AuthController(ILogger<AuthController> logger, Service.AuthService 
         {
             string? userIpAddress = HttpContext.Request.Headers["X-Forwarded-For"].FirstOrDefault() ?? HttpContext.Connection.RemoteIpAddress?.ToString();
         
-            if (userIpAddress == null)
+            if (userIpAddress is null)
             {
                 var error = new BaseResponse<string, object>
                 {
@@ -151,7 +151,7 @@ public class AuthController(ILogger<AuthController> logger, Service.AuthService 
         {
             string? userIpAddress = HttpContext.Request.Headers["X-Forwarded-For"].FirstOrDefault() ?? HttpContext.Connection.RemoteIpAddress?.ToString();
         
-            if (userIpAddress == null)
+            if (userIpAddress is null)
             {
                 var error = new BaseResponse<string, object>
                 {
@@ -203,7 +203,7 @@ public class AuthController(ILogger<AuthController> logger, Service.AuthService 
         {
             string? userIpAddress = HttpContext.Request.Headers["X-Forwarded-For"].FirstOrDefault() ?? HttpContext.Connection.RemoteIpAddress?.ToString();
         
-            if (userIpAddress == null)
+            if (userIpAddress is null)
             {
                 var error = new BaseResponse<string, object>
                 {
@@ -251,7 +251,7 @@ public class AuthController(ILogger<AuthController> logger, Service.AuthService 
         {
             string? userIpAddress = HttpContext.Request.Headers["X-Forwarded-For"].FirstOrDefault() ?? HttpContext.Connection.RemoteIpAddress?.ToString();
         
-            if (userIpAddress == null)
+            if (userIpAddress is null)
             {
                 var error = new BaseResponse<string, object>
                 {
@@ -431,7 +431,7 @@ public class AuthController(ILogger<AuthController> logger, Service.AuthService 
         {
             string? userIpAddress = HttpContext.Request.Headers["X-Forwarded-For"].FirstOrDefault() ?? HttpContext.Connection.RemoteIpAddress?.ToString();
         
-            if (userIpAddress == null)
+            if (userIpAddress is null)
             {
                 var error = new BaseResponse<string, object>
                 {

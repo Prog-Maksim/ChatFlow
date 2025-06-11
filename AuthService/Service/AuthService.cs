@@ -371,13 +371,13 @@ public class AuthService
                 return new BaseResponse<string, List<string>> { Message = "Сессия успешно отозвана", Successfully = true, Status = 200, Type = ResponseType.Ok, Errors = null, Data = new List<string> { sessionId } };
             }
 
-            var sessionsRevoke = sessions.Where(s => s.PersonId == dataToken.PersonId && s.Id != dataToken.Id);
+            IQueryable<Session> sessionsRevoke = sessions.Where(s => s.PersonId == dataToken.PersonId && s.Id != dataToken.Id);
+            var sessionIdsToRevoke = sessionsRevoke.Select(s => s.SessionId).ToList();
             
             await _authRepository.AddSessionsToBanAsync(sessionsRevoke.Select(s => s.SessionId), dataToken.PersonId);
             await sessionsRevoke.ExecuteUpdateAsync(p => p.SetProperty(s => s.IsRevoked, s => true));
             
-            return new BaseResponse<string, List<string>> { Message = "Сессии успешно отозваны", Successfully = true, Status = 200, Type = ResponseType.Ok, Errors = null, Data = sessionsRevoke.Select(s => s.SessionId).ToList() };
-            
+            return new BaseResponse<string, List<string>> { Message = "Сессии успешно отозваны", Successfully = true, Status = 200, Type = ResponseType.Ok, Errors = null, Data = sessionIdsToRevoke };
         }
         return new BaseResponse<string, List<string>> { Message = "Не удалось проверить корректность jwt токена", Type = ResponseType.JwtTokenVerificationFailed, Errors = "Forbidden", Status = 403, Successfully = false, Data = null};
     }

@@ -27,7 +27,7 @@ public class TokenSubscriberService: BackgroundService
             var data = JsonSerializer.Deserialize<TokenRevokedMessage>(message);
             if (data is not null)
             {
-                Console.WriteLine($"[TOKEN INVALIDATED] TokenId: {data.SessionId}, RevokedAt: {data.RevokedAt}");
+                _logger.LogDebug($"[TOKEN INVALIDATED] TokenId: {data.SessionId}, RevokedAt: {data.RevokedAt}");
                 _ = _jwtTokenService.RevokeSession(data.SessionId);
             }
             else

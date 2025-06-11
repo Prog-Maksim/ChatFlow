@@ -49,12 +49,13 @@ public class ProfileRepository: IProfileRepository
         if (person is not null)
         {
             var image = person.Images.FirstOrDefault(i => i.IsPrimary);
+            string? imageUrl = image != null ? S3Service.BaseFileUrl + image.ImageId : null;
             
             return new SummaryDataPerson
             {
                 Name = person.Name,
                 Surname = person.Surname,
-                ImageUrl = S3Service.BaseFileUrl + image?.ImageId
+                ImageUrl = imageUrl,
             };
         }
         

@@ -6,16 +6,18 @@ namespace AuthService.Scripts;
 
 public class KafkaEventProducer
 {
+    private readonly ILogger<KafkaEventProducer> _logger;
     private readonly IProducer<Null, string> _producer;
     private const string TopicName = "user.created";
 
-    public KafkaEventProducer(IConfiguration configuration)
+    public KafkaEventProducer(IConfiguration configuration, ILogger<KafkaEventProducer> logger)
     {
         var config = new ProducerConfig
         {
             BootstrapServers = configuration["Kafka:BootstrapServers"]
         };
 
+        _logger = logger;
         _producer = new ProducerBuilder<Null, string>(config).Build();
     }
 
@@ -33,11 +35,11 @@ public class KafkaEventProducer
         try
         {
             var deliveryResult = await _producer.ProduceAsync(TopicName, message);
-            Console.WriteLine($"Message delivered to {deliveryResult.TopicPartitionOffset}");
+            _logger.LogDebug($"Message delivered to {deliveryResult.TopicPartitionOffset}");
         }
         catch (ProduceException<Null, string> ex)
         {
-            Console.WriteLine($"Kafka produce error: {ex.Error.Reason}");
+            _logger.LogError(ex, $"Kafka produce error: {ex.Error.Reason}");
             throw;
         }
     }

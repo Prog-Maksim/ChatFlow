@@ -45,7 +45,7 @@ public class ImageService
         }
         
         if (await _profileRepository.GetNumImageInByIdAsync(dataToken.PersonId) >= 25)
-            return new BaseResponse<string, string> { Message = "Допущено предельное кол-во изображений", Successfully = false, Status = 403, Type = ResponseType.ImageLimitReached, Errors = "Forbidden", Data = null };
+            return new BaseResponse<string, string> { Message = "Допущено предельное кол-во изображений в 25 штук", Successfully = false, Status = 409, Type = ResponseType.ImageLimitReached, Errors = "Conflict", Data = null };
         
         if (file.Length > MaxFileSize)
             return new BaseResponse<string, string> { Message = "Файл слишком большой", Successfully = false, Status = 403, Type = ResponseType.FileTooLarge, Errors = "Forbidden", Data = null };

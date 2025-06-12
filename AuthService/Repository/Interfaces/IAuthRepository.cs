@@ -148,7 +148,7 @@ public interface IAuthRepository
     public Task<Session?> GetSessionByIdAsync(string personId, string sessionId);
 
     /// <summary>
-    /// Возвразает все сессии для пользователя 
+    /// Возвращает все сессии для пользователя 
     /// </summary>
     /// <param name="personId"></param>
     /// <param name="state">Состояние сессии</param>

@@ -127,7 +127,7 @@ public class ProfileService
         var personTag = await _profileRepository.CheckTagAsync(profile.Tag);
         
         if (profile.Tag is not null && (personTag != null && personTag.PersonId != dataToken.PersonId))
-            return new BaseResponse<string, string> { Message = "Данный тег занят", Type = ResponseType.TagAlreadyExists, Errors = "Forbidden", Status = 403, Successfully = false, Data = null};
+            return new BaseResponse<string, string> { Message = "Данный тег занят", Type = ResponseType.TagAlreadyExists, Errors = "Conflict", Status = 409, Successfully = false, Data = null};
 
         await _profileRepository.UpdateProfileDataAsync(dataToken.PersonId, profile);
         

@@ -34,7 +34,7 @@ public class UsersController(ILogger<UsersController> _logger, ImageService imag
     [ProducesResponseType(typeof(BaseResponse<string, string>),StatusCodes.Status404NotFound)]
     [ProducesResponseType(typeof(BaseResponse<string, string>),StatusCodes.Status409Conflict)]
     [ProducesResponseType(typeof(BaseResponse<string, string>),StatusCodes.Status500InternalServerError)]
-    public async Task<IActionResult> UploadAvatar([FromForm] IFormFile file, [FromQuery] double? top = 0, [FromQuery] double? left = 0)
+    public async Task<IActionResult> UploadAvatar(IFormFile file, [FromQuery] double? top = 0, [FromQuery] double? left = 0)
     {
         MetricsRegistry.EndpointRequestCounter
             .WithLabels("upload-image", "POST", "profile", Environment.MachineName).Inc();

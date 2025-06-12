@@ -98,6 +98,26 @@ public class ProfileRepository: IProfileRepository
         return null;
     }
 
+    public async Task<List<DataImage>?> GetImagesPersonData(string personId)
+    {
+        var person = await _context.Persons
+            .Include(i => i.Images)
+            .FirstOrDefaultAsync(p => p.PersonId == personId);
+
+        if (person is not null)
+        {
+            var images = person.Images.ToList();
+            
+            return images.Select(i => new DataImage
+            {
+                ImageId = i.ImageId,
+                Url = S3Service.BaseFileUrl + i.ImageId
+            }).ToList();
+        }
+        
+        return null;
+    }
+
     public async Task<bool> UserExistsAsync(string personId)
     {
         return await _context.Persons.AnyAsync(u => u.PersonId == personId);

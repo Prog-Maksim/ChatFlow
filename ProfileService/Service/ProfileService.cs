@@ -27,7 +27,7 @@ public class ProfileService
     /// <summary>
     /// Выдает краткую информацию о профиле
     /// </summary>
-    /// <param name="accessToken">Идентификатор токена</param>
+    /// <param name="accessToken">Access токен</param>
     /// <param name="personId">Идентификатор пользователя</param>
     /// <returns></returns>
     public async Task<BaseResponse<string, SummaryDataPerson>> GetSummaryProfileData(string accessToken, string? personId = null)
@@ -72,7 +72,7 @@ public class ProfileService
     /// <summary>
     /// Выдает полную информацию о профиле
     /// </summary>
-    /// <param name="accessToken">Идентификатор токена</param>
+    /// <param name="accessToken">Access токен</param>
     /// <param name="personId">Идентификатор пользователя</param>
     /// <returns></returns>
     public async Task<BaseResponse<string, DataPerson>> GetProfileData(string accessToken, string? personId = null)
@@ -84,10 +84,7 @@ public class ProfileService
         if (personId is not null)
         {
             if (!await _profileRepository.UserExistsAsync(personId))
-            {
-                _logger.LogError("Пользователь под id: {personId} не найден!", dataToken.PersonId);
                 return new BaseResponse<string, DataPerson> { Message = "Пользователь не найден!", Successfully = false, Status = 404, Type = ResponseType.ImageLimitReached, Errors = "Not Found", Data = null };
-            }
 
             var data = await _profileRepository.GetPersonDataAsync(personId);
             return new BaseResponse<string, DataPerson>
@@ -116,7 +113,7 @@ public class ProfileService
     /// <summary>
     /// Обновляет информацию в профиле
     /// </summary>
-    /// <param name="accessToken">Идентификатор токена</param>
+    /// <param name="accessToken">Access токен</param>
     /// <param name="profile">Данные профиля</param>
     /// <returns></returns>
     public async Task<BaseResponse<string, string>> UpdateProfileData(string accessToken, Profile profile)
@@ -146,6 +143,48 @@ public class ProfileService
         {
             Message = "Данные были успешно обновлены", Type = ResponseType.Ok, Status = 200, Successfully = true,
             Data = null
+        };
+    }
+
+    /// <summary>
+    /// Возвращает все изображения пользователя
+    /// </summary>
+    /// <param name="accessToken">Access токен</param>
+    /// <param name="personId">Идентификатор пользователя</param>
+    /// <returns></returns>
+    public async Task<BaseResponse<string, List<DataImage>>> GetProfileImages(string accessToken,
+        string? personId = null)
+    {
+        var dataToken = _jwtTokenService.GetJwtTokenData(accessToken);
+        if (!await _jwtTokenService.ValidateJwtAccessToken(dataToken))
+            return new BaseResponse<string, List<DataImage>> { Message = "Не удалось проверить корректность jwt токена", Type = ResponseType.JwtTokenVerificationFailed, Errors = "Forbidden", Status = 403, Successfully = false, Data = null};
+
+        if (personId is not null)
+        {
+            if (!await _profileRepository.UserExistsAsync(personId))
+                return new BaseResponse<string, List<DataImage>> { Message = "Пользователь не найден!", Successfully = false, Status = 404, Type = ResponseType.ImageLimitReached, Errors = "Not Found", Data = null };
+            
+            var data = await _profileRepository.GetImagesPersonData(personId);
+            return new BaseResponse<string, List<DataImage>>
+            {
+                Message = "Изображения пользователя",
+                Successfully = true,
+                Status = 200,
+                Type = ResponseType.Ok,
+                Errors = null,
+                Data = data
+            };
+        }
+        
+        var data1 = await _profileRepository.GetImagesPersonData(dataToken.PersonId);
+        return new BaseResponse<string, List<DataImage>>
+        {
+            Message = "Изображения пользователя",
+            Successfully = true,
+            Status = 200,
+            Type = ResponseType.Ok,
+            Errors = null,
+            Data = data1
         };
     }
 }

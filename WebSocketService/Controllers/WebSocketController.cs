@@ -1,21 +1,27 @@
 using System.Net.WebSockets;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.OpenApi.Services;
+using WebSocketService.Models.Response;
 
 namespace WebSocketService.Controllers;
 
 [ApiController]
 [ApiVersion("1.0")]
-[Produces("application/json")]
-[Route("backend/v{version:apiVersion}/[controller]")]
+[Route("backend/v{version:apiVersion}/ws")]
 public class WebSocketController(ILogger<WebSocketController> logger, Service.WebSocketService service): ControllerBase
 {
     /// <summary>
     /// Подключение пользователей по WebSocket
     /// </summary>
     /// <returns></returns>
+    /// <remarks>
+    /// - 400: Запрос не является WebSocket  
+    /// - 401: Неавторизованный пользователь  
+    /// - 406: Не удалось определить IP-адрес  
+    /// </remarks>
     [Authorize]
-    [HttpGet("connect")]
+    [HttpGet]
     public async Task Connect()
     {
         string? userIpAddress = HttpContext.Request.Headers["X-Forwarded-For"].FirstOrDefault() ?? HttpContext.Connection.RemoteIpAddress?.ToString();

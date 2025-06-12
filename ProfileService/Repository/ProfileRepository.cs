@@ -3,6 +3,7 @@ using ProfileService.Models.DB;
 using ProfileService.Models.Events;
 using ProfileService.Models.Other;
 using ProfileService.Models.Requests;
+using ProfileService.Models.Response;
 using ProfileService.Repository.Interfaces;
 using ProfileService.Scripts;
 
@@ -51,11 +52,19 @@ public class ProfileRepository: IProfileRepository
             var image = person.Images.FirstOrDefault(i => i.IsPrimary);
             string? imageUrl = image != null ? S3Service.BaseFileUrl + image.ImageId : null;
             
+            DataImage? dataImage = null;
+            if (imageUrl is not null)
+                dataImage = new DataImage
+                {
+                    ImageId = image.ImageId,
+                    Url = imageUrl
+                };
+            
             return new SummaryDataPerson
             {
                 Name = person.Name,
                 Surname = person.Surname,
-                ImageUrl = imageUrl,
+                Image = dataImage
             };
         }
         
@@ -78,8 +87,32 @@ public class ProfileRepository: IProfileRepository
                 Surname = person.Surname,
                 Tag = person.Tag,
                 Description = person.Description,
-                ImageUrls = images.Select(i => S3Service.BaseFileUrl + i.ImageId).ToList(),
+                Images = images.Select(i => new DataImage
+                {
+                    ImageId = i.ImageId,
+                    Url = S3Service.BaseFileUrl + i.ImageId
+                }).ToList(),
             };
+        }
+        
+        return null;
+    }
+
+    public async Task<List<DataImage>?> GetImagesPersonData(string personId)
+    {
+        var person = await _context.Persons
+            .Include(i => i.Images)
+            .FirstOrDefaultAsync(p => p.PersonId == personId);
+
+        if (person is not null)
+        {
+            var images = person.Images.ToList();
+            
+            return images.Select(i => new DataImage
+            {
+                ImageId = i.ImageId,
+                Url = S3Service.BaseFileUrl + i.ImageId
+            }).ToList();
         }
         
         return null;
@@ -172,7 +205,7 @@ public class ProfileRepository: IProfileRepository
             .ExecuteUpdateAsync(setters => setters
                 .SetProperty(p => p.Name, profile.Name)
                 .SetProperty(p => p.Surname, profile.Surname)
-                .SetProperty(p => p.Tag, profile.Tag)
+                .SetProperty(p => p.Tag, '@' + profile.Tag)
                 .SetProperty(p => p.Description, profile.Description)
             );
     }

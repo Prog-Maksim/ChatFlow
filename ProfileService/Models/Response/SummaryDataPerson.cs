@@ -1,4 +1,5 @@
 using System.Text.Json.Serialization;
+using ProfileService.Models.Response;
 
 namespace ProfileService.Models.Other;
 
@@ -18,5 +19,5 @@ public class SummaryDataPerson
     /// Ссылка на основную фотографию профиля
     /// </summary>
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-    public string? ImageUrl { get; set; }
+    public DataImage? Image { get; set; }
 }

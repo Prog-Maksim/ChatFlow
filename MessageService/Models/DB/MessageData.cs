@@ -7,9 +7,9 @@ namespace MessageService.Models.DB;
 
 public class MessageData
 {
-    [JsonIgnore(Condition = JsonIgnoreCondition.Always)]
     [BsonId]
     [BsonRepresentation(BsonType.ObjectId)]
+    [JsonIgnore(Condition = JsonIgnoreCondition.Always)]
     public string Id { get; set; } = ObjectId.GenerateNewId().ToString();
     
     public required string MessageId { get; set; }

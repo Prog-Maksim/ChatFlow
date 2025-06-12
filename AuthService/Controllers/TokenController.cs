@@ -16,6 +16,9 @@ public class TokenController(ILogger<AuthController> logger, TokenService tokenS
     /// <summary>
     /// Обновление токена
     /// </summary>
+    /// <remarks>
+    /// Для обновления токенов, требуется передать refresh токен
+    /// </remarks>
     /// <returns></returns>
     /// <response code="200">Успешно</response>
     /// <response code="403">Невалидный jwt токен</response>

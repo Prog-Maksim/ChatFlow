@@ -2,6 +2,7 @@ using ProfileService.Models.DB;
 using ProfileService.Models.Events;
 using ProfileService.Models.Other;
 using ProfileService.Models.Requests;
+using ProfileService.Models.Response;
 
 namespace ProfileService.Repository.Interfaces;
 
@@ -34,6 +35,13 @@ public interface IProfileRepository
     /// <param name="personId">Идентификатор пользователя</param>
     /// <returns></returns>
     public Task<DataPerson?> GetPersonDataAsync(string personId);
+    
+    /// <summary>
+    /// Возвращает все изображения пользователя
+    /// </summary>
+    /// <param name="personId"></param>
+    /// <returns></returns>
+    public Task<List<DataImage>?> GetImagesPersonData(string personId); 
 
     /// <summary>
     /// Проверяет существует ли пользователь в БД

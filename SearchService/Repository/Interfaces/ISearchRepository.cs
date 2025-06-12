@@ -19,7 +19,7 @@ public interface ISearchRepository
     /// <param name="query">Поисковой запрос</param>
     /// <returns></returns>
     /// <exception cref="Exception">Ошибка выполнения поиска</exception>
-    public Task<IReadOnlyCollection<IndexPerson>> SearchAsync(string query, int? size = 20);
+    public Task<IReadOnlyCollection<IndexPerson>?> SearchAsync(string query, int? size = 20);
 
     /// <summary>
     /// Обновляет данные пользователя

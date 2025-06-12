@@ -33,6 +33,14 @@ public class SearchService
             return new BaseResponse<string, SearchResult> { Message = "Не удалось проверить корректность jwt токена", Type = ResponseType.JwtTokenVerificationFailed, Errors = "Forbidden", Status = 403, Successfully = false, Data = null};
 
         var searchResult = await _repository.SearchAsync(query);
+
+        if (searchResult is null)
+            return new BaseResponse<string, SearchResult>
+            {
+                Message = "Поиск ничего не дал",
+                Type = ResponseType.SearchNotFound,
+                Errors = "Service Unavailable", Status = 503, Successfully = false, Data = null
+            };
         
         List<User> users = new ();
         List<Group> groups = new ();

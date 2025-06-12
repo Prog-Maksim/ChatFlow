@@ -38,7 +38,7 @@ public class SearchRepository: ISearchRepository
         }
     }
 
-    public async Task<IReadOnlyCollection<IndexPerson>> SearchAsync(string query, int? size = 20)
+    public async Task<IReadOnlyCollection<IndexPerson>?> SearchAsync(string query, int? size = 20)
     {
         if (string.IsNullOrWhiteSpace(query))
             return Array.Empty<IndexPerson>();
@@ -75,7 +75,10 @@ public class SearchRepository: ISearchRepository
         );
 
         if (!searchResponse.IsValid)
-            throw new Exception($"Ошибка поиска: {searchResponse.ServerError?.Error.Reason}");
+        {
+            _logger.LogError(searchResponse.ServerError?.Error.Reason);
+            return null;
+        }
 
         return searchResponse.Documents;
     }

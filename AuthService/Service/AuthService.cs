@@ -78,7 +78,7 @@ public class AuthService
     }
 
     /// <summary>
-    ///  Авторизирует пользователя
+    ///  Авторизация пользователя
     /// </summary>
     /// <param name="login">Номер телефона или почта</param>
     /// <param name="password">Пароль</param>

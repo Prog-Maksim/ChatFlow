@@ -82,6 +82,72 @@ public class ProfilesController(ILogger<ProfilesController> _logger, Service.Pro
     }
 
     /// <summary>
+    /// Возвращает все фотографии пользователя
+    /// </summary>
+    /// <returns></returns>
+    /// <response code="200">Успешно</response>
+    /// <response code="403">Невалидный jwt токен</response>
+    /// <response code="404">Пользователь не найден</response>
+    [Authorize]
+    [HttpGet("me/images")]
+    [ProducesResponseType(typeof(BaseResponse<string, List<DataImage>>),StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(BaseResponse<string, object>),StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(typeof(BaseResponse<string, object>),StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> GetProfileImages()
+    {
+        MetricsRegistry.EndpointRequestCounter
+            .WithLabels("get-images", "GET", "profile", Environment.MachineName).Inc();
+        
+        using (MetricsRegistry.EndpointDuration
+                   .WithLabels("get-images", "GET", "profile", Environment.MachineName)
+                   .NewTimer())
+        {
+            var authHeader = HttpContext.Request.Headers["Authorization"].ToString();
+            var token = authHeader.Substring("Bearer ".Length);
+
+            var response = await profileService.GetProfileImages(token);
+
+            if (!response.Successfully)
+                return StatusCode(response.Status, response);
+
+            return Ok(response);
+        }
+    }
+    
+    /// <summary>
+    /// Возвращает все фотографии пользователя
+    /// </summary>
+    /// <returns></returns>
+    /// <response code="200">Успешно</response>
+    /// <response code="403">Невалидный jwt токен</response>
+    /// <response code="404">Пользователь не найден</response>
+    [Authorize]
+    [HttpGet("{personId}/images")]
+    [ProducesResponseType(typeof(BaseResponse<string, List<DataImage>>),StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(BaseResponse<string, object>),StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(typeof(BaseResponse<string, object>),StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> GetProfileImages([FromRoute] string personId)
+    {
+        MetricsRegistry.EndpointRequestCounter
+            .WithLabels("get-images-by-id", "GET", "profile", Environment.MachineName).Inc();
+        
+        using (MetricsRegistry.EndpointDuration
+                   .WithLabels("get-images-by-id", "GET", "profile", Environment.MachineName)
+                   .NewTimer())
+        {
+            var authHeader = HttpContext.Request.Headers["Authorization"].ToString();
+            var token = authHeader.Substring("Bearer ".Length);
+
+            var response = await profileService.GetProfileImages(token, personId);
+
+            if (!response.Successfully)
+                return StatusCode(response.Status, response);
+
+            return Ok(response);
+        }
+    }
+
+    /// <summary>
     /// Возвращает полную информацию о пользователе
     /// </summary>
     /// <returns></returns>

@@ -1,5 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 using MessageService.Models.DB;
+using MessageService.Models.Requests;
 using MessageService.Models.Response;
 using MessageService.Monitoring;
 using Microsoft.AspNetCore.Authorization;
@@ -101,7 +102,7 @@ public class ChatsController(ILogger<ChatsController> logger, Service.MessageSer
     [ProducesResponseType(typeof(BaseResponse<string, MessageData>),StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(BaseResponse<string, MessageData>),StatusCodes.Status403Forbidden)]
     [ProducesResponseType(typeof(BaseResponse<string, MessageData>),StatusCodes.Status404NotFound)]
-    public async Task<IActionResult> UpdateMessage([Required][FromRoute] string chatId, [Required][FromRoute] string messageId, [Required][FromBody] MessageData message)
+    public async Task<IActionResult> UpdateMessage([Required][FromRoute] string chatId, [Required][FromRoute] string messageId, [Required][FromBody] UpdateMessage message)
     {
         MetricsRegistry.EndpointRequestCounter
             .WithLabels("update-message", "PUT", "message", Environment.MachineName).Inc();

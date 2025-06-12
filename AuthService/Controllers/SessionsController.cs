@@ -86,7 +86,7 @@ public class SessionsController(ILogger<AuthController> logger, SessionService s
     /// <response code="403">Невалидный jwt токен</response>
     /// <response code="404">Активные сессии не найдены</response>
     [Authorize]
-    [HttpDelete("sessions/{sessionId}")]
+    [HttpDelete("{sessionId}")]
     [ProducesResponseType(typeof(BaseResponse<string, List<string>>),StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(BaseResponse<string, List<string>>),StatusCodes.Status403Forbidden)]
     [ProducesResponseType(typeof(BaseResponse<string, List<string>>),StatusCodes.Status404NotFound)]

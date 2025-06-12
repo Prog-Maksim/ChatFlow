@@ -127,8 +127,8 @@ public class TwoFactorController(ILogger<AuthController> logger, TwoFactorServic
     [AllowAnonymous]
     [HttpGet("qr-code")]
     [ProducesResponseType(typeof(byte[]),StatusCodes.Status200OK)]
-    [ProducesResponseType(typeof(string),StatusCodes.Status403Forbidden)]
-    [ProducesResponseType(typeof(string),StatusCodes.Status404NotFound)]
+    [ProducesResponseType(typeof(BaseResponse<string, string>),StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(typeof(BaseResponse<string, string>),StatusCodes.Status404NotFound)]
     public async Task<IActionResult> GetQrCode([Required] [FromQuery] string code)
     {
         MetricsRegistry.EndpointRequestCounter
@@ -163,12 +163,24 @@ public class TwoFactorController(ILogger<AuthController> logger, TwoFactorServic
             catch (NullReferenceException error)
             {
                 logger.LogError(error.Message);
-                return StatusCode(StatusCodes.Status404NotFound, error.Message);
+                return StatusCode(StatusCodes.Status404NotFound, new BaseResponse<string, string>
+                {
+                    Message = error.Message,
+                    Type = ResponseType.CodeNotFount,
+                    Successfully = false, Status = StatusCodes.Status404NotFound,
+                    Data = null, Errors = "Not Fount"
+                });
             }
             catch (UnauthorizedAccessException error)
             {
                 logger.LogError(error.Message);
-                return StatusCode(StatusCodes.Status403Forbidden, error.Message);
+                return StatusCode(StatusCodes.Status403Forbidden, new BaseResponse<string, string>
+                {
+                    Message = error.Message,
+                    Type = ResponseType.AccessDenied,
+                    Successfully = false, Status = StatusCodes.Status403Forbidden,
+                    Data = null, Errors = "Forbidden"
+                });
             }
         }
     }

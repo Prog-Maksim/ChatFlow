@@ -19,10 +19,12 @@ public class SearchController(ILogger<SearchController> logger, Service.SearchSe
     /// <returns></returns>
     /// <response code="200">Успешно</response>
     /// <response code="403">Невалидный jwt токен</response>
+    /// <response code="503">Поиск ничего не дал</response>
     [Authorize]
     [HttpGet]
     [ProducesResponseType(typeof(BaseResponse<string, SearchResult>),StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(BaseResponse<string, SearchResult>),StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(typeof(BaseResponse<string, SearchResult>),StatusCodes.Status503ServiceUnavailable)]
     public async Task<IActionResult> Search([FromQuery] string query)
     {
         MetricsRegistry.EndpointRequestCounter

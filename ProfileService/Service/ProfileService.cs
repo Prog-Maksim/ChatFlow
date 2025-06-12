@@ -1,8 +1,9 @@
 using ProfileService.Enums;
+using ProfileService.Models.DB;
 using ProfileService.Models.Events;
 using ProfileService.Models.Other;
-using ProfileService.Models.Requests;
 using ProfileService.Models.Response;
+using ProfileService.Models.Requests;
 using ProfileService.Repository.Interfaces;
 using ProfileService.Scripts;
 
@@ -124,7 +125,9 @@ public class ProfileService
         if (!await _jwtTokenService.ValidateJwtAccessToken(dataToken))
             return new BaseResponse<string, string> { Message = "Не удалось проверить корректность jwt токена", Type = ResponseType.JwtTokenVerificationFailed, Errors = "Forbidden", Status = 403, Successfully = false, Data = null};
 
-        var personTag = await _profileRepository.CheckTagAsync(profile.Tag);
+        Persons? personTag = null;
+        if (profile.Tag is not null)
+            personTag = await _profileRepository.CheckTagAsync(profile.Tag);
         
         if (profile.Tag is not null && (personTag != null && personTag.PersonId != dataToken.PersonId))
             return new BaseResponse<string, string> { Message = "Данный тег занят", Type = ResponseType.TagAlreadyExists, Errors = "Conflict", Status = 409, Successfully = false, Data = null};
@@ -136,7 +139,7 @@ public class ProfileService
             PersonId = dataToken.PersonId,
             Name = profile.Name,
             Surname = profile.Surname,
-            Tag = profile.Tag
+            Tag = '@' + profile.Tag
         });
             
         return new BaseResponse<string, string>

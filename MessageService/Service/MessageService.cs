@@ -50,6 +50,14 @@ public class MessageService
                 Type = ResponseType.ChatNotFound, Errors = "Not Found", Status = 404,
                 Successfully = false, Data = null
             };
+        
+        if (chat.Users.All(p => p.PersonId != dataToken.PersonId))
+            return new BaseResponse<string, SendMessage>
+            {
+                Message = "Вы не состоите в этом чате",
+                Type = ResponseType.UserNotInChat, Errors = "Forbidden", Status = 403,
+                Successfully = false, Data = null
+            };
 
         if (chat.Type != ChatType.Private)
         {
@@ -276,6 +284,7 @@ public class MessageService
             };
 
         message.MessageType = MessageStatus.Deleted;
+        message.Updated = DateTime.UtcNow;
         var success = await _messageRepository.UpdateMessageAsync(message);
         
         if (!success)
@@ -298,7 +307,7 @@ public class MessageService
     /// <param name="messageId">Идентификатор сообщения</param>
     /// <param name="messageData">Объект обновляемого сообщения</param>
     /// <returns></returns>
-    public async Task<BaseResponse<string, MessageData>> UpdateMessageAsync(string accessToken, string chatId, string messageId, MessageData messageData)
+    public async Task<BaseResponse<string, MessageData>> UpdateMessageAsync(string accessToken, string chatId, string messageId, UpdateMessage messageData)
     {
         var dataToken = _jwtTokenService.GetJwtTokenData(accessToken);
         if (!await _jwtTokenService.ValidateJwtAccessToken(dataToken))
@@ -346,7 +355,10 @@ public class MessageService
                 Successfully = false, Data = null
             };
 
-        var success = await _messageRepository.UpdateMessageAsync(messageData);
+        message.Text = messageData.Text;
+        message.MessageType = MessageStatus.Updated;
+        message.Updated = DateTime.UtcNow;
+        var success = await _messageRepository.UpdateMessageAsync(message);
         
         if (!success)
             return new BaseResponse<string, MessageData>
@@ -356,11 +368,11 @@ public class MessageService
                 Successfully = false, Data = null
             };
 
-        await _kafkaEventProducer.PublishNewMessageAsync(messageData, chat.Users, CancellationToken.None);
+        await _kafkaEventProducer.PublishNewMessageAsync(message, chat.Users, CancellationToken.None);
         return new BaseResponse<string, MessageData>
         {
             Message = "Сообщение успешно изменено",
-            Type = ResponseType.Ok, Status = 200, Successfully = true, Errors = null, Data = messageData
+            Type = ResponseType.Ok, Status = 200, Successfully = true, Errors = null, Data = message
         };
     }
 }

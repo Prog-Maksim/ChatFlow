@@ -100,40 +100,40 @@ public class ImageService
     /// <param name="accessToken">Access токен</param>
     /// <param name="personId">Идентификатор пользователя</param>
     /// <returns></returns>
-    public async Task<BaseResponse<string, int>> GetCountImages(string accessToken, string? personId = null)
+    public async Task<BaseResponse<string, CountImage>> GetCountImages(string accessToken, string? personId = null)
     {
         var dataToken = _jwtTokenService.GetJwtTokenData(accessToken);
         if (!await _jwtTokenService.ValidateJwtAccessToken(dataToken))
-            return new BaseResponse<string, int> { Message = "Не удалось проверить корректность jwt токена", Type = ResponseType.JwtTokenVerificationFailed, Errors = "Forbidden", Status = 403, Successfully = false, Data = 0};
+            return new BaseResponse<string, CountImage> { Message = "Не удалось проверить корректность jwt токена", Type = ResponseType.JwtTokenVerificationFailed, Errors = "Forbidden", Status = 403, Successfully = false, Data = null };
 
         if (personId is null)
         {
             var count = await _profileRepository.GetNumImageInByIdAsync(dataToken.PersonId);
-            return new BaseResponse<string, int>
+            return new BaseResponse<string, CountImage>
             {
                 Message = "Кол-во изображений",
                 Successfully = true,
                 Status = 200,
                 Type = ResponseType.Ok,
                 Errors = null,
-                Data = count,
+                Data = new CountImage { Count = count},
             };
         }
         
         if (!await _profileRepository.UserExistsAsync(personId))
         {
             _logger.LogError("Пользователь под id: {personId} не найден!", personId);
-            return new BaseResponse<string, int> { Message = "Пользователь не найден!", Successfully = false, Status = 404, Type = ResponseType.ImageLimitReached, Errors = "Not Found", Data = 0 };
+            return new BaseResponse<string, CountImage> { Message = "Пользователь не найден!", Successfully = false, Status = 404, Type = ResponseType.ImageLimitReached, Errors = "Not Found", Data = null };
         }
         
-        return new BaseResponse<string, int>
+        return new BaseResponse<string, CountImage>
         {
             Message = "Кол-во изображений",
             Successfully = true,
             Status = 200,
             Type = ResponseType.Ok,
             Errors = null,
-            Data = await _profileRepository.GetNumImageInByIdAsync(personId),
+            Data = new CountImage { Count = await _profileRepository.GetNumImageInByIdAsync(personId) },
         };
     }
 
@@ -143,18 +143,18 @@ public class ImageService
     /// <param name="accessToken">Access токен</param>
     /// <param name="personId">Идентификатор пользователя</param>
     /// <returns></returns>
-    public async Task<BaseResponse<string, string>> GetPrimaryImage(string accessToken, string? personId = null)
+    public async Task<BaseResponse<string, DataImage>> GetPrimaryImage(string accessToken, string? personId = null)
     {
         var dataToken = _jwtTokenService.GetJwtTokenData(accessToken);
         if (!await _jwtTokenService.ValidateJwtAccessToken(dataToken))
-            return new BaseResponse<string, string> { Message = "Не удалось проверить корректность jwt токена", Type = ResponseType.JwtTokenVerificationFailed, Errors = "Forbidden", Status = 403, Successfully = false, Data = null};
+            return new BaseResponse<string, DataImage> { Message = "Не удалось проверить корректность jwt токена", Type = ResponseType.JwtTokenVerificationFailed, Errors = "Forbidden", Status = 403, Successfully = false, Data = null};
 
         if (personId is null)
         {
             var imageId = await _profileRepository.GetPrimaryImage(dataToken.PersonId);
 
             if (imageId is null)
-                return new BaseResponse<string, string>
+                return new BaseResponse<string, DataImage>
                 {
                     Message = "Ссылка на главное изображение не найдено",
                     Successfully = false,
@@ -164,27 +164,31 @@ public class ImageService
                     Data = null
                 };
             
-            return new BaseResponse<string, string>
+            return new BaseResponse<string, DataImage>
             {
                 Message = "Основное изображение пользователя",
                 Successfully = true,
                 Status = 200,
                 Type = ResponseType.Ok,
                 Errors = null,
-                Data = S3Service.BaseFileUrl + imageId
+                Data = new DataImage
+                {
+                    ImageId = imageId,
+                    Url = S3Service.BaseFileUrl + imageId
+                }
             };
         }
         
         if (!await _profileRepository.UserExistsAsync(personId))
         {
             _logger.LogError("Пользователь под id: {personId} не найден!", personId);
-            return new BaseResponse<string, string> { Message = "Пользователь не найден!", Successfully = false, Status = 404, Type = ResponseType.ImageLimitReached, Errors = "Not Found", Data = null };
+            return new BaseResponse<string, DataImage> { Message = "Пользователь не найден!", Successfully = false, Status = 404, Type = ResponseType.ImageLimitReached, Errors = "Not Found", Data = null };
         }
         
         var imageId1 = await _profileRepository.GetPrimaryImage(personId);
         
         if (imageId1 is null)
-            return new BaseResponse<string, string>
+            return new BaseResponse<string, DataImage>
             {
                 Message = "Ссылка на главное изображение не найдено",
                 Successfully = false,
@@ -194,14 +198,18 @@ public class ImageService
                 Data = null
             };
         
-        return new BaseResponse<string, string>
+        return new BaseResponse<string, DataImage>
         {
             Message = "Основное изображение пользователя",
             Successfully = true,
             Status = 200,
             Type = ResponseType.Ok,
             Errors = null,
-            Data = S3Service.BaseFileUrl + imageId1
+            Data = new DataImage
+            {
+                ImageId = imageId1,
+                Url = S3Service.BaseFileUrl + imageId1
+            }
         };
     }
 

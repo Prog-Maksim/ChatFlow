@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using ProfileService.Enums;
 using ProfileService.Models.Response;
 using ProfileService.Monitoring;
 using ProfileService.Service;
@@ -44,10 +45,22 @@ public class UsersController(ILogger<UsersController> _logger, ImageService imag
                    .NewTimer())
         {
             if (file.Length == 0)
-                return BadRequest("Файл отсутствует.");
+                return StatusCode(StatusCodes.Status400BadRequest, new BaseResponse<string, string>
+                {
+                    Message = "Файл отсутствует.",
+                    Type = ResponseType.ImageNotFound,
+                    Successfully = false, Status = 400,
+                    Errors = "BadRequest", Data = null
+                });
 
             if (!file.ContentType.Equals("image/jpeg", StringComparison.OrdinalIgnoreCase))
-                return BadRequest("Поддерживается только формат JPG.");
+                return StatusCode(StatusCodes.Status400BadRequest, new BaseResponse<string, string>
+                {
+                    Message = "Поддерживается только формат JPG.",
+                    Type = ResponseType.InvalidFile,
+                    Successfully = false, Status = 400,
+                    Errors = "BadRequest", Data = null
+                });
 
             var authHeader = HttpContext.Request.Headers["Authorization"].ToString();
             var token = authHeader.Substring("Bearer ".Length);
@@ -70,9 +83,9 @@ public class UsersController(ILogger<UsersController> _logger, ImageService imag
     /// <response code="404">Пользователь не найден</response>
     [Authorize]
     [HttpGet("me/images/count")]
-    [ProducesResponseType(typeof(BaseResponse<string, int>),StatusCodes.Status200OK)]
-    [ProducesResponseType(typeof(BaseResponse<string, int>),StatusCodes.Status403Forbidden)]
-    [ProducesResponseType(typeof(BaseResponse<string, int>),StatusCodes.Status404NotFound)]
+    [ProducesResponseType(typeof(BaseResponse<string, CountImage>),StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(BaseResponse<string, CountImage>),StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(typeof(BaseResponse<string, CountImage>),StatusCodes.Status404NotFound)]
     public async Task<IActionResult> CountImages()
     {
         MetricsRegistry.EndpointRequestCounter
@@ -137,9 +150,9 @@ public class UsersController(ILogger<UsersController> _logger, ImageService imag
     /// <response code="404">Пользователь или главное изображение не найдено</response>
     [Authorize]
     [HttpGet("me/images/primary")]
-    [ProducesResponseType(typeof(BaseResponse<string, string>),StatusCodes.Status200OK)]
-    [ProducesResponseType(typeof(BaseResponse<string, string>),StatusCodes.Status403Forbidden)]
-    [ProducesResponseType(typeof(BaseResponse<string, string>),StatusCodes.Status404NotFound)]
+    [ProducesResponseType(typeof(BaseResponse<string, DataImage>),StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(BaseResponse<string, DataImage>),StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(typeof(BaseResponse<string, DataImage>),StatusCodes.Status404NotFound)]
     public async Task<IActionResult> GetPrimaryImages()
     {
         MetricsRegistry.EndpointRequestCounter

@@ -10,5 +10,10 @@ public enum ResponseType
     /// <summary>
     /// Не удается проверить корректность jwt токена
     /// </summary>
-    JwtTokenVerificationFailed
+    JwtTokenVerificationFailed,
+    
+    /// <summary>
+    /// ПОиск ничего не дал
+    /// </summary>
+    SearchNotFound,
 }

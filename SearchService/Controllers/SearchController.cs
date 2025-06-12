@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Prometheus;
+using SearchService.Models.Response;
 using SearchService.Monitoring;
 
 namespace SearchService.Controllers;
@@ -16,8 +17,12 @@ public class SearchController(ILogger<SearchController> logger, Service.SearchSe
     /// </summary>
     /// <param name="query">Поисковой запрос</param>
     /// <returns></returns>
+    /// <response code="200">Успешно</response>
+    /// <response code="403">Невалидный jwt токен</response>
     [Authorize]
-    [HttpGet("search")]
+    [HttpGet]
+    [ProducesResponseType(typeof(BaseResponse<string, SearchResult>),StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(BaseResponse<string, SearchResult>),StatusCodes.Status403Forbidden)]
     public async Task<IActionResult> Search([FromQuery] string query)
     {
         MetricsRegistry.EndpointRequestCounter

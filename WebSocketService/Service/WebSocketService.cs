@@ -29,7 +29,7 @@ public class WebSocketService
 
         if (socket.State != WebSocketState.Open)
             return new BaseResponse<string, string>
-                { Message = "Соединение должно быть открытым", Type = ResponseType.WebSocketIsNotOpen, Successfully = false, Status = 403, Errors = "Bad Request", Data = null };
+                { Message = "Соединение должно быть открытым", Type = ResponseType.WebSocketIsNotOpen, Successfully = false, Status = 400, Errors = "Bad Request", Data = null };
         
         PersonRegion region = await DeterminingIpAddress.GetPositionUser(userIpAdress);
         

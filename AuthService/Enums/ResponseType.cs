@@ -105,5 +105,5 @@ public enum ResponseType
     /// <summary>
     /// Сессии не найдены 
     /// </summary>
-    SessionNotFound,
+    SessionNotFound
 }

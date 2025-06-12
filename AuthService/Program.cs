@@ -1,7 +1,6 @@
 using System.Net;
 using System.Reflection;
 using AuthService;
-using AuthService.Enums;
 using AuthService.Repository;
 using AuthService.Repository.Interfaces;
 using AuthService.Scripts;
@@ -12,7 +11,6 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.ApiExplorer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
-using Microsoft.OpenApi.Any;
 using Microsoft.OpenApi.Models;
 using Prometheus;
 using Serilog;
@@ -45,7 +43,12 @@ builder.Services.AddSingleton<AuthOptions>(sp =>
 
 // Добавление сервисов
 builder.Services.AddScoped<IAuthRepository, AuthRepository>();
+
 builder.Services.AddScoped<AuthService.Service.AuthService>();
+builder.Services.AddScoped<AccountService>();
+builder.Services.AddScoped<SessionService>();
+builder.Services.AddScoped<TokenService>();
+builder.Services.AddScoped<TwoFactorService>();
 
 builder.Services.AddSingleton<KafkaEventProducer>();
 builder.Services.AddSingleton<IEncryptionService, EncryptionService>();

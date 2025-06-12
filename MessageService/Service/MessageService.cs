@@ -282,16 +282,12 @@ public class MessageService
             return new BaseResponse<string, MessageData>
             {
                 Message = "Сообщение не удалено",
-                Type = ResponseType.MessageNotModified, Errors = "Not Modified", Status = 304,
+                Type = ResponseType.MessageNotModified, Errors = "BadRequest", Status = 400,
                 Successfully = false, Data = null
             };
 
         await _kafkaEventProducer.PublishNewMessageAsync(message, chat.Users, CancellationToken.None);
-        return new BaseResponse<string, MessageData>
-        {
-            Message = "Сообщение успешно удалено",
-            Type = ResponseType.Ok, Status = 200, Successfully = true, Errors = null, Data = message
-        };
+        return null;
     }
 
     /// <summary>
@@ -356,7 +352,7 @@ public class MessageService
             return new BaseResponse<string, MessageData>
             {
                 Message = "Сообщение не изменено",
-                Type = ResponseType.MessageNotModified, Errors = "Not Modified", Status = 304,
+                Type = ResponseType.MessageNotModified, Errors = "BadRequest", Status = 400,
                 Successfully = false, Data = null
             };
 

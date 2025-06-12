@@ -1,6 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 using MessageService.Models.DB;
-using MessageService.Models.Requests;
+using MessageService.Models.Response;
 using MessageService.Monitoring;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -12,44 +12,8 @@ namespace MessageService.Controllers;
 [ApiVersion("1.0")]
 [Produces("application/json")]
 [Route("backend/v{version:apiVersion}/[controller]")]
-public class MessageController(ILogger<MessageController> logger, Service.MessageService messageService): ControllerBase
+public class ChatsController(ILogger<ChatsController> logger, Service.MessageService messageService): ControllerBase
 {
-    /// <summary>
-    /// Позволяет отправить сообщение
-    /// </summary>
-    /// <param name="message">Данные сообщения</param>
-    /// <param name="cancellationToken">Токен отмены сообщения</param>
-    /// <returns></returns>
-    [Authorize]
-    [HttpPost("message")]
-    public async Task<IActionResult> SendMessage(Message message, CancellationToken cancellationToken)
-    {
-        try
-        {
-            MetricsRegistry.EndpointRequestCounter
-                .WithLabels("send-message", "POST", "message", Environment.MachineName).Inc();
-        
-            using (MetricsRegistry.EndpointDuration
-                       .WithLabels("send-message", "POST", "message", Environment.MachineName)
-                       .NewTimer())
-            {
-                var authHeader = HttpContext.Request.Headers["Authorization"].ToString();
-                var token = authHeader.Substring("Bearer ".Length);
-
-                var response = await messageService.SendMessageAsync(token, message, cancellationToken);
-
-                if (!response.Successfully)
-                    return StatusCode(response.Status, response);
-
-                return Ok(response);
-            }
-        }
-        catch (OperationCanceledException)
-        {
-            return StatusCode(StatusCodes.Status499ClientClosedRequest, "Client closed request");
-        }
-    }
-
     /// <summary>
     /// Выдает все сообщения с пагинацией
     /// </summary>
@@ -57,15 +21,21 @@ public class MessageController(ILogger<MessageController> logger, Service.Messag
     /// <param name="limit">Кол-во сообщений в выдаче</param>
     /// <param name="offset">Отступ от начала списка</param>
     /// <returns></returns>
+    /// <response code="200">Успешно</response>
+    /// <response code="403">Невалидный jwt токен или пользователь не состоит в чате</response>
+    /// <response code="404">Чат или сообщения не найдены</response>
     [Authorize]
-    [HttpGet("message/{chatId}")]
-    public async Task<IActionResult> GetMessage([Required][FromRoute] string chatId, [FromQuery] int? limit = 30, [FromQuery] int? offset = 0)
+    [HttpGet("{chatId}/messages")]
+    [ProducesResponseType(typeof(BaseResponse<string, MessagesPagination>),StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(BaseResponse<string, MessagesPagination>),StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(typeof(BaseResponse<string, MessagesPagination>),StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> GetMessages([Required] [FromRoute] string chatId, [FromQuery] int? limit = 30, [FromQuery] int? offset = 0)
     {
         MetricsRegistry.EndpointRequestCounter
-            .WithLabels("get-message", "GET", "message", Environment.MachineName).Inc();
+            .WithLabels("get-messages", "GET", "message", Environment.MachineName).Inc();
         
         using (MetricsRegistry.EndpointDuration
-                   .WithLabels("get-message", "GET", "message", Environment.MachineName)
+                   .WithLabels("get-messages", "GET", "message", Environment.MachineName)
                    .NewTimer())
         {
             var authHeader = HttpContext.Request.Headers["Authorization"].ToString();
@@ -85,9 +55,15 @@ public class MessageController(ILogger<MessageController> logger, Service.Messag
     /// </summary>
     /// <param name="chatId">Идентификатор чата</param>
     /// <returns></returns>
+    /// <response code="200">Успешно</response>
+    /// <response code="403">Невалидный jwt токен или пользователь не состоит в чате</response>
+    /// <response code="404">Чат или сообщения не найдены</response>
     [Authorize]
-    [HttpGet("message/{chatId}/preview")]
-    public async Task<IActionResult> GetMessagePreview([Required][FromRoute] string chatId)
+    [HttpGet("{chatId}/messages/last")]
+    [ProducesResponseType(typeof(BaseResponse<string, MessageData>),StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(BaseResponse<string, MessageData>),StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(typeof(BaseResponse<string, MessageData>),StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> GetMessageLast([Required][FromRoute] string chatId)
     {
         MetricsRegistry.EndpointRequestCounter
             .WithLabels("get-last-message", "GET", "message", Environment.MachineName).Inc();
@@ -107,7 +83,7 @@ public class MessageController(ILogger<MessageController> logger, Service.Messag
             return Ok(response);
         }
     }
-
+    
     /// <summary>
     /// Позволяет изменить сообщение
     /// </summary>
@@ -115,9 +91,17 @@ public class MessageController(ILogger<MessageController> logger, Service.Messag
     /// <param name="messageId">Идентификатор сообщение</param>
     /// <param name="message">Объект обновляемого сообщения</param>
     /// <returns></returns>
+    /// <response code="200">Успешно</response>
+    /// <response code="400">Сообщение не было изменено</response>
+    /// <response code="403">Невалидный jwt токен или пользователь не состоит в чате или нет прав на редактирование</response>
+    /// <response code="404">Чат или сообщения не найдены</response>
     [Authorize]
-    [HttpPut("message/{chatId}")]
-    public async Task<IActionResult> UpdateMessage([Required][FromBody] string chatId, [Required][FromQuery] string messageId, [Required][FromBody] MessageData message)
+    [HttpPut("{chatId}/messages/{messageId}")]
+    [ProducesResponseType(typeof(BaseResponse<string, MessageData>),StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(BaseResponse<string, MessageData>),StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(BaseResponse<string, MessageData>),StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(typeof(BaseResponse<string, MessageData>),StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> UpdateMessage([Required][FromRoute] string chatId, [Required][FromRoute] string messageId, [Required][FromBody] MessageData message)
     {
         MetricsRegistry.EndpointRequestCounter
             .WithLabels("update-message", "PUT", "message", Environment.MachineName).Inc();
@@ -144,9 +128,17 @@ public class MessageController(ILogger<MessageController> logger, Service.Messag
     /// <param name="chatId">Идентификатор чата</param>
     /// <param name="messageId">Идентификатор сообщения</param>
     /// <returns></returns>
+    /// <response code="200">Успешно</response>
+    /// <response code="400">Сообщение не было удалено</response>
+    /// <response code="403">Невалидный jwt токен или пользователь не состоит в чате или нет прав на редактирование</response>
+    /// <response code="404">Чат или сообщения не найдены</response>
     [Authorize]
-    [HttpDelete("message/{chatId}")]
-    public async Task<IActionResult> DeleteMessage([Required][FromRoute] string chatId, [Required][FromQuery] string messageId)
+    [HttpDelete("{chatId}/messages/{messageId}")]
+    [ProducesResponseType(typeof(BaseResponse<string, MessageData>),StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(BaseResponse<string, MessageData>),StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(BaseResponse<string, MessageData>),StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(typeof(BaseResponse<string, MessageData>),StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> DeleteMessage([Required][FromRoute] string chatId, [Required][FromRoute] string messageId)
     {
         MetricsRegistry.EndpointRequestCounter
             .WithLabels("delete-message", "DELETE", "message", Environment.MachineName).Inc();
@@ -163,7 +155,7 @@ public class MessageController(ILogger<MessageController> logger, Service.Messag
             if (!response.Successfully)
                 return StatusCode(response.Status, response);
 
-            return Ok(response);
+            return NoContent();
         }
     }
 }

@@ -12,7 +12,7 @@ namespace AuthService.Controllers;
 [ApiController]
 [ApiVersion("1.0")]
 [Produces("application/json")]
-[Route("backend/v{version:apiVersion}/[controller]")]
+[Route("backend-a/v{version:apiVersion}/[controller]")]
 public class TwoFactorController(ILogger<AuthController> logger, TwoFactorService twoFactorService): ControllerBase
 {
     /// <summary>

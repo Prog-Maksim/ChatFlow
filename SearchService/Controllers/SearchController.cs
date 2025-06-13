@@ -9,7 +9,7 @@ namespace SearchService.Controllers;
 [ApiController]
 [ApiVersion("1.0")]
 [Produces("application/json")]
-[Route("backend/v{version:apiVersion}/[controller]")]
+[Route("backend-e/v{version:apiVersion}/[controller]")]
 public class SearchController(ILogger<SearchController> logger, Service.SearchService searchService): ControllerBase
 {
     /// <summary>

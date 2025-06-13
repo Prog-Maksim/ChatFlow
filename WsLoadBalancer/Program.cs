@@ -1,4 +1,5 @@
 using System.Net;
+using Elasticsearch.Net;
 using Microsoft.AspNetCore.HttpOverrides;
 using Prometheus;
 using Serilog;
@@ -10,18 +11,26 @@ using WsLoadBalancer.Service;
 var builder = WebApplication.CreateBuilder(args);
 
 // Настройка логирования
+var elasticSection = builder.Configuration.GetSection("ElasticSearch");
+var uri = elasticSection.GetValue<string>("Uri");
+var serviceToken = elasticSection.GetValue<string>("ServiceToken");
+
+var sinkOptions = new ElasticsearchSinkOptions(new Uri(uri))
+{
+    AutoRegisterTemplate = true,
+    IndexFormat = "logs-{0:yyyy.MM.dd}",
+    FailureCallback = e => Console.WriteLine($"Не удалось отправить лог в Elasticsearch: {e.Exception.Message}"),
+    MinimumLogEventLevel = LogEventLevel.Information,
+    ModifyConnectionSettings = conn => conn.ApiKeyAuthentication(new ApiKeyAuthenticationCredentials(serviceToken))
+};
+
+// Настройка логирования
 Log.Logger = new LoggerConfiguration()
     .MinimumLevel.Debug()
-    .WriteTo.Elasticsearch(new ElasticsearchSinkOptions(new Uri(builder.Configuration.GetConnectionString("ElasticSearch") ?? throw new InvalidOperationException("`ElasticSearch` is not set in configuration.")))
-    {
-        AutoRegisterTemplate = true,
-        IndexFormat = "logs-{0:yyyy.MM.dd}",
-        FailureCallback = exception => Console.WriteLine($"Не удалось отправить лог в Elasticsearch: {exception.Exception.Message}"),
-        MinimumLogEventLevel = LogEventLevel.Information
-    })
+    .WriteTo.Elasticsearch(sinkOptions)
     .WriteTo.File("Logs/log-.txt", rollingInterval: RollingInterval.Hour,
         restrictedToMinimumLevel: LogEventLevel.Information)
-    .WriteTo.Console(restrictedToMinimumLevel: LogEventLevel.Debug)
+    .WriteTo.Console(restrictedToMinimumLevel: LogEventLevel.Information)
     .CreateLogger();
 
 builder.Host.UseSerilog();

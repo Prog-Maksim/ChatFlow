@@ -12,7 +12,7 @@ namespace MessageService.Controllers;
 [ApiController]
 [ApiVersion("1.0")]
 [Produces("application/json")]
-[Route("backend/v{version:apiVersion}/[controller]")]
+[Route("backend-c/v{version:apiVersion}/[controller]")]
 public class ChatsController(ILogger<ChatsController> logger, Service.MessageService messageService): ControllerBase
 {
     /// <summary>

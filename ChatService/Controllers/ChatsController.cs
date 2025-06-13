@@ -11,7 +11,7 @@ namespace ChatService.Controllers;
 [ApiController]
 [ApiVersion("1.0")]
 [Produces("application/json")]
-[Route("backend/v{version:apiVersion}/[controller]")]
+[Route("backend-b/v{version:apiVersion}/[controller]")]
 public class ChatsController(ILogger<ChatsController> logger, Service.ChatService chatService): ControllerBase
 {
     /// <summary>

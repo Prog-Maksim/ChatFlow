@@ -8,7 +8,7 @@ namespace WebSocketService.Controllers;
 
 [ApiController]
 [ApiVersion("1.0")]
-[Route("backend/v{version:apiVersion}/ws")]
+[Route("backend-f/v{version:apiVersion}/ws")]
 public class WebSocketController(ILogger<WebSocketController> logger, Service.WebSocketService service): ControllerBase
 {
     /// <summary>

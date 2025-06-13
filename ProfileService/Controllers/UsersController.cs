@@ -11,7 +11,7 @@ namespace ProfileService.Controllers;
 [ApiController]
 [ApiVersion("1.0")]
 [Produces("application/json")]
-[Route("backend/v{version:apiVersion}/[controller]")]
+[Route("backend-d/v{version:apiVersion}/[controller]")]
 public class UsersController(ILogger<UsersController> _logger, ImageService imageService): ControllerBase
 {
     /// <summary>

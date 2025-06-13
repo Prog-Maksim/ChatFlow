@@ -10,7 +10,7 @@ namespace AuthService.Controllers;
 [ApiController]
 [ApiVersion("1.0")]
 [Produces("application/json")]
-[Route("backend/v{version:apiVersion}/[controller]")]
+[Route("backend-a/v{version:apiVersion}/[controller]")]
 public class TokenController(ILogger<AuthController> logger, TokenService tokenService): ControllerBase
 {
     /// <summary>

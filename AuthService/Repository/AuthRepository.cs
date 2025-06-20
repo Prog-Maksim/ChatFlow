@@ -52,7 +52,7 @@ public class AuthRepository: IAuthRepository
         {
             PersonId = personData.PersonId,
             PersonData = personData,
-            IpAdress = userIpAddress,
+            IpAddress = userIpAddress,
             TotpCode = null,
             IsUpdate = true,
             IsRead = true
@@ -75,7 +75,7 @@ public class AuthRepository: IAuthRepository
         {
             PersonId = personData.PersonId,
             PersonData = personData,
-            IpAdress = userIpAdress,
+            IpAddress = userIpAdress,
             TotpCode = totpCode,
             IsUpdate = false,
             IsRead = false
@@ -217,7 +217,7 @@ public class AuthRepository: IAuthRepository
         return await _context.Sessions.FirstOrDefaultAsync(p => p.PersonId == personId && p.SessionId == sessionId);
     }
 
-    public async Task<IQueryable<Session>> GetSessionsAsync(string personId, bool state = false)
+    public IQueryable<Session> GetSessionsAsync(string personId, bool state = false)
     {
         return _context.Sessions.Where(p => p.PersonId == personId && p.IsRevoked == state);
     }

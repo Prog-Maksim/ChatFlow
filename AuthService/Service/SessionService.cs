@@ -25,7 +25,7 @@ public class SessionService
     /// <summary>
     /// Выдает все активные сессии
     /// </summary>
-    /// <param name="accessToken"></param>
+    /// <param name="accessToken">Access токен</param>
     /// <returns></returns>
     public async Task<BaseResponse<string, DataSession>> GetSessions(string accessToken)
     {
@@ -33,14 +33,15 @@ public class SessionService
         if (!await _jwtTokenService.ValidateJwtAccessToken(dataToken))
             return new BaseResponse<string, DataSession> { Message = "Не удалось проверить корректность jwt токена", Type = ResponseType.JwtTokenVerificationFailed, Errors = "Forbidden", Status = 403, Successfully = false, Data = null};
 
-        var sessions = await _authRepository.GetSessionsAsync(dataToken.PersonId);
-        if (sessions == null)
+        IQueryable<Session> sessions = _authRepository.GetSessionsAsync(dataToken.PersonId);
+        
+        if (!sessions.Any())
             return new BaseResponse<string, DataSession> { Message = "Сессии не найдены", Successfully = false, Status = 404, Type = ResponseType.SessionNotFound, Errors = "Not Found", Data = null };
             
         List<Sessions> result = new ();
         foreach (var session in sessions)
         {
-            var address = await DeterminingIpAddress.GetPositionUser(session.IpAddress);
+            var address = await DeterminingIpAddress.GetPositionUser(_encryptionService.Decrypt(session.IpAddress));
             Sessions data = new Sessions
             {
                 IpAddress = _encryptionService.Decrypt(session.IpAddress),
@@ -72,9 +73,9 @@ public class SessionService
 
         if (await _jwtTokenService.ValidateJwtAccessToken(dataToken))
         {
-            var sessions = await _authRepository.GetSessionsAsync(dataToken.PersonId);
+            IQueryable<Session> sessions = _authRepository.GetSessionsAsync(dataToken.PersonId);
 
-            if (sessions == null)
+            if (!sessions.Any())
                 return new BaseResponse<string, List<string>> { Message = "Активные сессии не найдены", Successfully = false, Status = 404, Type = ResponseType.SessionNotFound, Errors = "Not Found", Data = null };
             
             if (sessionId != null)

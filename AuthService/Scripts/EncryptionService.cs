@@ -40,9 +40,9 @@ public class EncryptionService: IEncryptionService
         }
     }
     
-    public string Decrypt(string encryptedText)
+    public string Decrypt(string text)
     {
-        byte[] encryptedBytes = Convert.FromBase64String(encryptedText);
+        byte[] encryptedBytes = Convert.FromBase64String(text);
 
         using (Aes aes = Aes.Create())
         {

@@ -143,7 +143,7 @@ public class AuthService
     /// <summary>
     /// Мониторинг неправильных попыток входа
     /// </summary>
-    /// <param name="ip">Ip адрес пользовтаеля</param>
+    /// <param name="ip">Ip адрес пользователя</param>
     private void TrackFailedLogin(string ip)
     {
         MetricsRegistry.BruteForceDetection

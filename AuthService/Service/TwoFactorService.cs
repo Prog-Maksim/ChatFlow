@@ -34,7 +34,7 @@ public class TwoFactorService
         {
             var data = await _authRepository.GetTotpDataByCodeAsync(code);
 
-            if (data == null || data.IpAdress != userIpAddress)
+            if (data == null || data.IpAddress != userIpAddress)
                 return new BaseResponse<string, Token2Fa> { Message = "Отказано", Successfully = false, Status = 403, Type = ResponseType.AccessDenied, Errors = "Forbidden", Data = null };
             
             if (data.TotpCode != null && !data.IsUpdate)
@@ -75,7 +75,7 @@ public class TwoFactorService
             if (await _authRepository.GetNumberSessionsAsync(data.PersonId) >= 10)
                 return new BaseResponse<string, AuthTokens> { Message = "Достигнуто максимальное кол-во устройств", Successfully = false, Status = 403, Type = ResponseType.DeviceLimitReached, Errors = "Forbidden", Data = null};
             
-            if (data.IpAdress != userIpAddress)
+            if (data.IpAddress != userIpAddress)
                 return new BaseResponse<string, AuthTokens> { Message = "Отказано", Successfully = false, Status = 403, Type = ResponseType.AccessDenied, Errors = "Forbidden", Data = null };
 
             if (data.TotpCode == null)
@@ -130,6 +130,11 @@ public class TwoFactorService
         return new BaseResponse<string, AuthTokens> { Message = "Данный код не найден", Successfully = false, Status = 404, Type = ResponseType.CodeNotFount, Errors = "Not Found", Data = null};
     }
         
+    /// <summary>
+    /// Добавляет пользователю totp код
+    /// </summary>
+    /// <param name="person">Объект пользователя</param>
+    /// <param name="totpCode">Totp код</param>
     private async Task AddTotpCode(Person person, string totpCode)
     {
         try
@@ -161,7 +166,7 @@ public class TwoFactorService
             if (data == null)
                 throw new NullReferenceException("Вы не создали подключение");
             
-            if (data.IpAdress != userIpAddress)
+            if (data.IpAddress != userIpAddress)
                 throw new UnauthorizedAccessException("Qr-code не может быть создан!");
             
             if (!data.IsRead)

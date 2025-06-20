@@ -102,7 +102,8 @@ public interface IAuthRepository
     /// </summary>
     /// <param name="personId">Идентификатор пользователя</param>
     /// <param name="token">Токен</param>
-    /// <returns>true - токен не валиден</returns>
+    /// <param name="sessionId">Идентификатор сессии</param>
+    /// <returns>True - токен не валиден</returns>
     public Task<bool> IsBannedTokenAsync(string personId, string token, string sessionId);
 
     /// <summary>
@@ -153,7 +154,12 @@ public interface IAuthRepository
     /// <param name="personId"></param>
     /// <param name="state">Состояние сессии</param>
     /// <returns></returns>
-    public Task<IQueryable<Session>?> GetSessionsAsync(string personId, bool state = false);
+    public IQueryable<Session> GetSessionsAsync(string personId, bool state = false);
     
+    /// <summary>
+    /// Отзывает все токены
+    /// </summary>
+    /// <param name="personId">Идентификатор пользователя</param>
+    /// <returns></returns>
     public Task RevokeAllSessionsAsync(string personId);
 }

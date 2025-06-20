@@ -22,12 +22,12 @@ public static class GoogleAuthenticatorService
     /// </summary>
     /// <param name="code">Код от пользователя</param>
     /// <param name="secret">Пользовательский ключ</param>
-    /// <returns></returns>
+    /// <returns>true - код верен</returns>
     public static bool CheckValidKey(string code, string secret)
     {
         Totp totp = new Totp(Base32Encoding.ToBytes(secret));
         
-        bool isValid = totp.VerifyTotp(code, out long timeWindowUsed, VerificationWindow.RfcSpecifiedNetworkDelay);
+        bool isValid = totp.VerifyTotp(code, out long _, VerificationWindow.RfcSpecifiedNetworkDelay);
         return isValid;
     }
 
@@ -41,7 +41,6 @@ public static class GoogleAuthenticatorService
     {
         string service = "ChatFlow";
         string qrUri = $"otpauth://totp/{service}:{user}?secret={secret}&issuer={service}";
-
         return qrUri;
     }
     

@@ -3,16 +3,16 @@
 public interface IEncryptionService
 {
     /// <summary>
-    /// Шифрует данные
+    /// Шифрует текст
     /// </summary>
     /// <param name="text">Текст для шифрования</param>
-    /// <returns></returns>
+    /// <returns>Зашифрованный текст</returns>
     public string Encrypt(string text);
     
     /// <summary>
-    /// Расшифровывает данные
+    /// Расшифровывает текст
     /// </summary>
-    /// <param name="encryptedText">Текст для расшифровки</param>
-    /// <returns></returns>
-    public string Decrypt(string encryptedText);
+    /// <param name="text">Текст для расшифровки</param>
+    /// <returns>Расшифрованный текст</returns>
+    public string Decrypt(string text);
 }

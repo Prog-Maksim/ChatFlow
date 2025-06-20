@@ -22,6 +22,13 @@ public class JwtTokenService
     public const int AccessTokenLifetimeMinute = 5;
     public const int RefreshTokenLifetimeDay = 30;
 
+    /// <summary>
+    /// Создает access токен
+    /// </summary>
+    /// <param name="personId">Идентификатор пользователя</param>
+    /// <param name="sessionId">Идентификатор сессии</param>
+    /// <param name="id">Идентификатор</param>
+    /// <returns></returns>
     public string GenerateJwtAccessToken(string personId, string sessionId, int id)
     {        
         var claims = new List<Claim>
@@ -44,6 +51,14 @@ public class JwtTokenService
         return new JwtSecurityTokenHandler().WriteToken(jwt);
     }
 
+    /// <summary>
+    /// Создает Refresh токен
+    /// </summary>
+    /// <param name="personId">Идентификатор пользователя</param>
+    /// <param name="passwordVersion">Версия пароля</param>
+    /// <param name="sessionId">Идентификатор сессии</param>
+    /// <param name="id">Идентификатор</param>
+    /// <returns></returns>
     public string GenerateJwtRefreshToken(string personId, int passwordVersion, string sessionId, int id)
     {
         var claims = new List<Claim>
@@ -67,6 +82,14 @@ public class JwtTokenService
         return new JwtSecurityTokenHandler().WriteToken(jwt);
     }
 
+    /// <summary>
+    /// Создает jwt токены для пользователя
+    /// </summary>
+    /// <param name="personId">Идентификатор пользователя</param>
+    /// <param name="passwordVersion">Версия пароля</param>
+    /// <param name="sessionId">Идентификатор сессии</param>
+    /// <param name="id">Идентификатор</param>
+    /// <returns></returns>
     public Tokens CreateJwtToken(string personId, int passwordVersion, string sessionId, int id)
     {
         var accessToken = GenerateJwtAccessToken(personId, sessionId, id);
@@ -75,6 +98,15 @@ public class JwtTokenService
         return new Tokens { AccessToken = accessToken, RefreshToken = refreshToken };
     }
 
+    /// <summary>
+    /// Создает jwt токены для пользователя
+    /// </summary>
+    /// <param name="personId">Идентификатор пользователя</param>
+    /// <param name="passwordVersion">Версия пароля</param>
+    /// <param name="sessionId">Идентификатор сессии</param>
+    /// <param name="id">Идентификатор</param>
+    /// <param name="oldRefreshToken">Старый refresh токен</param>
+    /// <returns></returns>
     public Tokens CreateJwtToken(string personId, int passwordVersion, string sessionId, int id, string oldRefreshToken)
     {
         _ = _authRepository.AddJwtTokenToBanAsync(personId, oldRefreshToken);
@@ -85,6 +117,12 @@ public class JwtTokenService
         return new Tokens { AccessToken = accessToken, RefreshToken = refreshToken };
     }
 
+    /// <summary>
+    /// Возвращает данные токена
+    /// </summary>
+    /// <param name="token">Токен</param>
+    /// <returns></returns>
+    /// <exception cref="ArgumentException">Неверный jwt токен</exception>
     public JwtTokenData GetJwtTokenData(string token)
     {
         var handler = new JwtSecurityTokenHandler();
@@ -125,8 +163,8 @@ public class JwtTokenService
     /// <summary>
     /// Проверяет валидность токена
     /// </summary>
-    /// <param name="token"></param>
-    /// <param name="person"></param>
+    /// <param name="token">Данные токена</param>
+    /// <param name="person">Объект пользователя</param>
     /// <returns>true - токен валиден</returns>
     public async Task<bool> ValidateJwtRefreshToken(JwtTokenData token, Person person)
     {
@@ -142,7 +180,7 @@ public class JwtTokenService
     /// <summary>
     /// Проверяет валидность токена
     /// </summary>
-    /// <param name="token"></param>
+    /// <param name="token">Токен</param>
     /// <returns>true - токен валиден</returns>
     public async Task<bool> ValidateJwtAccessToken(JwtTokenData token)
     {

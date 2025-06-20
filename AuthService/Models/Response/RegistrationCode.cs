@@ -10,7 +10,7 @@ public class RegistrationCode
     public required string Code { get; set; }
     
     /// <summary>
-    /// До какого времени годен токен
+    /// До какого времени токен валиден
     /// </summary>
     [JsonPropertyName("expires-at")]
     public required DateTime ExpiresAt { get; set; }

@@ -15,7 +15,7 @@ public class AccountService
     private readonly JwtTokenService _jwtTokenService;
     private readonly ILogger<AuthService> _logger;
     private readonly PasswordHasher<Person> _passwordHasher;
-
+    
     public AccountService(IAuthRepository authRepository, IEncryptionService encryptionService, JwtTokenService jwtTokenService, ILogger<AuthService> logger)
     {
         _authRepository = authRepository;
@@ -87,12 +87,16 @@ public class AccountService
         return new BaseResponse<string, RegistrationCode> { Message = "Не удалось проверить корректность jwt токена", Type = ResponseType.JwtTokenVerificationFailed, Errors = "Forbidden", Status = 403, Successfully = false, Data = null};
     }
         
+    /// <summary>
+    /// Удаляет все сессии пользователя
+    /// </summary>
+    /// <param name="personId">Идентификатор пользователя</param>
     private async Task RevokeAllSessions(string personId)
     {
-        var session = await _authRepository.GetSessionsAsync(personId);
-        if (session == null) return;
+        IQueryable<Session> sessions = _authRepository.GetSessionsAsync(personId);
+        if (!sessions.Any()) return;
         
         await _authRepository.RevokeAllSessionsAsync(personId);
-        await _authRepository.AddSessionsToBanAsync(session.Select(s => s.SessionId), personId);
+        await _authRepository.AddSessionsToBanAsync(sessions.Select(s => s.SessionId), personId);
     }
 }

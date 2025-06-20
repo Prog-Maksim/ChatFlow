@@ -19,9 +19,9 @@ public class TokenService
     }
     
     /// <summary>
-    /// Обновляет Refesh токен
+    /// Обновляет Refresh токен
     /// </summary>
-    /// <param name="refreshToken">refresh токен</param>
+    /// <param name="refreshToken">Refresh токен</param>
     /// <returns></returns>
     public async Task<BaseResponse<string, AuthTokens>> RefreshAccessToken(string refreshToken)
     {

@@ -1,4 +1,3 @@
-using AuthService.Enums;
 using AuthService.Models.DB;
 using AuthService.Models.Response;
 using AuthService.Repository;
@@ -12,16 +11,14 @@ public class AccountService
 {
     private readonly IAuthRepository _authRepository;
     private readonly IEncryptionService _encryptionService;
-    private readonly JwtTokenService _jwtTokenService;
-    private readonly ILogger<AuthService> _logger;
+    private readonly TokenValidator _tokenValidator;
     private readonly PasswordHasher<Person> _passwordHasher;
     
-    public AccountService(IAuthRepository authRepository, IEncryptionService encryptionService, JwtTokenService jwtTokenService, ILogger<AuthService> logger)
+    public AccountService(IAuthRepository authRepository, IEncryptionService encryptionService, TokenValidator tokenValidator)
     {
         _authRepository = authRepository;
         _encryptionService = encryptionService;
-        _jwtTokenService = jwtTokenService;
-        _logger = logger;
+        _tokenValidator = tokenValidator;
         _passwordHasher = new PasswordHasher<Person>();
     }
     
@@ -33,23 +30,22 @@ public class AccountService
     /// <returns></returns>
     public async Task<BaseResponse<string, string>> UpdateNumberPhone(string accessToken, string phoneNumber)
     {
-        var dataToken = _jwtTokenService.GetJwtTokenData(accessToken);
-        if (await _jwtTokenService.ValidateJwtAccessToken(dataToken))
-        {
-            var checkNumberPhone = await _authRepository.GetUserByPhoneNumberAsync(phoneNumber);
-            if (checkNumberPhone != null)
-                return new BaseResponse<string, string> { Message = "Данный номер телефона занят", Successfully = false, Status = 403, Type = ResponseType.PhoneNumberInUse, Errors = "Forbidden", Data = null };
+        var (isValid, dataToken) = await _tokenValidator.TryValidateTokenAsync(accessToken);
+        if (!isValid)
+            return ResponseFactory.JwtTokenInvalid<string>();
+        
+        var checkNumberPhone = await _authRepository.GetUserByPhoneNumberAsync(phoneNumber);
+        if (checkNumberPhone != null)
+            return ResponseFactory.PhoneNumberInUse<string>();
             
-            var person = await _authRepository.GetUserByIdAsync(dataToken.PersonId);
-            if (person == null)
-                return new BaseResponse<string, string> { Message = "Данный пользователь не найден", Successfully = false, Status = 404, Type = ResponseType.PersonNotFound, Errors = "Not Found", Data = null };
+        var person = await _authRepository.GetUserByIdAsync(dataToken.PersonId);
+        if (person == null)
+            return ResponseFactory.PersonNotFound<string>();
             
-            person.NumberPhone = phoneNumber;
-            await _authRepository.SaveChangesAsync();
+        person.NumberPhone = phoneNumber;
+        await _authRepository.SaveChangesAsync();
             
-            return new BaseResponse<string, string> { Message = "Номер телефона успешно обновлен", Successfully = true, Status = 200, Type = ResponseType.Ok, Errors = null, Data = "Номер телефона обновлен" };
-        }
-        return new BaseResponse<string, string> { Message = "Не удалось проверить корректность jwt токена", Type = ResponseType.JwtTokenVerificationFailed, Errors = "Forbidden", Status = 403, Successfully = false, Data = null};
+        return ResponseFactory.Success("Номер телефона успешно обновлен", "Номер телефона обнолвен");
     }
     
     /// <summary>
@@ -62,29 +58,53 @@ public class AccountService
     /// <returns></returns>
     public async Task<BaseResponse<string, RegistrationCode>> UpdatePassword(string accessToken, string oldPassword, string newPassword, string userIpAddress)
     {
-        var dataToken = _jwtTokenService.GetJwtTokenData(accessToken);
-        if (await _jwtTokenService.ValidateJwtAccessToken(dataToken))
-        {
-            var person = await _authRepository.GetUserByIdAsync(dataToken.PersonId);
-            if (person == null)
-                return new BaseResponse<string, RegistrationCode> { Message = "Данный пользователь не найден", Successfully = false, Status = 404, Type = ResponseType.PersonNotFound, Errors = "Not Found", Data = null };
+        var (isValid, dataToken) = await _tokenValidator.TryValidateTokenAsync(accessToken);
+        if (!isValid)
+            return ResponseFactory.JwtTokenInvalid<RegistrationCode>();
             
-            if (_passwordHasher.VerifyHashedPassword(person, person.PasswordHash, oldPassword) != PasswordVerificationResult.Success)
-                return new BaseResponse<string, RegistrationCode> { Message = "Данный пароль не верен", Successfully = false, Status = 403, Type = ResponseType.InvalidPasswordError, Errors = "Forbidden", Data = null };
+        var person = await _authRepository.GetUserByIdAsync(dataToken.PersonId);
+        if (person == null)
+            return ResponseFactory.PersonNotFound<RegistrationCode>();
             
-            if (oldPassword == newPassword)
-                return new BaseResponse<string, RegistrationCode> { Message = "Данный пароль уже используется", Successfully = false, Status = 403, Type = ResponseType.InvalidPasswordError, Errors = "Forbidden", Data = null };
+        if (_passwordHasher.VerifyHashedPassword(person, person.PasswordHash, oldPassword) != PasswordVerificationResult.Success)
+            return ResponseFactory.InvalidPassword<RegistrationCode>("Данный пароль не верен");
             
-            person.PasswordHash = _passwordHasher.HashPassword(person, newPassword);
-            await RevokeAllSessions(person.PersonId);
-            await _authRepository.SaveChangesAsync();
+        if (oldPassword == newPassword)
+            return ResponseFactory.InvalidPassword<RegistrationCode>("Данный пароль уже используется");
+            
+        await UpdateUserPasswordAsync(person, newPassword);
+        var codeResult = await GenerateRegistrationCode(person, userIpAddress);
+        
+        return ResponseFactory.Success("Остался всего один шаг", codeResult);
+    }
 
-            var code = await _authRepository.GenerateCodeAndSaveAsync(person, userIpAddress, _encryptionService.Decrypt(person.TotpCode));
-            var codeResult = new RegistrationCode { Code = code, ExpiresAt = DateTime.UtcNow.AddMinutes(AuthRepository.CodeLifetimeMinute) };
-            var result = new BaseResponse<string, RegistrationCode> { Message = "Остался всего один шаг", Successfully = true, Status = 200, Type = ResponseType.Ok, Data = codeResult, Errors = null };
-            return result;
-        }
-        return new BaseResponse<string, RegistrationCode> { Message = "Не удалось проверить корректность jwt токена", Type = ResponseType.JwtTokenVerificationFailed, Errors = "Forbidden", Status = 403, Successfully = false, Data = null};
+    /// <summary>
+    /// Обновляет пароль пользователя
+    /// </summary>
+    /// <param name="person">Объект пользователя</param>
+    /// <param name="newPassword">Новый пароль</param>
+    private async Task UpdateUserPasswordAsync(Person person, string newPassword)
+    {
+        person.PasswordHash = _passwordHasher.HashPassword(person, newPassword);
+        await RevokeAllSessions(person.PersonId);
+        await _authRepository.SaveChangesAsync();
+    }
+    
+    /// <summary>
+    /// Генерирует регистрационный код
+    /// </summary>
+    /// <param name="person">Объект пользователя</param>
+    /// <param name="ip">IP адрес пользователя</param>
+    /// <returns></returns>
+    private async Task<RegistrationCode> GenerateRegistrationCode(Person person, string ip)
+    {
+        var decryptedTotp = _encryptionService.Decrypt(person.TotpCode);
+        var code = await _authRepository.GenerateCodeAndSaveAsync(person, ip, decryptedTotp);
+        return new RegistrationCode
+        {
+            Code = code,
+            ExpiresAt = DateTime.UtcNow.AddMinutes(AuthRepository.CodeLifetimeMinute)
+        };
     }
         
     /// <summary>

@@ -115,7 +115,7 @@ public class AuthService
             if (_passwordHasher.VerifyHashedPassword(person, person.PasswordHash, password) != PasswordVerificationResult.Success)
             {
                 await _authRepository.IncrementLoginAttemptsAsync(userIpAddress);
-                TrackFailedLogin(userIpAddress);
+                Metrics.TrackFailedLogin(userIpAddress);
                 return new BaseResponse<string, RegistrationCode>{ Status = 403, Message = "Пароль не верен", Type = ResponseType.InvalidPasswordError, Errors = "Forbidden", Successfully = false, Data = null };
             }
             
@@ -140,14 +140,4 @@ public class AuthService
         return new BaseResponse<string, RegistrationCode>{ Status = 400, Message = "Некорректная строка", Type = ResponseType.InvalidString, Errors = "Bad Request", Successfully = false, Data = null };
     }
     
-    /// <summary>
-    /// Мониторинг неправильных попыток входа
-    /// </summary>
-    /// <param name="ip">Ip адрес пользователя</param>
-    private void TrackFailedLogin(string ip)
-    {
-        MetricsRegistry.BruteForceDetection
-            .WithLabels(ip, "auth", Environment.MachineName)
-            .Inc();
-    }
 }

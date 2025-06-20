@@ -63,6 +63,7 @@ builder.Services.AddSingleton<IEncryptionService, EncryptionService>();
 builder.Services.AddSingleton<TokenPublisherService>();
 
 builder.Services.AddScoped<JwtTokenService>();
+builder.Services.AddScoped<TokenValidator>();
 
 // Swagger
 builder.Services.AddApiVersioning(options =>

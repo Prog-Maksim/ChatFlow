@@ -27,7 +27,7 @@ public static class ResponseFactory
     /// <typeparam name="T"></typeparam>
     /// <returns></returns>
     public static BaseResponse<string, T> PersonNotFoundOrBlocked<T>() =>
-        new() { Message = "Пользователь не найден или заблокирован", Type = ResponseType.PersonNotFoundOrBlocked, Errors = "Forbidden", Status = 423, Successfully = false, Data = default };
+        new() { Message = "Пользователь не найден или заблокирован", Type = ResponseType.PersonNotFoundOrBlocked, Errors = "Forbidden", Status = 423, Successfully = false};
 
     /// <summary>
     /// Отказано в доступе
@@ -36,7 +36,7 @@ public static class ResponseFactory
     /// <typeparam name="T"></typeparam>
     /// <returns></returns>
     public static BaseResponse<string, T> AccessDenied<T>(string message = "Отказано в доступе") =>
-        new() { Message = message, Type = ResponseType.AccessDenied, Errors = "Forbidden", Status = 403, Successfully = false, Data = default };
+        new() { Message = message, Type = ResponseType.AccessDenied, Errors = "Forbidden", Status = 403, Successfully = false };
     
     /// <summary>
     /// Неверный пароль
@@ -107,4 +107,10 @@ public static class ResponseFactory
     /// <returns></returns>
     public static BaseResponse<string, TData> SessionNotFound<TData>() =>
         new() { Message = "Сессии не найдены", Type = ResponseType.SessionNotFound, Errors = "Not Found", Status = 404, Successfully = false };
+    
+    public static BaseResponse<string, T> NotFound<T>(string message, ResponseType type) =>
+        new() { Message = message, Successfully = false, Status = 404, Type = type, Errors = "Not Found" };
+
+    public static BaseResponse<string, T> Forbidden<T>(string message, ResponseType type) =>
+        new() { Message = message, Successfully = false, Status = 403, Type = type, Errors = "Forbidden" };
 }

@@ -30,26 +30,22 @@ public class TwoFactorService
     /// <returns></returns>
     public async Task<BaseResponse<string, Token2Fa>> AddGoogleAuthenticatorAsync(string code, string userIpAddress)
     {
-        if (await _authRepository.CheckCodeAsync(code))
-        {
-            var data = await _authRepository.GetTotpDataByCodeAsync(code);
-
-            if (data == null || data.IpAddress != userIpAddress)
-                return new BaseResponse<string, Token2Fa> { Message = "Отказано", Successfully = false, Status = 403, Type = ResponseType.AccessDenied, Errors = "Forbidden", Data = null };
-            
-            if (data.TotpCode != null && !data.IsUpdate)
-                return new BaseResponse<string, Token2Fa> { Message = "Код уже был создан", Successfully = false, Status = 403, Type = ResponseType.CodeIsCreated, Errors = "Forbidden", Data = null };
-            
-            var key = GoogleAuthenticatorService.GenerateKey();
-            await _authRepository.UpdateTotpDataByCodeAsync(code, key);
-            
-            var codeResult = new Token2Fa { Token = key };
-            var result = new BaseResponse<string, Token2Fa> { Message = "Ваш код аутентификации", Successfully = true, Status = 200, Type = ResponseType.Ok, Data = codeResult, Errors = null };
+        if (!await _authRepository.CheckCodeAsync(code))
+            return ResponseFactory.NotFound<Token2Fa>("Данный код не найден", ResponseType.CodeNotFount);
         
-            return result;
-        }
-        _logger.LogWarning("Код аутентификации пользователя не найден");
-        return new BaseResponse<string, Token2Fa> { Message = "Данный код не найден", Successfully = false, Status = 404, Type = ResponseType.CodeNotFount, Errors = "Not Found", Data = null};
+        var data = await _authRepository.GetTotpDataByCodeAsync(code);
+
+        if (data == null || data.IpAddress != userIpAddress)
+            return ResponseFactory.AccessDenied<Token2Fa>();
+            
+        if (data.TotpCode != null && !data.IsUpdate)
+            return ResponseFactory.Forbidden<Token2Fa>("Код уже был создан", ResponseType.CodeIsCreated);
+            
+        var secretKey = GoogleAuthenticatorService.GenerateKey();
+        await _authRepository.UpdateTotpDataByCodeAsync(code, secretKey);
+            
+        var tokenResult = new Token2Fa { Token = secretKey };
+        return ResponseFactory.Success("Ваш код аутентификации", tokenResult);
     }
 
     /// <summary>
@@ -62,72 +58,90 @@ public class TwoFactorService
     /// <returns></returns>
     public async Task<BaseResponse<string, AuthTokens>> CheckGoogleAuthenticatorAsync(string code, string key, string userIpAddress, string userAgent)
     {
-        if (await _authRepository.CheckCodeAsync(code))
+        if (!await _authRepository.CheckCodeAsync(code))
+            return ResponseFactory.NotFound<AuthTokens>("Данный код не найден", ResponseType.CodeNotFount);
+        
+        var data = await _authRepository.GetTotpDataByCodeAsync(code);
+
+        if (data == null)
+            return ResponseFactory.NotFound<AuthTokens>("Вы не подключили сервис", ResponseType.ServiceNotConnected);
+
+        if (await _authRepository.GetNumberSessionsAsync(data.PersonId) >= 10)
+            return ResponseFactory.Forbidden<AuthTokens>("Достигнуто максимальное количество устройств", ResponseType.DeviceLimitReached);
+            
+        if (data.IpAddress != userIpAddress)
+            return ResponseFactory.AccessDenied<AuthTokens>();
+
+        if (data.TotpCode == null)
+            return ResponseFactory.NotFound<AuthTokens>("Подключаемый сервис не найден", ResponseType.ServiceConnectedNotFound);
+            
+        if (!GoogleAuthenticatorService.CheckValidKey(key, data.TotpCode))
+            return ResponseFactory.Forbidden<AuthTokens>("Код Google Authenticator не верен", ResponseType.CodeIsNotValid);
+        
+        if (data.TotpCode != null)
+            await TryAddTotpCodeAsync(data.PersonId, data.TotpCode);
+
+        var session = CreateSession(data.PersonId, userIpAddress, userAgent);
+        await _authRepository.AddSessionAsync(session);
+        await _authRepository.SaveChangesAsync();
+
+        var tokens = _jwtTokenService.CreateJwtToken(
+            data.PersonId,
+            data.PersonData.PasswordVersion,
+            session.SessionId,
+            session.Id
+        );
+
+        await _authRepository.DeleteTotpDataByCodeAsync(code);
+
+        var tokenResult = new AuthTokens
         {
-            var data = await _authRepository.GetTotpDataByCodeAsync(code);
-
-            if (data == null)
-            {
-                _logger.LogInformation("Пользователь не подключил сервис");
-                return new BaseResponse<string, AuthTokens> { Message = "Вы не подключили сервис", Successfully = false, Status = 404, Type = ResponseType.ServiceNotConnected, Errors = "Not Found", Data = null};
-            }
-
-            if (await _authRepository.GetNumberSessionsAsync(data.PersonId) >= 10)
-                return new BaseResponse<string, AuthTokens> { Message = "Достигнуто максимальное кол-во устройств", Successfully = false, Status = 403, Type = ResponseType.DeviceLimitReached, Errors = "Forbidden", Data = null};
-            
-            if (data.IpAddress != userIpAddress)
-                return new BaseResponse<string, AuthTokens> { Message = "Отказано", Successfully = false, Status = 403, Type = ResponseType.AccessDenied, Errors = "Forbidden", Data = null };
-
-            if (data.TotpCode == null)
-            {
-                _logger.LogWarning("Секрет TOTP не найден");
-                return new BaseResponse<string, AuthTokens> { Message = "Подключаемый сервис не найден", Successfully = false, Status = 404, Type = ResponseType.ServiceConnectedNotFound, Errors = "Not Found", Data = null};
-            }         
-            
-            var result = GoogleAuthenticatorService.CheckValidKey(key, data.TotpCode);
-
-            if (result)
-            {
-                
-                if (data.TotpCode != null)
-                {
-                    Person? person = await _authRepository.GetUserByIdAsync(data.PersonId);
-                    if (person != null)
-                        await AddTotpCode(person, data.TotpCode);
-                }
-                else
-                    _logger.LogInformation("Пользователь уже зарегистрирован");
-
-                string sessionId = Guid.NewGuid().ToString();
-                
-                var parser = Parser.GetDefault();
-                ClientInfo clientInfo = parser.Parse(userAgent);
-
-                Session session = new Session
-                {
-                    PersonId = data.PersonId,
-                    SessionId = sessionId,
-                    IpAddress = _encryptionService.Encrypt(userIpAddress),
-                    Device = clientInfo.Device.ToString(),
-                    Os = clientInfo.OS.ToString(),
-                    Browser = clientInfo.UA.ToString(),
-                    CreatedAt = DateTime.UtcNow,
-                    LastUsedAt = DateTime.UtcNow,
-                    IsRevoked = false
-                };
-                await _authRepository.AddSessionAsync(session);
-                await _authRepository.SaveChangesAsync();
-                
-                var tokens = _jwtTokenService.CreateJwtToken(data.PersonId, data.PersonData.PasswordVersion, sessionId, session.Id);
-                await _authRepository.DeleteTotpDataByCodeAsync(code);
-
-                var tokensResult = new AuthTokens { AccessToken = tokens.AccessToken, RefreshToken = tokens.RefreshToken, AccessTokenExpiration = DateTime.UtcNow.AddMinutes(JwtTokenService.AccessTokenLifetimeMinute), RefreshTokenExpiration = DateTime.UtcNow.AddDays(JwtTokenService.RefreshTokenLifetimeDay) };
-                return new BaseResponse<string, AuthTokens> { Message = "Вы успешно авторизовались", Successfully = true, Status = 200, Type = ResponseType.Ok, Errors = null, Data = tokensResult, };
-            }
-            return new BaseResponse<string, AuthTokens> { Message = "Код не верен", Successfully = false, Status = 403, Type = ResponseType.CodeIsNotValid, Errors = "Forbidden", Data = null};
-        }
-        _logger.LogWarning("Код аутентификации пользователя не найден");
-        return new BaseResponse<string, AuthTokens> { Message = "Данный код не найден", Successfully = false, Status = 404, Type = ResponseType.CodeNotFount, Errors = "Not Found", Data = null};
+            AccessToken = tokens.AccessToken,
+            RefreshToken = tokens.RefreshToken,
+            AccessTokenExpiration = DateTime.UtcNow.AddMinutes(JwtTokenService.AccessTokenLifetimeMinute),
+            RefreshTokenExpiration = DateTime.UtcNow.AddDays(JwtTokenService.RefreshTokenLifetimeDay)
+        };
+        return ResponseFactory.Success("Вы успешно авторизовались", tokenResult);
+    }
+    
+    /// <summary>
+    /// Добавляет totp код
+    /// </summary>
+    /// <param name="personId">Идентификатор пользователя</param>
+    /// <param name="totpCode">Totp код</param>
+    private async Task TryAddTotpCodeAsync(string personId, string totpCode)
+    {
+        var person = await _authRepository.GetUserByIdAsync(personId);
+        if (person != null)
+            await AddTotpCode(person, totpCode);
+        else
+            _logger.LogInformation("Пользователь не найден для добавления TOTP");
+    }
+    
+    /// <summary>
+    /// Создает объект сессии
+    /// </summary>
+    /// <param name="personId">Идентификатор пользователя</param>
+    /// <param name="ipAddress">IP адрес</param>
+    /// <param name="userAgent">User агенты пользователя</param>
+    /// <returns></returns>
+    private Session CreateSession(string personId, string ipAddress, string userAgent)
+    {
+        var parser = Parser.GetDefault();
+        var clientInfo = parser.Parse(userAgent);
+    
+        return new Session
+        {
+            PersonId = personId,
+            SessionId = Guid.NewGuid().ToString(),
+            IpAddress = _encryptionService.Encrypt(ipAddress),
+            Device = clientInfo.Device.ToString(),
+            Os = clientInfo.OS.ToString(),
+            Browser = clientInfo.UA.ToString(),
+            CreatedAt = DateTime.UtcNow,
+            LastUsedAt = DateTime.UtcNow,
+            IsRevoked = false
+        };
     }
         
     /// <summary>
@@ -159,27 +173,26 @@ public class TwoFactorService
     /// <exception cref="UnauthorizedAccessException"></exception>
     public async Task<byte[]> GetQrCodeGoogleAuthenticatorAsync(string code, string userIpAddress)
     {
-        if (await _authRepository.CheckCodeAsync(code))
-        {
-            var data = await _authRepository.GetTotpDataByCodeAsync(code);
+        if (!await _authRepository.CheckCodeAsync(code))
+            throw new NullReferenceException("Данный код не найден");
+        
+        var data = await _authRepository.GetTotpDataByCodeAsync(code);
             
-            if (data == null)
-                throw new NullReferenceException("Вы не создали подключение");
+        if (data == null)
+            throw new NullReferenceException("Вы не создали подключение");
             
-            if (data.IpAddress != userIpAddress)
-                throw new UnauthorizedAccessException("Qr-code не может быть создан!");
+        if (data.IpAddress != userIpAddress)
+            throw new UnauthorizedAccessException("Qr-code не может быть создан!");
             
-            if (!data.IsRead)
-                throw new UnauthorizedAccessException("Qr-code не может быть создан!");
+        if (!data.IsRead)
+            throw new UnauthorizedAccessException("Qr-code не может быть создан!");
 
-            if (data.TotpCode == null)
-                throw new NullReferenceException("Подключаемый сервис не найден");
+        if (data.TotpCode == null)
+            throw new NullReferenceException("Подключаемый сервис не найден");
 
 
-            var userData = data.PersonData.Email ?? data.PersonData.NumberPhone;
-            string url = GoogleAuthenticatorService.GenerateUrl(data.TotpCode, userData);
-            return GoogleAuthenticatorService.GenerateQrCode(url);
-        }
-        throw new NullReferenceException("Данный код не найден");
+        var userData = data.PersonData.Email ?? data.PersonData.NumberPhone;
+        string url = GoogleAuthenticatorService.GenerateUrl(data.TotpCode, userData);
+        return GoogleAuthenticatorService.GenerateQrCode(url);
     }
 }

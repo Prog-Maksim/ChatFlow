@@ -1,9 +1,7 @@
-using AuthService.Enums;
 using AuthService.Models.DB;
 using AuthService.Models.Response;
 using AuthService.Repository.Interfaces;
 using AuthService.Scripts;
-using Microsoft.EntityFrameworkCore;
 
 namespace AuthService.Service;
 
@@ -11,15 +9,13 @@ public class SessionService
 {
     private readonly IAuthRepository _authRepository;
     private readonly IEncryptionService _encryptionService;
-    private readonly JwtTokenService _jwtTokenService;
-    private readonly ILogger<AuthService> _logger;
+    private readonly TokenValidator _tokenValidator;
 
-    public SessionService(IAuthRepository authRepository, IEncryptionService encryptionService, JwtTokenService jwtTokenService, ILogger<AuthService> logger)
+    public SessionService(IAuthRepository authRepository, IEncryptionService encryptionService, TokenValidator tokenValidator)
     {
         _authRepository = authRepository;
         _encryptionService = encryptionService;
-        _jwtTokenService = jwtTokenService;
-        _logger = logger;
+        _tokenValidator = tokenValidator;
     }
     
     /// <summary>
@@ -29,36 +25,51 @@ public class SessionService
     /// <returns></returns>
     public async Task<BaseResponse<string, DataSession>> GetSessions(string accessToken)
     {
-        var dataToken = _jwtTokenService.GetJwtTokenData(accessToken);
-        if (!await _jwtTokenService.ValidateJwtAccessToken(dataToken))
-            return new BaseResponse<string, DataSession> { Message = "Не удалось проверить корректность jwt токена", Type = ResponseType.JwtTokenVerificationFailed, Errors = "Forbidden", Status = 403, Successfully = false, Data = null};
-
-        IQueryable<Session> sessions = _authRepository.GetSessionsAsync(dataToken.PersonId);
+        var (isValid, dataToken) = await _tokenValidator.TryValidateTokenAsync(accessToken);
+        if (!isValid)
+            return ResponseFactory.JwtTokenInvalid<DataSession>();
         
-        if (!sessions.Any())
-            return new BaseResponse<string, DataSession> { Message = "Сессии не найдены", Successfully = false, Status = 404, Type = ResponseType.SessionNotFound, Errors = "Not Found", Data = null };
-            
-        List<Sessions> result = new ();
-        foreach (var session in sessions)
+        var sessions = _authRepository.GetSessionsAsync(dataToken.PersonId).ToList();
+        if (sessions.Count == 0)
+            return ResponseFactory.SessionNotFound<DataSession>();
+        
+        var data = await BuildSessionDataAsync(sessions, dataToken.Id);
+        return ResponseFactory.Success("Ваши активные сессии", data);
+    }
+    
+    /// <summary>
+    /// Сборка активных сессий
+    /// </summary>
+    /// <param name="sessions">Список сессий</param>
+    /// <param name="currentSessionId">Текущий идентификатор сессий</param>
+    /// <returns></returns>
+    private async Task<DataSession> BuildSessionDataAsync(List<Session> sessions, int currentSessionId)
+    {
+        var sessionResults = await Task.WhenAll(sessions.Select(async session =>
         {
-            var address = await DeterminingIpAddress.GetPositionUser(_encryptionService.Decrypt(session.IpAddress));
-            Sessions data = new Sessions
+            var decryptedIp = _encryptionService.Decrypt(session.IpAddress);
+            var location = await DeterminingIpAddress.GetPositionUser(decryptedIp);
+
+            return new Sessions
             {
-                IpAddress = _encryptionService.Decrypt(session.IpAddress),
-                City = address.City,
-                Country = address.Country,
+                IpAddress = decryptedIp,
+                City = location.City,
+                Country = location.Country,
                 Device = session.Device,
                 Os = session.Os,
                 Browser = session.Browser,
                 CreateAt = session.CreatedAt,
                 LastUsedAt = session.LastUsedAt,
                 SessionId = session.SessionId,
-                IsYou = dataToken.Id == session.Id
+                IsYou = currentSessionId == session.Id
             };
-            result.Add(data);
-        }
-        
-        return new BaseResponse<string, DataSession> { Message = "Ваши активные сессии", Successfully = true, Status = 200, Type = ResponseType.Ok, Errors = null, Data = new DataSession { Count = result.Count, Sessions = result } };
+        }));
+
+        return new DataSession
+        {
+            Count = sessionResults.Length,
+            Sessions = sessionResults.ToList()
+        };
     }
     
     /// <summary>
@@ -69,37 +80,55 @@ public class SessionService
     /// <returns></returns>
     public async Task<BaseResponse<string, List<string>>> RevokeSession(string accessToken, string? sessionId = null)
     {
-        var dataToken = _jwtTokenService.GetJwtTokenData(accessToken);
+        var (isValid, dataToken) = await _tokenValidator.TryValidateTokenAsync(accessToken);
+        if (!isValid)
+            return ResponseFactory.JwtTokenInvalid<List<string>>();
 
-        if (await _jwtTokenService.ValidateJwtAccessToken(dataToken))
-        {
-            IQueryable<Session> sessions = _authRepository.GetSessionsAsync(dataToken.PersonId);
+        var sessions = _authRepository.GetSessionsAsync(dataToken.PersonId).ToList();
+        if (sessions.Count == 0)
+            return ResponseFactory.SessionNotFound<List<string>>();
 
-            if (!sessions.Any())
-                return new BaseResponse<string, List<string>> { Message = "Активные сессии не найдены", Successfully = false, Status = 404, Type = ResponseType.SessionNotFound, Errors = "Not Found", Data = null };
-            
-            if (sessionId != null)
-            {
-                var session = sessions.FirstOrDefault(s => s.SessionId == sessionId && s.IsRevoked == false);
-                if (session == null)
-                    return new BaseResponse<string, List<string>> { Message = "Данная сессия не найдена", Successfully = false, Status = 404, Type = ResponseType.SessionNotFound, Errors = "Not Found", Data = null };
-                    
-                session.IsRevoked = true;
-                await _authRepository.AddSessionToBanAsync(sessionId, dataToken.PersonId);
-                await _authRepository.SaveChangesAsync();
-
-                return new BaseResponse<string, List<string>> { Message = "Сессия успешно отозвана", Successfully = true, Status = 200, Type = ResponseType.Ok, Errors = null, Data = new List<string> { sessionId } };
-            }
-
-            IQueryable<Session> sessionsRevoke = sessions.Where(s => s.PersonId == dataToken.PersonId && s.Id != dataToken.Id);
-            var sessionIdsToRevoke = sessionsRevoke.Select(s => s.SessionId).ToList();
-            
-            await _authRepository.AddSessionsToBanAsync(sessionsRevoke.Select(s => s.SessionId), dataToken.PersonId);
-            await sessionsRevoke.ExecuteUpdateAsync(p => p.SetProperty(s => s.IsRevoked, s => true));
-            
-            return new BaseResponse<string, List<string>> { Message = "Сессии успешно отозваны", Successfully = true, Status = 200, Type = ResponseType.Ok, Errors = null, Data = sessionIdsToRevoke };
-        }
-        return new BaseResponse<string, List<string>> { Message = "Не удалось проверить корректность jwt токена", Type = ResponseType.JwtTokenVerificationFailed, Errors = "Forbidden", Status = 403, Successfully = false, Data = null};
+        return sessionId != null
+            ? await RevokeSingleSessionAsync(sessionId, sessions, dataToken.PersonId)
+            : await RevokeAllOtherSessionsAsync(sessions, dataToken.PersonId, dataToken.Id);
     }
     
+    /// <summary>
+    /// Отзыв одной сессии
+    /// </summary>
+    /// <param name="sessionId">Идентификатор сессии</param>
+    /// <param name="sessions">Список сессий</param>
+    /// <param name="personId">Идентификатор пользователя</param>
+    /// <returns></returns>
+    private async Task<BaseResponse<string, List<string>>> RevokeSingleSessionAsync(string sessionId, List<Session> sessions, string personId)
+    {
+        var session = sessions.FirstOrDefault(s => s.SessionId == sessionId && !s.IsRevoked);
+        if (session == null)
+            return ResponseFactory.SessionNotFound<List<string>>();
+
+        session.IsRevoked = true;
+        await _authRepository.AddSessionToBanAsync(sessionId, personId);
+        await _authRepository.SaveChangesAsync();
+
+        return ResponseFactory.Success("Сессия успешно отозвана", new List<string> { sessionId });
+    }
+
+    /// <summary>
+    /// Отзыв всех сессии
+    /// </summary>
+    /// <param name="sessions">Список сессий</param>
+    /// <param name="personId">Идентификатор сессии</param>
+    /// <param name="currentSessionId">Текущий идентификатор сессии</param>
+    /// <returns></returns>
+    private async Task<BaseResponse<string, List<string>>> RevokeAllOtherSessionsAsync(List<Session> sessions, string personId, int currentSessionId)
+    {
+        var sessionsToRevoke = sessions.Where(s => s.Id != currentSessionId && !s.IsRevoked).ToList();
+        if (sessionsToRevoke.Count == 0)
+            return ResponseFactory.SessionNotFound<List<string>>();
+
+        var sessionIds = sessionsToRevoke.Select(s => s.SessionId).ToList();
+        await _authRepository.AddSessionsToBanAsync(sessionIds, personId);
+        
+        return ResponseFactory.Success("Сессии успешно отозваны", sessionIds);
+    }
 }

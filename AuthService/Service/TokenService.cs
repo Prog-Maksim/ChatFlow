@@ -1,4 +1,5 @@
 using AuthService.Enums;
+using AuthService.Models.DB;
 using AuthService.Models.Response;
 using AuthService.Repository.Interfaces;
 using AuthService.Scripts;
@@ -9,13 +10,13 @@ public class TokenService
 {
     private readonly IAuthRepository _authRepository;
     private readonly JwtTokenService _jwtTokenService;
-    private readonly ILogger<AuthService> _logger;
+    private readonly TokenValidator _tokenValidator;
 
-    public TokenService(IAuthRepository authRepository, JwtTokenService jwtTokenService, ILogger<AuthService> logger)
+    public TokenService(IAuthRepository authRepository, JwtTokenService jwtTokenService, TokenValidator tokenValidator)
     {
         _authRepository = authRepository;
         _jwtTokenService = jwtTokenService;
-        _logger = logger;
+        _tokenValidator = tokenValidator;
     }
     
     /// <summary>
@@ -25,27 +26,50 @@ public class TokenService
     /// <returns></returns>
     public async Task<BaseResponse<string, AuthTokens>> RefreshAccessToken(string refreshToken)
     {
-        var dataToken = _jwtTokenService.GetJwtTokenData(refreshToken);
+        var (isValid, dataToken) = await _tokenValidator.TryValidateTokenAsync(refreshToken);
         var person = await _authRepository.GetUserByIdAsync(dataToken.PersonId);
         
         if (person == null || person.AccountState == AccountState.Blocked)
-            return new BaseResponse<string, AuthTokens> { Message = "Пользователь не найден или был заблокирован!", Type = ResponseType.PersonNotFoundOrBlocked, Errors = "Forbidden", Status = 423, Successfully = false, Data = null};
+            return ResponseFactory.PersonNotFoundOrBlocked<AuthTokens>();
+        
+        if (!isValid)
+            return ResponseFactory.JwtTokenInvalid<AuthTokens>();
+        
+        var session = await _authRepository.GetSessionByIdAsync(person.PersonId, dataToken.SessionId);
 
-        if (await _jwtTokenService.ValidateJwtRefreshToken(dataToken, person))
+        if (session == null || session.IsRevoked)
+            return ResponseFactory.AccessDenied<AuthTokens>();
+            
+        session.LastUsedAt = DateTime.UtcNow;
+        await _authRepository.SaveChangesAsync();
+            
+        var authTokens = GenerateAuthTokens(person, session, refreshToken);
+        return ResponseFactory.Success("Токены успешно обновлены", authTokens);
+    }
+    
+    /// <summary>
+    /// Генерация новых токенов
+    /// </summary>
+    /// <param name="person">Идентификатор пользователя</param>
+    /// <param name="session">Объект сессии</param>
+    /// <param name="previousRefreshToken">Текущий refresh токен</param>
+    /// <returns></returns>
+    private AuthTokens GenerateAuthTokens(Person person, Session session, string previousRefreshToken)
+    {
+        var tokens = _jwtTokenService.CreateJwtToken(
+            person.PersonId,
+            person.PasswordVersion,
+            session.SessionId,
+            session.Id,
+            previousRefreshToken
+        );
+
+        return new AuthTokens
         {
-            var session = await _authRepository.GetSessionByIdAsync(person.PersonId, dataToken.SessionId);
-
-            if (session == null || session.IsRevoked)
-                return new BaseResponse<string, AuthTokens> { Message = "Отказано", Successfully = false, Status = 403, Type = ResponseType.AccessDenied, Errors = "Forbidden", Data = null };
-            
-            session.LastUsedAt = DateTime.UtcNow;
-            await _authRepository.SaveChangesAsync();
-            
-            var tokens = _jwtTokenService.CreateJwtToken(person.PersonId, person.PasswordVersion, session.SessionId, session.Id, refreshToken);
-            
-            var tokensResult = new AuthTokens { AccessToken = tokens.AccessToken, RefreshToken = tokens.RefreshToken, AccessTokenExpiration = DateTime.UtcNow.AddMinutes(JwtTokenService.AccessTokenLifetimeMinute), RefreshTokenExpiration = DateTime.UtcNow.AddDays(JwtTokenService.RefreshTokenLifetimeDay) };
-            return new BaseResponse<string, AuthTokens> { Message = "Токены успешно обновлены", Successfully = true, Status = 200, Type = ResponseType.Ok, Errors = null, Data = tokensResult, };
-        }
-        return new BaseResponse<string, AuthTokens> { Message = "Не удалось проверить корректность jwt токена", Type = ResponseType.JwtTokenVerificationFailed, Errors = "Forbidden", Status = 403, Successfully = false, Data = null};
+            AccessToken = tokens.AccessToken,
+            RefreshToken = tokens.RefreshToken,
+            AccessTokenExpiration = DateTime.UtcNow.AddMinutes(JwtTokenService.AccessTokenLifetimeMinute),
+            RefreshTokenExpiration = DateTime.UtcNow.AddDays(JwtTokenService.RefreshTokenLifetimeDay)
+        };
     }
 }

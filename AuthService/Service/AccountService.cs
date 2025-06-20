@@ -58,6 +58,9 @@ public class AccountService
     /// <returns></returns>
     public async Task<BaseResponse<string, RegistrationCode>> UpdatePassword(string accessToken, string oldPassword, string newPassword, string userIpAddress)
     {
+        if (await _authRepository.IsBlockedAsync(userIpAddress))
+            return ResponseFactory.TooManyRequests<RegistrationCode>();
+        
         var (isValid, dataToken) = await _tokenValidator.TryValidateTokenAsync(accessToken);
         if (!isValid)
             return ResponseFactory.JwtTokenInvalid<RegistrationCode>();
@@ -67,7 +70,11 @@ public class AccountService
             return ResponseFactory.PersonNotFound<RegistrationCode>();
             
         if (_passwordHasher.VerifyHashedPassword(person, person.PasswordHash, oldPassword) != PasswordVerificationResult.Success)
+        {
+            await _authRepository.IncrementLoginAttemptsAsync(userIpAddress);
+            Metrics.TrackFailedLogin(userIpAddress);
             return ResponseFactory.InvalidPassword<RegistrationCode>("Данный пароль не верен");
+        }
             
         if (oldPassword == newPassword)
             return ResponseFactory.InvalidPassword<RegistrationCode>("Данный пароль уже используется");

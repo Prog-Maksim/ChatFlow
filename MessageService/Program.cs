@@ -39,7 +39,7 @@ var sinkOptions = new ElasticsearchSinkOptions(new Uri(uri))
 Log.Logger = new LoggerConfiguration()
     .MinimumLevel.Debug()
     .WriteTo.Elasticsearch(sinkOptions)
-    .WriteTo.File("Logs/log-.txt", rollingInterval: RollingInterval.Hour,
+    .WriteTo.File("Logs/log-.log", rollingInterval: RollingInterval.Hour,
         restrictedToMinimumLevel: LogEventLevel.Information)
     .WriteTo.Console(restrictedToMinimumLevel: LogEventLevel.Information)
     .CreateLogger();
@@ -149,18 +149,19 @@ if (app.Environment.IsDevelopment())
 {
     app.UseDeveloperExceptionPage();
     app.UseStatusCodePages();
-    app.UseSwagger();
+    app.UseSwagger(c =>
+    {
+        c.RouteTemplate = "swagger-ms3/{documentName}/swagger.json";  // меняем путь json
+    });
     app.UseSwaggerUI(options =>
     {
         var provider = app.Services.GetRequiredService<IApiVersionDescriptionProvider>();
-        
         foreach (var description in provider.ApiVersionDescriptions)
         {
             options.SwaggerEndpoint(
-                $"/swagger/{description.GroupName}/swagger.json",
+                $"/swagger-ms3/{description.GroupName}/swagger.json",  // совпадает с RouteTemplate
                 description.GroupName.ToUpperInvariant());
         }
-
         options.RoutePrefix = "swagger-ms3";
     });
 }

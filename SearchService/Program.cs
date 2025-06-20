@@ -5,7 +5,6 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.ApiExplorer;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 using Nest;
@@ -26,7 +25,9 @@ var builder = WebApplication.CreateBuilder(args);
 var elasticSection = builder.Configuration.GetSection("ElasticSearch");
 var uri = elasticSection.GetValue<string>("Uri");
 var serviceToken = elasticSection.GetValue<string>("ServiceToken");
+var serviceToken1 = elasticSection.GetValue<string>("ServiceTokenChats");
 var credentials = new ApiKeyAuthenticationCredentials(serviceToken);
+var credentials1 = new ApiKeyAuthenticationCredentials(serviceToken1);
 
 var sinkOptions = new ElasticsearchSinkOptions(new Uri(uri))
 {
@@ -41,7 +42,7 @@ var sinkOptions = new ElasticsearchSinkOptions(new Uri(uri))
 Log.Logger = new LoggerConfiguration()
     .MinimumLevel.Debug()
     .WriteTo.Elasticsearch(sinkOptions)
-    .WriteTo.File("Logs/log-.txt", rollingInterval: RollingInterval.Hour,
+    .WriteTo.File("Logs/log-.log", rollingInterval: RollingInterval.Hour,
         restrictedToMinimumLevel: LogEventLevel.Information)
     .WriteTo.Console(restrictedToMinimumLevel: LogEventLevel.Information)
     .CreateLogger();
@@ -63,7 +64,7 @@ builder.Services.AddSingleton<ISecurityRedisConnection, SecurityRedisConnection>
 
 // ElasticSearch
 var settings = new ConnectionSettings(new Uri(builder.Configuration.GetConnectionString("ElasticSearch")))
-    .ApiKeyAuthentication(credentials)
+    .ApiKeyAuthentication(credentials1)
     .DefaultIndex("chats")
     .DefaultMappingFor<IndexPerson>(m => m
         .PropertyName(p => p.ChatId, "chatId")
@@ -167,18 +168,19 @@ if (app.Environment.IsDevelopment())
 {
     app.UseDeveloperExceptionPage();
     app.UseStatusCodePages();
-    app.UseSwagger();
+    app.UseSwagger(c =>
+    {
+        c.RouteTemplate = "swagger-ms5/{documentName}/swagger.json";  // меняем путь json
+    });
     app.UseSwaggerUI(options =>
     {
         var provider = app.Services.GetRequiredService<IApiVersionDescriptionProvider>();
-        
         foreach (var description in provider.ApiVersionDescriptions)
         {
             options.SwaggerEndpoint(
-                $"/swagger/{description.GroupName}/swagger.json",
+                $"/swagger-ms5/{description.GroupName}/swagger.json",  // совпадает с RouteTemplate
                 description.GroupName.ToUpperInvariant());
         }
-
         options.RoutePrefix = "swagger-ms5";
     });
 }

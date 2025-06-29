@@ -3,6 +3,7 @@ using AuthService.Models.DB;
 using AuthService.Models.Response;
 using AuthService.Repository.Interfaces;
 using AuthService.Scripts;
+using Serilog.Core;
 
 namespace AuthService.Service;
 
@@ -11,12 +12,14 @@ public class TokenService
     private readonly IAuthRepository _authRepository;
     private readonly JwtTokenService _jwtTokenService;
     private readonly TokenValidator _tokenValidator;
+    private readonly ILogger<TokenService> _logger;
 
-    public TokenService(IAuthRepository authRepository, JwtTokenService jwtTokenService, TokenValidator tokenValidator)
+    public TokenService(ILogger<TokenService> logger, IAuthRepository authRepository, JwtTokenService jwtTokenService, TokenValidator tokenValidator)
     {
         _authRepository = authRepository;
         _jwtTokenService = jwtTokenService;
         _tokenValidator = tokenValidator;
+        _logger = logger;
     }
     
     /// <summary>
@@ -26,13 +29,13 @@ public class TokenService
     /// <returns></returns>
     public async Task<BaseResponse<string, AuthTokens>> RefreshAccessToken(string refreshToken)
     {
-        var (isValid, dataToken) = await _tokenValidator.TryValidateTokenAsync(refreshToken);
-        var person = await _authRepository.GetUserByIdAsync(dataToken.PersonId);
+        var dataToken = _jwtTokenService.GetJwtTokenData(refreshToken);
+        Person? person = await _authRepository.GetUserByIdAsync(dataToken.PersonId);
         
-        if (person == null || person.AccountState == AccountState.Blocked)
+        if (person is null || person.AccountState == AccountState.Blocked)
             return ResponseFactory.PersonNotFoundOrBlocked<AuthTokens>();
         
-        if (!isValid)
+        if (!await _jwtTokenService.ValidateJwtRefreshToken(dataToken, person))
             return ResponseFactory.JwtTokenInvalid<AuthTokens>();
         
         var session = await _authRepository.GetSessionByIdAsync(person.PersonId, dataToken.SessionId);

@@ -13,12 +13,14 @@ public class AccountService
     private readonly IEncryptionService _encryptionService;
     private readonly TokenValidator _tokenValidator;
     private readonly PasswordHasher<Person> _passwordHasher;
+    private readonly SessionService _sessionService;
     
-    public AccountService(IAuthRepository authRepository, IEncryptionService encryptionService, TokenValidator tokenValidator)
+    public AccountService(IAuthRepository authRepository, IEncryptionService encryptionService, TokenValidator tokenValidator, SessionService sessionService)
     {
         _authRepository = authRepository;
         _encryptionService = encryptionService;
         _tokenValidator = tokenValidator;
+        _sessionService = sessionService;
         _passwordHasher = new PasswordHasher<Person>();
     }
     
@@ -81,10 +83,26 @@ public class AccountService
             
         await UpdateUserPasswordAsync(person, newPassword);
         var codeResult = await GenerateRegistrationCode(person, userIpAddress);
+        await _sessionService.RevokeSession(accessToken);
         
         return ResponseFactory.Success("Остался всего один шаг", codeResult);
     }
 
+    /// <summary>
+    /// Позволяет выйти пользователю из аккаунта
+    /// </summary>
+    /// <param name="accessToken">Access токен</param>
+    /// <returns></returns>
+    public async Task<BaseResponse<string, RevokeSession>> ExitTheSession(string accessToken)
+    {
+        var (isValid, dataToken) = await _tokenValidator.TryValidateTokenAsync(accessToken);
+        if (!isValid)
+            return ResponseFactory.JwtTokenInvalid<RevokeSession>();
+        
+        await _sessionService.RevokeSession(accessToken, dataToken.SessionId);
+        return ResponseFactory.Success("Пользователь успешно вышел из аккаунта", new RevokeSession { SessionId = dataToken.SessionId });
+    }
+    
     /// <summary>
     /// Обновляет пароль пользователя
     /// </summary>

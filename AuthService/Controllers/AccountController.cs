@@ -101,4 +101,35 @@ public class AccountController(ILogger<AuthController> logger, AccountService ac
             return Ok(response);
         }
     }
+
+    /// <summary>
+    /// Позволяет выйти из аккаунта
+    /// </summary>
+    /// <returns></returns>
+    /// <response code="200">Успешно</response>
+    /// <response code="403">Невалидный jwt токен и невалидный пароль</response>
+    [Authorize]
+    [HttpPost("exit")]
+    [ProducesResponseType(typeof(BaseResponse<string, RevokeSession>),StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(BaseResponse<string, string>),StatusCodes.Status403Forbidden)]
+    public async Task<IActionResult> Exit()
+    {
+        MetricsRegistry.EndpointRequestCounter
+            .WithLabels("update-password", "PATCH", "auth", Environment.MachineName).Inc();
+
+        using (MetricsRegistry.EndpointDuration
+                   .WithLabels("update-password", "PATCH", "auth", Environment.MachineName)
+                   .NewTimer())
+        {
+            var authHeader = HttpContext.Request.Headers["Authorization"].ToString();
+            var token = authHeader.Substring("Bearer ".Length);
+            
+            var response = await accountService.ExitTheSession(token);
+            
+            if (!response.Successfully)
+                return StatusCode(response.Status, response);
+        
+            return Ok(response);
+        }
+    }
 }

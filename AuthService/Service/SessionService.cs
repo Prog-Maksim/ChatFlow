@@ -78,15 +78,15 @@ public class SessionService
     /// <param name="accessToken">Access токен</param>
     /// <param name="sessionId">Идентификатор сессии</param>
     /// <returns></returns>
-    public async Task<BaseResponse<string, List<string>>> RevokeSession(string accessToken, string? sessionId = null)
+    public async Task<BaseResponse<string, List<RevokeSession>>> RevokeSession(string accessToken, string? sessionId = null)
     {
         var (isValid, dataToken) = await _tokenValidator.TryValidateTokenAsync(accessToken);
         if (!isValid)
-            return ResponseFactory.JwtTokenInvalid<List<string>>();
+            return ResponseFactory.JwtTokenInvalid<List<RevokeSession>>();
 
         var sessions = _authRepository.GetSessionsAsync(dataToken.PersonId).ToList();
         if (sessions.Count == 0)
-            return ResponseFactory.SessionNotFound<List<string>>();
+            return ResponseFactory.SessionNotFound<List<RevokeSession>>();
 
         return sessionId != null
             ? await RevokeSingleSessionAsync(sessionId, sessions, dataToken.PersonId)
@@ -100,17 +100,17 @@ public class SessionService
     /// <param name="sessions">Список сессий</param>
     /// <param name="personId">Идентификатор пользователя</param>
     /// <returns></returns>
-    private async Task<BaseResponse<string, List<string>>> RevokeSingleSessionAsync(string sessionId, List<Session> sessions, string personId)
+    private async Task<BaseResponse<string, List<RevokeSession>>> RevokeSingleSessionAsync(string sessionId, List<Session> sessions, string personId)
     {
         var session = sessions.FirstOrDefault(s => s.SessionId == sessionId && !s.IsRevoked);
         if (session == null)
-            return ResponseFactory.SessionNotFound<List<string>>();
+            return ResponseFactory.SessionNotFound<List<RevokeSession>>();
 
         session.IsRevoked = true;
         await _authRepository.AddSessionToBanAsync(sessionId, personId);
         await _authRepository.SaveChangesAsync();
 
-        return ResponseFactory.Success("Сессия успешно отозвана", new List<string> { sessionId });
+        return ResponseFactory.Success("Сессия успешно отозвана", new List<RevokeSession> { new RevokeSession { SessionId = sessionId } });
     }
 
     /// <summary>
@@ -120,15 +120,15 @@ public class SessionService
     /// <param name="personId">Идентификатор сессии</param>
     /// <param name="currentSessionId">Текущий идентификатор сессии</param>
     /// <returns></returns>
-    private async Task<BaseResponse<string, List<string>>> RevokeAllOtherSessionsAsync(List<Session> sessions, string personId, int currentSessionId)
+    private async Task<BaseResponse<string, List<RevokeSession>>> RevokeAllOtherSessionsAsync(List<Session> sessions, string personId, int currentSessionId)
     {
         var sessionsToRevoke = sessions.Where(s => s.Id != currentSessionId && !s.IsRevoked).ToList();
         if (sessionsToRevoke.Count == 0)
-            return ResponseFactory.SessionNotFound<List<string>>();
+            return ResponseFactory.SessionNotFound<List<RevokeSession>>();
 
         var sessionIds = sessionsToRevoke.Select(s => s.SessionId).ToList();
         await _authRepository.AddSessionsToBanAsync(sessionIds, personId);
         
-        return ResponseFactory.Success("Сессии успешно отозваны", sessionIds);
+        return ResponseFactory.Success("Сессии успешно отозваны", sessionIds.Select(s => new RevokeSession { SessionId = s }).ToList());
     }
 }

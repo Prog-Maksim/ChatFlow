@@ -53,7 +53,7 @@ public class SessionsController(ILogger<AuthController> logger, SessionService s
     /// <response code="404">Активные сессии не найдены</response>
     [Authorize]
     [HttpDelete]
-    [ProducesResponseType(typeof(BaseResponse<string, List<string>>),StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(BaseResponse<string, List<RevokeSession>>),StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(BaseResponse<string, List<string>>),StatusCodes.Status403Forbidden)]
     [ProducesResponseType(typeof(BaseResponse<string, List<string>>),StatusCodes.Status404NotFound)]
     public async Task<IActionResult> DeleteSessions()
@@ -87,7 +87,7 @@ public class SessionsController(ILogger<AuthController> logger, SessionService s
     /// <response code="404">Активные сессии не найдены</response>
     [Authorize]
     [HttpDelete("{sessionId}")]
-    [ProducesResponseType(typeof(BaseResponse<string, List<string>>),StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(BaseResponse<string, List<RevokeSession>>),StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(BaseResponse<string, List<string>>),StatusCodes.Status403Forbidden)]
     [ProducesResponseType(typeof(BaseResponse<string, List<string>>),StatusCodes.Status404NotFound)]
     public async Task<IActionResult> DeleteSessions([FromRoute] string sessionId)

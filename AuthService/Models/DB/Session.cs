@@ -59,4 +59,9 @@ public class Session
     /// Статус входа (действительный или отозван)
     /// </summary>
     public bool IsRevoked { get; set; }
+    
+    /// <summary>
+    /// Дата и время когда токен был отозван
+    /// </summary>
+    public DateTime? RevokedAt { get; set; }
 }

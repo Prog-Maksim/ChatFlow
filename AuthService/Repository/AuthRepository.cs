@@ -143,6 +143,14 @@ public class AuthRepository: IAuthRepository
 
     public async Task AddSessionToBanAsync(string sessionId, string personId)
     {
+        await _context.Sessions.Where(t => t.PersonId == personId && t.SessionId == sessionId).ExecuteUpdateAsync(s => s
+            .SetProperty(
+                r => r.IsRevoked,
+                r => true)
+            .SetProperty(
+                r => r.RevokedAt,
+                r => DateTime.UtcNow));
+        
         var tag= "sessions";
         await _database.SetAddAsync(tag, sessionId);
         await _database.KeyExpireAsync(tag, TimeSpan.FromDays(JwtTokenService.RefreshTokenLifetimeDay));
@@ -156,6 +164,14 @@ public class AuthRepository: IAuthRepository
         var sessionsList = sessionIds.Where(id => !string.IsNullOrWhiteSpace(id)).ToList();
         if (sessionsList.Count == 0)
             return;
+        
+        await _context.Sessions.Where(t => t.PersonId == personId && sessionsList.Contains(t.SessionId)).ExecuteUpdateAsync(s => s
+            .SetProperty(
+                r => r.IsRevoked,
+                r => true)
+            .SetProperty(
+                r => r.RevokedAt,
+                r => DateTime.UtcNow));
 
         RedisValue[] redisValues = sessionsList.Select(id => (RedisValue)id).ToArray();
         
@@ -228,6 +244,9 @@ public class AuthRepository: IAuthRepository
             .Where(p => p.PersonId == personId)
             .ExecuteUpdateAsync(s => s.SetProperty(
                 r => r.IsRevoked,
-                r => r.IsRevoked == true));
+                r => true)
+                .SetProperty(
+                r => r.RevokedAt,
+                r => DateTime.UtcNow));
     }
 }

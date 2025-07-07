@@ -7,7 +7,7 @@ stages:
 
 # ──────── TEST JOBS ────────
 
-test-loadbalancer-service:
+test-service:
   stage: test
   image: mcr.microsoft.com/dotnet/sdk:9.0
   tags:
@@ -17,92 +17,8 @@ test-loadbalancer-service:
     paths:
       - ~/.nuget/packages/
   script:
-    - cd Backend/WsLoadBalancer
-    - dotnet restore
-    - dotnet test
-
-test-auth-service:
-  stage: test
-  image: mcr.microsoft.com/dotnet/sdk:9.0
-  tags:
-    - prod
-  cache:
-    key: ${CI_COMMIT_REF_SLUG}
-    paths:
-      - ~/.nuget/packages/
-  script:
-    - cd Backend/AuthService
-    - dotnet restore
-    - dotnet test
-
-test-chat-service:
-  stage: test
-  image: mcr.microsoft.com/dotnet/sdk:9.0
-  tags:
-    - prod
-  cache:
-    key: ${CI_COMMIT_REF_SLUG}
-    paths:
-      - ~/.nuget/packages/
-  script:
-    - cd Backend/ChatService
-    - dotnet restore
-    - dotnet test
-
-test-message-service:
-  stage: test
-  image: mcr.microsoft.com/dotnet/sdk:9.0
-  tags:
-    - prod
-  cache:
-    key: ${CI_COMMIT_REF_SLUG}
-    paths:
-      - ~/.nuget/packages/
-  script:
-    - cd Backend/MessageService
-    - dotnet restore
-    - dotnet test
-
-test-profile-service:
-  stage: test
-  image: mcr.microsoft.com/dotnet/sdk:9.0
-  tags:
-    - prod
-  cache:
-    key: ${CI_COMMIT_REF_SLUG}
-    paths:
-      - ~/.nuget/packages/
-  script:
-    - cd Backend/ProfileService
-    - dotnet restore
-    - dotnet test
-
-test-search-service:
-  stage: test
-  image: mcr.microsoft.com/dotnet/sdk:9.0
-  tags:
-    - prod
-  cache:
-    key: ${CI_COMMIT_REF_SLUG}
-    paths:
-      - ~/.nuget/packages/
-  script:
-    - cd Backend/SearchService
-    - dotnet restore
-    - dotnet test
-
-test-websocket-service:
-  stage: test
-  image: mcr.microsoft.com/dotnet/sdk:9.0
-  tags:
-    - prod
-  cache:
-    key: ${CI_COMMIT_REF_SLUG}
-    paths:
-      - ~/.nuget/packages/
-  script:
-    - cd Backend/WebSocketService
-    - dotnet restore
+    - rm -rf ~/.nuget/packages/
+    - cd Backend
     - dotnet test
 
 # ──────── BUILD JOBS ────────

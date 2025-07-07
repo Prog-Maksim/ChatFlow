@@ -16,3 +16,101 @@ test-auth-service-job:
     - cd Backend/AuthService
     - dotnet restore
     - dotnet test
+      
+test-chat-service-job:
+  stage: test
+  image: mcr.microsoft.com/dotnet/sdk:9.0
+  tags:
+    - prod
+  cache:
+    key: ${CI_COMMIT_REF_SLUG}
+    paths:
+      - ~/.nuget/packages/
+  script:
+    - cd Backend/ChatService
+    - dotnet restore
+    - dotnet test
+  
+test-media-service-job:
+  stage: test
+  image: mcr.microsoft.com/dotnet/sdk:9.0
+  tags:
+    - prod
+  cache:
+    key: ${CI_COMMIT_REF_SLUG}
+    paths:
+      - ~/.nuget/packages/
+  script:
+    - cd Backend/MediaService
+    - dotnet restore
+    - dotnet test
+  
+test-message-service-job:
+  stage: test
+  image: mcr.microsoft.com/dotnet/sdk:9.0
+  tags:
+    - prod
+  cache:
+    key: ${CI_COMMIT_REF_SLUG}
+    paths:
+      - ~/.nuget/packages/
+  script:
+    - cd Backend/MessageService
+    - dotnet restore
+    - dotnet test
+  
+test-profile-service-job:
+  stage: test
+  image: mcr.microsoft.com/dotnet/sdk:9.0
+  tags:
+    - prod
+  cache:
+    key: ${CI_COMMIT_REF_SLUG}
+    paths:
+      - ~/.nuget/packages/
+  script:
+    - cd Backend/ProfileService
+    - dotnet restore
+    - dotnet test
+      
+test-search-service-job:
+  stage: test
+  image: mcr.microsoft.com/dotnet/sdk:9.0
+  tags:
+    - prod
+  cache:
+    key: ${CI_COMMIT_REF_SLUG}
+    paths:
+      - ~/.nuget/packages/
+  script:
+    - cd Backend/SearchService
+    - dotnet restore
+    - dotnet test
+      
+test-websocket-service-job:
+  stage: test
+  image: mcr.microsoft.com/dotnet/sdk:9.0
+  tags:
+    - prod
+  cache:
+    key: ${CI_COMMIT_REF_SLUG}
+    paths:
+      - ~/.nuget/packages/
+  script:
+    - cd Backend/WebSocketService
+    - dotnet restore
+    - dotnet test
+      
+test-wsloadbalancer-service-job:
+  stage: test
+  image: mcr.microsoft.com/dotnet/sdk:9.0
+  tags:
+    - prod
+  cache:
+    key: ${CI_COMMIT_REF_SLUG}
+    paths:
+      - ~/.nuget/packages/
+  script:
+    - cd Backend/WsLoadBalancer
+    - dotnet restore
+    - dotnet test

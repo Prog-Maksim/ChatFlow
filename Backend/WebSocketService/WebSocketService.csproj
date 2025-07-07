@@ -42,14 +42,14 @@
     </ItemGroup>
 
     <ItemGroup>
-      <Content Include="..\.dockerignore">
-        <Link>.dockerignore</Link>
-      </Content>
+      <Folder Include="Logs\" />
+      <Folder Include="Tests\" />
     </ItemGroup>
 
     <ItemGroup>
-      <Folder Include="Logs\" />
-      <Folder Include="Tests\" />
+      <Content Include="..\.dockerignore">
+        <Link>.dockerignore</Link>
+      </Content>
     </ItemGroup>
 
 </Project>

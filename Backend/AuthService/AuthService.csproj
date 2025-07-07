@@ -50,12 +50,12 @@
     </ItemGroup>
 
     <ItemGroup>
-      <Content Include="..\.dockerignore">
-        <Link>.dockerignore</Link>
-      </Content>
+      <Folder Include="Logs\" />
     </ItemGroup>
 
     <ItemGroup>
-      <Folder Include="Logs\" />
+      <Content Include="..\.dockerignore">
+        <Link>.dockerignore</Link>
+      </Content>
     </ItemGroup>
 </Project>

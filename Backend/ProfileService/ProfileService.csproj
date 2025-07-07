@@ -10,12 +10,6 @@
     </PropertyGroup>
 
     <ItemGroup>
-      <Content Include="..\.dockerignore">
-        <Link>.dockerignore</Link>
-      </Content>
-    </ItemGroup>
-
-    <ItemGroup>
         <PackageReference Include="AWSSDK.S3" Version="3.7.410.12" />
         <PackageReference Include="SixLabors.ImageSharp" Version="3.1.8" />
 
@@ -59,6 +53,12 @@
     <ItemGroup>
       <Folder Include="Logs\" />
       <Folder Include="Tests\" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <Content Include="..\.dockerignore">
+        <Link>.dockerignore</Link>
+      </Content>
     </ItemGroup>
 
 </Project>

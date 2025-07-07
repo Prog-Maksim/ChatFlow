@@ -17,8 +17,8 @@ test-service:
     paths:
       - ~/.nuget/packages/
   script:
-    - rm -rf ~/.nuget/packages/
     - cd Backend
+    - dotnet restore
     - dotnet test
 
 # ──────── BUILD JOBS ────────

@@ -13,7 +13,6 @@ test-service:
   tags:
     - prod
   script:
-    - rm -rf ~/.nuget/packages/
     - cd Backend
     - dotnet restore
     - dotnet test

@@ -12,10 +12,6 @@ test-service:
   image: mcr.microsoft.com/dotnet/sdk:9.0
   tags:
     - prod
-  cache:
-    key: ${CI_COMMIT_REF_SLUG}
-    paths:
-      - ~/.nuget/packages/
   script:
     - rm -rf ~/.nuget/packages/
     - cd Backend

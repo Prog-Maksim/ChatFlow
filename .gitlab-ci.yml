@@ -7,6 +7,20 @@ stages:
 
 # ──────── TEST JOBS ────────
 
+test-loadbalancer-service:
+  stage: test
+  image: mcr.microsoft.com/dotnet/sdk:9.0
+  tags:
+    - prod
+  cache:
+    key: ${CI_COMMIT_REF_SLUG}
+    paths:
+      - ~/.nuget/packages/
+  script:
+    - cd Backend/WsLoadBalancer
+    - dotnet restore
+    - dotnet test
+
 test-auth-service:
   stage: test
   image: mcr.microsoft.com/dotnet/sdk:9.0

@@ -146,25 +146,24 @@ var app = builder.Build();
 
 // Настройки среды
 if (app.Environment.IsDevelopment())
-{
     app.UseDeveloperExceptionPage();
-    app.UseStatusCodePages();
-    app.UseSwagger(c =>
+
+app.UseStatusCodePages();
+app.UseSwagger(c =>
+{
+    c.RouteTemplate = "swagger-ms3/{documentName}/swagger.json";  // меняем путь json
+});
+app.UseSwaggerUI(options =>
+{
+    var provider = app.Services.GetRequiredService<IApiVersionDescriptionProvider>();
+    foreach (var description in provider.ApiVersionDescriptions)
     {
-        c.RouteTemplate = "swagger-ms3/{documentName}/swagger.json";  // меняем путь json
-    });
-    app.UseSwaggerUI(options =>
-    {
-        var provider = app.Services.GetRequiredService<IApiVersionDescriptionProvider>();
-        foreach (var description in provider.ApiVersionDescriptions)
-        {
-            options.SwaggerEndpoint(
-                $"/swagger-ms3/{description.GroupName}/swagger.json",  // совпадает с RouteTemplate
-                description.GroupName.ToUpperInvariant());
-        }
-        options.RoutePrefix = "swagger-ms3";
-    });
-}
+        options.SwaggerEndpoint(
+            $"/swagger-ms3/{description.GroupName}/swagger.json",  // совпадает с RouteTemplate
+            description.GroupName.ToUpperInvariant());
+    }
+    options.RoutePrefix = "swagger-ms3";
+});
 
 app.UseRouting();
 

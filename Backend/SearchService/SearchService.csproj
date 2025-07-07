@@ -58,6 +58,7 @@
       <Folder Include="Logs\" />
       <Folder Include="Migrations\" />
       <Folder Include="Scripts\" />
+      <Folder Include="Tests\" />
     </ItemGroup>
 
 </Project>

@@ -5,9 +5,11 @@ stages:
   - build
   - deploy
 
-.default-dotnet-job:
-  image: mcr.microsoft.com/dotnet/sdk:9.0
+# ──────── TEST JOBS ────────
+
+test-auth-service:
   stage: test
+  image: mcr.microsoft.com/dotnet/sdk:9.0
   tags:
     - prod
   cache:
@@ -15,99 +17,150 @@ stages:
     paths:
       - ~/.nuget/packages/
   script:
-    - cd $SERVICE_PATH
+    - cd Backend/AuthService
     - dotnet restore
     - dotnet test
 
-test-auth-service:
-  extends: .default-dotnet-job
-  variables:
-    SERVICE_PATH: Backend/AuthService
 test-chat-service:
-  extends: .default-dotnet-job
-  variables:
-    SERVICE_PATH: Backend/ChatService
+  stage: test
+  image: mcr.microsoft.com/dotnet/sdk:9.0
+  tags:
+    - prod
+  cache:
+    key: ${CI_COMMIT_REF_SLUG}
+    paths:
+      - ~/.nuget/packages/
+  script:
+    - cd Backend/ChatService
+    - dotnet restore
+    - dotnet test
+
 test-message-service:
-  extends: .default-dotnet-job
-  variables:
-    SERVICE_PATH: Backend/MessageService
+  stage: test
+  image: mcr.microsoft.com/dotnet/sdk:9.0
+  tags:
+    - prod
+  cache:
+    key: ${CI_COMMIT_REF_SLUG}
+    paths:
+      - ~/.nuget/packages/
+  script:
+    - cd Backend/MessageService
+    - dotnet restore
+    - dotnet test
+
 test-profile-service:
-  extends: .default-dotnet-job
-  variables:
-    SERVICE_PATH: Backend/ProfileService
+  stage: test
+  image: mcr.microsoft.com/dotnet/sdk:9.0
+  tags:
+    - prod
+  cache:
+    key: ${CI_COMMIT_REF_SLUG}
+    paths:
+      - ~/.nuget/packages/
+  script:
+    - cd Backend/ProfileService
+    - dotnet restore
+    - dotnet test
+
 test-search-service:
-  extends: .default-dotnet-job
-  variables:
-    SERVICE_PATH: Backend/SearchService
+  stage: test
+  image: mcr.microsoft.com/dotnet/sdk:9.0
+  tags:
+    - prod
+  cache:
+    key: ${CI_COMMIT_REF_SLUG}
+    paths:
+      - ~/.nuget/packages/
+  script:
+    - cd Backend/SearchService
+    - dotnet restore
+    - dotnet test
+
 test-websocket-service:
-  extends: .default-dotnet-job
-  variables:
-    SERVICE_PATH: Backend/WebSocketService
+  stage: test
+  image: mcr.microsoft.com/dotnet/sdk:9.0
+  tags:
+    - prod
+  cache:
+    key: ${CI_COMMIT_REF_SLUG}
+    paths:
+      - ~/.nuget/packages/
+  script:
+    - cd Backend/WebSocketService
+    - dotnet restore
+    - dotnet test
+
 test-loadbalancer-service:
-  extends: .default-dotnet-job
-  variables:
-    SERVICE_PATH: Backend/WsLoadBalancer
+  stage: test
+  image: mcr.microsoft.com/dotnet/sdk:9.0
+  tags:
+    - prod
+  cache:
+    key: ${CI_COMMIT_REF_SLUG}
+    paths:
+      - ~/.nuget/packages/
+  script:
+    - cd Backend/WsLoadBalancer
+    - dotnet restore
+    - dotnet test
 
+# ──────── BUILD JOBS ────────
 
-.default-duild-job:
+build-auth-service-job:
   stage: build
   tags:
     - prod
   script:
-    - docker build -t $IMAGE_NAME -f $DOCKERFILE_PATH $BUILD_CONTEXT
+    - docker build -t chatflow-auth-service -f Backend/AuthService/Dockerfile Backend/AuthService
 
-build-auth-service-job:
-  extends: .default-build-job
-  variables:
-    IMAGE_NAME: chatflow-auth-service
-    DOCKERFILE_PATH: Backend/AuthService/Dockerfile
-    BUILD_CONTEXT: Backend/AuthService
-    
 build-chat-service-job:
-  extends: .default-build-job
-  variables:
-    IMAGE_NAME: chatflow-chat-service
-    DOCKERFILE_PATH: Backend/ChatService/Dockerfile
-    BUILD_CONTEXT: Backend/ChatService
-    
+  stage: build
+  tags:
+    - prod
+  script:
+    - docker build -t chatflow-chat-service -f Backend/ChatService/Dockerfile Backend/ChatService
+
 build-message-service-job:
-  extends: .default-build-job
-  variables:
-    IMAGE_NAME: chatflow-message-service
-    DOCKERFILE_PATH: Backend/MessageService/Dockerfile
-    BUILD_CONTEXT: Backend/MessageService
-    
+  stage: build
+  tags:
+    - prod
+  script:
+    - docker build -t chatflow-message-service -f Backend/MessageService/Dockerfile Backend/MessageService
+
 build-profile-service-job:
-  extends: .default-build-job
-  variables:
-    IMAGE_NAME: chatflow-profile-service
-    DOCKERFILE_PATH: Backend/ProfileService/Dockerfile
-    BUILD_CONTEXT: Backend/ProfileService
-    
+  stage: build
+  tags:
+    - prod
+  script:
+    - docker build -t chatflow-profile-service -f Backend/ProfileService/Dockerfile Backend/ProfileService
+
 build-search-service-job:
-  extends: .default-build-job
-  variables:
-    IMAGE_NAME: chatflow-search-service
-    DOCKERFILE_PATH: Backend/SearchService/Dockerfile
-    BUILD_CONTEXT: Backend/SearchService
-    
+  stage: build
+  tags:
+    - prod
+  script:
+    - docker build -t chatflow-search-service -f Backend/SearchService/Dockerfile Backend/SearchService
+
 build-websocket-service-job:
-  extends: .default-build-job
-  variables:
-    IMAGE_NAME: chatflow-websocket-service
-    DOCKERFILE_PATH: Backend/WebSocketService/Dockerfile
-    BUILD_CONTEXT: Backend/WebSocketService
-    
+  stage: build
+  tags:
+    - prod
+  script:
+    - docker build -t chatflow-websocket-service -f Backend/WebSocketService/Dockerfile Backend/WebSocketService
+
 build-loadbalancer-service-job:
-  extends: .default-build-job
-  variables:
-    IMAGE_NAME: chatflow-loadbalancer-service
-    DOCKERFILE_PATH: Backend/WsLoadBalancer/Dockerfile
-    BUILD_CONTEXT: Backend/WsLoadBalancer
-    
+  stage: build
+  tags:
+    - prod
+  script:
+    - docker build -t chatflow-loadbalancer-service -f Backend/WsLoadBalancer/Dockerfile Backend/WsLoadBalancer
+
+# ──────── DEPLOY JOB ────────
+
 deploy-job:
   stage: deploy
   tags:
     - prod
-  script: 
+  script:
     - docker compose up -d

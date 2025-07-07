@@ -3,6 +3,7 @@ obj
 bin
 */appsettings.json
 */appsettings.Development.json
+*/appsettings.Production.json
 Properties
 */Logs
 ChatFlow.sln.DotSettings.user

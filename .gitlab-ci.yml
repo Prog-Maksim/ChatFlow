@@ -2,10 +2,12 @@ image: docker:24.0.7
 
 stages:
   - test
+  - build
+  - deploy
 
-test-auth-service-job:
-  stage: test
+.default-dotnet-job:
   image: mcr.microsoft.com/dotnet/sdk:9.0
+  stage: test
   tags:
     - prod
   cache:
@@ -13,104 +15,99 @@ test-auth-service-job:
     paths:
       - ~/.nuget/packages/
   script:
-    - cd Backend/AuthService
+    - cd $SERVICE_PATH
     - dotnet restore
     - dotnet test
-      
-test-chat-service-job:
-  stage: test
-  image: mcr.microsoft.com/dotnet/sdk:9.0
+
+test-auth-service:
+  extends: .default-dotnet-job
+  variables:
+    SERVICE_PATH: Backend/AuthService
+test-chat-service:
+  extends: .default-dotnet-job
+  variables:
+    SERVICE_PATH: Backend/ChatService
+test-message-service:
+  extends: .default-dotnet-job
+  variables:
+    SERVICE_PATH: Backend/MessageService
+test-profile-service:
+  extends: .default-dotnet-job
+  variables:
+    SERVICE_PATH: Backend/ProfileService
+test-search-service:
+  extends: .default-dotnet-job
+  variables:
+    SERVICE_PATH: Backend/SearchService
+test-websocket-service:
+  extends: .default-dotnet-job
+  variables:
+    SERVICE_PATH: Backend/WebSocketService
+test-loadbalancer-service:
+  extends: .default-dotnet-job
+  variables:
+    SERVICE_PATH: Backend/WsLoadBalancer
+
+
+.default-duild-job:
+  stage: build
   tags:
     - prod
-  cache:
-    key: ${CI_COMMIT_REF_SLUG}
-    paths:
-      - ~/.nuget/packages/
   script:
-    - cd Backend/ChatService
-    - dotnet restore
-    - dotnet test
-  
-test-media-service-job:
-  stage: test
-  image: mcr.microsoft.com/dotnet/sdk:9.0
+    - docker build -t $IMAGE_NAME -f $DOCKERFILE_PATH $BUILD_CONTEXT
+
+build-auth-service-job:
+  extends: .default-build-job
+  variables:
+    IMAGE_NAME: chatflow-auth-service
+    DOCKERFILE_PATH: Backend/AuthService/Dockerfile
+    BUILD_CONTEXT: Backend/AuthService
+    
+build-chat-service-job:
+  extends: .default-build-job
+  variables:
+    IMAGE_NAME: chatflow-chat-service
+    DOCKERFILE_PATH: Backend/ChatService/Dockerfile
+    BUILD_CONTEXT: Backend/ChatService
+    
+build-message-service-job:
+  extends: .default-build-job
+  variables:
+    IMAGE_NAME: chatflow-message-service
+    DOCKERFILE_PATH: Backend/MessageService/Dockerfile
+    BUILD_CONTEXT: Backend/MessageService
+    
+build-profile-service-job:
+  extends: .default-build-job
+  variables:
+    IMAGE_NAME: chatflow-profile-service
+    DOCKERFILE_PATH: Backend/ProfileService/Dockerfile
+    BUILD_CONTEXT: Backend/ProfileService
+    
+build-search-service-job:
+  extends: .default-build-job
+  variables:
+    IMAGE_NAME: chatflow-search-service
+    DOCKERFILE_PATH: Backend/SearchService/Dockerfile
+    BUILD_CONTEXT: Backend/SearchService
+    
+build-websocket-service-job:
+  extends: .default-build-job
+  variables:
+    IMAGE_NAME: chatflow-websocket-service
+    DOCKERFILE_PATH: Backend/WebSocketService/Dockerfile
+    BUILD_CONTEXT: Backend/WebSocketService
+    
+build-loadbalancer-service-job:
+  extends: .default-build-job
+  variables:
+    IMAGE_NAME: chatflow-loadbalancer-service
+    DOCKERFILE_PATH: Backend/WsLoadBalancer/Dockerfile
+    BUILD_CONTEXT: Backend/WsLoadBalancer
+    
+deploy-job:
+  stage: deploy
   tags:
     - prod
-  cache:
-    key: ${CI_COMMIT_REF_SLUG}
-    paths:
-      - ~/.nuget/packages/
-  script:
-    - cd Backend/MediaService
-    - dotnet restore
-    - dotnet test
-  
-test-message-service-job:
-  stage: test
-  image: mcr.microsoft.com/dotnet/sdk:9.0
-  tags:
-    - prod
-  cache:
-    key: ${CI_COMMIT_REF_SLUG}
-    paths:
-      - ~/.nuget/packages/
-  script:
-    - cd Backend/MessageService
-    - dotnet restore
-    - dotnet test
-  
-test-profile-service-job:
-  stage: test
-  image: mcr.microsoft.com/dotnet/sdk:9.0
-  tags:
-    - prod
-  cache:
-    key: ${CI_COMMIT_REF_SLUG}
-    paths:
-      - ~/.nuget/packages/
-  script:
-    - cd Backend/ProfileService
-    - dotnet restore
-    - dotnet test
-      
-test-search-service-job:
-  stage: test
-  image: mcr.microsoft.com/dotnet/sdk:9.0
-  tags:
-    - prod
-  cache:
-    key: ${CI_COMMIT_REF_SLUG}
-    paths:
-      - ~/.nuget/packages/
-  script:
-    - cd Backend/SearchService
-    - dotnet restore
-    - dotnet test
-      
-test-websocket-service-job:
-  stage: test
-  image: mcr.microsoft.com/dotnet/sdk:9.0
-  tags:
-    - prod
-  cache:
-    key: ${CI_COMMIT_REF_SLUG}
-    paths:
-      - ~/.nuget/packages/
-  script:
-    - cd Backend/WebSocketService
-    - dotnet restore
-    - dotnet test
-      
-test-wsloadbalancer-service-job:
-  stage: test
-  image: mcr.microsoft.com/dotnet/sdk:9.0
-  tags:
-    - prod
-  cache:
-    key: ${CI_COMMIT_REF_SLUG}
-    paths:
-      - ~/.nuget/packages/
-  script:
-    - cd Backend/WsLoadBalancer
-    - dotnet restore
-    - dotnet test
+  script: 
+    - docker compose up -d

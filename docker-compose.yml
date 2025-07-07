@@ -1,0 +1,57 @@
+version: '3.8'
+
+networks:
+  net:
+    
+services:
+  nginx:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "80:80"
+    depends_on:
+      - auth-service
+      - chat-service
+      - message-service
+      - profile-service
+      - search-service
+      - websocket-service
+      - load-balancer-service
+    networks:
+      - net
+  
+  auth-service:
+    image: chatflow-auth-service:latest
+    networks:
+      - net
+  
+  chat-service:
+    image: chatflow-chat-service:latest
+    networks:
+      - net
+  
+  message-service:
+    image: chatflow-message-service:latest
+    networks:
+      - net
+      
+  profile-service:
+    image: chatflow-profile-service:latest
+    networks:
+      - net
+  
+  search-service:
+    image: chatflow-search-service:latest
+    networks:
+      - net
+  
+  websocket-service:
+    image: chatflow-websocket-service:latest
+    networks:
+      - net
+  
+  load-balancer-service:
+    image: chatflow-loadbalancer-service:latest
+    networks:
+      - net

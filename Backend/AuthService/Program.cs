@@ -21,6 +21,12 @@ using StackExchange.Redis;
 
 var builder = WebApplication.CreateBuilder(args);
 
+builder.Configuration
+    .SetBasePath(Directory.GetCurrentDirectory())
+    .AddJsonFile("appsettings.json", optional: false, reloadOnChange: true)
+    .AddJsonFile($"appsettings.{builder.Environment.EnvironmentName}.json", optional: true, reloadOnChange: true)
+    .AddEnvironmentVariables();
+
 var elasticSection = builder.Configuration.GetSection("ElasticSearch");
 var uri = elasticSection.GetValue<string>("Uri");
 var serviceToken = elasticSection.GetValue<string>("ServiceToken");
@@ -149,25 +155,24 @@ var app = builder.Build();
 
 // Настройки среды
 if (app.Environment.IsDevelopment())
-{
     app.UseDeveloperExceptionPage();
-    app.UseStatusCodePages();
-    app.UseSwagger(c =>
+
+app.UseStatusCodePages();
+app.UseSwagger(c =>
+{
+    c.RouteTemplate = "swagger-ms1/{documentName}/swagger.json";  // меняем путь json
+});
+app.UseSwaggerUI(options =>
+{
+    var provider = app.Services.GetRequiredService<IApiVersionDescriptionProvider>();
+    foreach (var description in provider.ApiVersionDescriptions)
     {
-        c.RouteTemplate = "swagger-ms1/{documentName}/swagger.json";  // меняем путь json
-    });
-    app.UseSwaggerUI(options =>
-    {
-        var provider = app.Services.GetRequiredService<IApiVersionDescriptionProvider>();
-        foreach (var description in provider.ApiVersionDescriptions)
-        {
-            options.SwaggerEndpoint(
-                $"/swagger-ms1/{description.GroupName}/swagger.json",  // совпадает с RouteTemplate
-                description.GroupName.ToUpperInvariant());
-        }
-        options.RoutePrefix = "swagger-ms1";
-    });
-}
+        options.SwaggerEndpoint(
+            $"/swagger-ms1/{description.GroupName}/swagger.json",  // совпадает с RouteTemplate
+            description.GroupName.ToUpperInvariant());
+    }
+    options.RoutePrefix = "swagger-ms1";
+});
 
 app.UseRouting();
 

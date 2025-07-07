@@ -1,8 +1,18 @@
-stages:
-  - build
+image: docker:24.0.7
 
-build-job:
-  stage: build
+stages:
+  - test
+
+test-auth-service-job:
+  stage: test
+  image: mcr.microsoft.com/dotnet/sdk:9.0
+  tags:
+    - prod
+  cache:
+    key: ${CI_COMMIT_REF_SLUG}
+    paths:
+      - ~/.nuget/packages/
   script:
-    - echo "Compiling the code..."
-    - echo "Compile complete."
+    - cd Backend/AuthService
+    - dotnet restore
+    - dotnet test

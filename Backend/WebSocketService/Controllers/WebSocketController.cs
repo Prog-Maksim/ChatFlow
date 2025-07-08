@@ -8,7 +8,7 @@ namespace WebSocketService.Controllers;
 
 [ApiController]
 [ApiVersion("1.0")]
-[Route("backend-f/v{version:apiVersion}/ws")]
+[Route("f/v{version:apiVersion}/ws")]
 public class WebSocketController(ILogger<WebSocketController> logger, Service.WebSocketService service): ControllerBase
 {
     /// <summary>
@@ -22,6 +22,7 @@ public class WebSocketController(ILogger<WebSocketController> logger, Service.We
     /// </remarks>
     [Authorize]
     [HttpGet]
+    [ApiVersion("1.0")]
     public async Task Connect()
     {
         string? userIpAddress = HttpContext.Request.Headers["X-Forwarded-For"].FirstOrDefault() ?? HttpContext.Connection.RemoteIpAddress?.ToString();

@@ -10,20 +10,22 @@ namespace AuthService.Controllers;
 [ApiController]
 [ApiVersion("1.0")]
 [Produces("application/json")]
-[Route("backend-a/v{version:apiVersion}/[controller]")]
+[Route("a/v{version:apiVersion}/token")]
 public class TokenController(ILogger<AuthController> logger, TokenService tokenService): ControllerBase
 {
     /// <summary>
     /// Обновление токена
     /// </summary>
     /// <remarks>
-    /// Для обновления токенов, требуется передать refresh токен
+    /// <para>Для обновления токенов, требуется передать refresh токен.</para>
+    /// <para><b>Требует обязательную передачу User-Agent.</b></para>
     /// </remarks>
     /// <returns></returns>
     /// <response code="200">Успешно</response>
     /// <response code="403">Невалидный jwt токен</response>
     /// <response code="423">Пользователь не найден или был заблокирован</response>
     [Authorize]
+    [ApiVersion("1.0")]
     [HttpPost("refresh")]
     [ProducesResponseType(typeof(BaseResponse<string, AuthTokens>),StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(BaseResponse<string, AuthTokens>),StatusCodes.Status403Forbidden)]

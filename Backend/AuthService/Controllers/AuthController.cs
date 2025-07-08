@@ -12,12 +12,15 @@ namespace AuthService.Controllers;
 [ApiController]
 [ApiVersion("1.0")]
 [Produces("application/json")]
-[Route("backend-a/v{version:apiVersion}/[controller]")]
+[Route("a/v{version:apiVersion}/auth")]
 public class AuthController(ILogger<AuthController> logger, Service.AuthService authService): ControllerBase
 {
     /// <summary>
     /// Регистрация нового пользователя
     /// </summary>
+    /// <remarks>
+    /// <b>Требует обязательную передачу User-Agent.</b>
+    /// </remarks>
     /// <param name="registrationUser">Данные пользователя</param>
     /// <returns></returns>
     /// <response code="200">Успешная регистрация нового пользователя</response>
@@ -25,6 +28,7 @@ public class AuthController(ILogger<AuthController> logger, Service.AuthService 
     /// <response code="400">Ошибка валидации данных</response>
     /// <response code="403">Номер телефона занят</response>
     [AllowAnonymous]
+    [ApiVersion("1.0")]
     [HttpPost("registration")]
     [ProducesResponseType(typeof(BaseResponse<string, RegistrationCode>),StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(BaseResponse<string, object>),StatusCodes.Status406NotAcceptable)]
@@ -71,6 +75,9 @@ public class AuthController(ILogger<AuthController> logger, Service.AuthService 
     /// <summary>
     /// Авторизация пользователя
     /// </summary>
+    /// <remarks>
+    /// <b>Требует обязательную передачу User-Agent.</b>
+    /// </remarks>
     /// <param name="authUser">Данные пользователя</param>
     /// <returns></returns>
     /// <response code="200">Успешная авторизация пользователя</response>
@@ -80,6 +87,7 @@ public class AuthController(ILogger<AuthController> logger, Service.AuthService 
     /// <response code="406">Не удалось определить Ip адрес пользователя</response>
     /// <response code="429">Слишком много попыток входа</response>
     [AllowAnonymous]
+    [ApiVersion("1.0")]
     [HttpPost("authorization")]
     [ProducesResponseType(typeof(BaseResponse<string, RegistrationCode>),StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ValidationProblemDetails),StatusCodes.Status400BadRequest)]

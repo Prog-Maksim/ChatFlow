@@ -5,7 +5,6 @@ using ChatService.Repository;
 using ChatService.Repository.Interfaces;
 using ChatService.Scripts;
 using ChatService.Service;
-using Elasticsearch.Net;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.Mvc;
@@ -26,23 +25,21 @@ var builder = WebApplication.CreateBuilder(args);
 // Настройка логирования
 var elasticSection = builder.Configuration.GetSection("ElasticSearch");
 var uri = elasticSection.GetValue<string>("Uri");
-var serviceToken = elasticSection.GetValue<string>("ServiceToken");
 
 var sinkOptions = new ElasticsearchSinkOptions(new Uri(uri))
 {
-    AutoRegisterTemplate = true,
+    AutoRegisterTemplate = false,
     IndexFormat = "logs-{0:yyyy.MM.dd}",
     FailureCallback = e => Console.WriteLine($"Не удалось отправить лог в Elasticsearch: {e.Exception.Message}"),
     MinimumLogEventLevel = LogEventLevel.Information,
-    ModifyConnectionSettings = conn => conn.ApiKeyAuthentication(new ApiKeyAuthenticationCredentials(serviceToken))
+    CustomFormatter = new JsonFormatter(),
+    EmitEventFailure = EmitEventFailureHandling.WriteToSelfLog
 };
 
 // Настройка логирования
 Log.Logger = new LoggerConfiguration()
     .MinimumLevel.Debug()
     .WriteTo.Elasticsearch(sinkOptions)
-    .WriteTo.File("Logs/log-.log", rollingInterval: RollingInterval.Hour,
-        restrictedToMinimumLevel: LogEventLevel.Information)
     .WriteTo.Console(restrictedToMinimumLevel: LogEventLevel.Information)
     .CreateLogger();
 
@@ -152,25 +149,24 @@ var app = builder.Build();
 
 // Настройки среды
 if (app.Environment.IsDevelopment())
-{
     app.UseDeveloperExceptionPage();
-    app.UseStatusCodePages();
-    app.UseSwagger(c =>
+
+app.UseStatusCodePages();
+app.UseSwagger(c =>
+{
+    c.RouteTemplate = "swagger-ms2/{documentName}/swagger.json";  // меняем путь json
+});
+app.UseSwaggerUI(options =>
+{
+    var provider = app.Services.GetRequiredService<IApiVersionDescriptionProvider>();
+    foreach (var description in provider.ApiVersionDescriptions)
     {
-        c.RouteTemplate = "swagger-ms2/{documentName}/swagger.json";  // меняем путь json
-    });
-    app.UseSwaggerUI(options =>
-    {
-        var provider = app.Services.GetRequiredService<IApiVersionDescriptionProvider>();
-        foreach (var description in provider.ApiVersionDescriptions)
-        {
-            options.SwaggerEndpoint(
-                $"/swagger-ms2/{description.GroupName}/swagger.json",  // совпадает с RouteTemplate
-                description.GroupName.ToUpperInvariant());
-        }
-        options.RoutePrefix = "swagger-ms2";
-    });
-}
+        options.SwaggerEndpoint(
+            $"/swagger-ms2/{description.GroupName}/swagger.json",  // совпадает с RouteTemplate
+            description.GroupName.ToUpperInvariant());
+    }
+    options.RoutePrefix = "swagger-ms2";
+});
 
 app.UseRouting();
 

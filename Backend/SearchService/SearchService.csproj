@@ -10,12 +10,6 @@
     </PropertyGroup>
 
     <ItemGroup>
-      <Content Include="..\.dockerignore">
-        <Link>.dockerignore</Link>
-      </Content>
-    </ItemGroup>
-
-    <ItemGroup>
         <PackageReference Include="Confluent.Kafka" Version="2.10.0" />
         <PackageReference Include="NEST" Version="7.17.5" />
         <PackageReference Include="prometheus-net.AspNetCore" Version="8.2.1" />
@@ -55,9 +49,27 @@
     </ItemGroup>
 
     <ItemGroup>
-      <Folder Include="Logs\" />
       <Folder Include="Migrations\" />
       <Folder Include="Scripts\" />
+      <Folder Include="Tests\" />
     </ItemGroup>
 
+    <ItemGroup>
+      <Content Include="..\.dockerignore">
+        <Link>.dockerignore</Link>
+      </Content>
+    </ItemGroup>
+
+    <ItemGroup>
+        <None Update="appsettings.json">
+            <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+        </None>
+        <None Update="appsettings.Development.json">
+            <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+        </None>
+        <None Update="appsettings.Production.json">
+            <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+        </None>
+    </ItemGroup>
+    
 </Project>

@@ -1,11 +1,11 @@
 using System.Net;
-using Elasticsearch.Net;
 using Microsoft.AspNetCore.HttpOverrides;
 using Prometheus;
 using Serilog;
 using Serilog.Events;
 using Serilog.Sinks.Elasticsearch;
 using StackExchange.Redis;
+using WsLoadBalancer;
 using WsLoadBalancer.Service;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -13,15 +13,15 @@ var builder = WebApplication.CreateBuilder(args);
 // Настройка логирования
 var elasticSection = builder.Configuration.GetSection("ElasticSearch");
 var uri = elasticSection.GetValue<string>("Uri");
-var serviceToken = elasticSection.GetValue<string>("ServiceToken");
 
 var sinkOptions = new ElasticsearchSinkOptions(new Uri(uri))
 {
-    AutoRegisterTemplate = true,
+    AutoRegisterTemplate = false,
     IndexFormat = "logs-{0:yyyy.MM.dd}",
     FailureCallback = e => Console.WriteLine($"Не удалось отправить лог в Elasticsearch: {e.Exception.Message}"),
     MinimumLogEventLevel = LogEventLevel.Information,
-    ModifyConnectionSettings = conn => conn.ApiKeyAuthentication(new ApiKeyAuthenticationCredentials(serviceToken))
+    CustomFormatter = new JsonFormatter(),
+    EmitEventFailure = EmitEventFailureHandling.WriteToSelfLog
 };
 
 // Настройка логирования

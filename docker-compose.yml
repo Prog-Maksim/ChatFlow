@@ -1,35 +1,64 @@
-﻿version: '3.8'
-
-services:
-  elasticsearch:
-    image: docker.elastic.co/elasticsearch/elasticsearch:8.11.3
-    container_name: elasticsearch2
-    environment:
-      - discovery.type=single-node
-      - xpack.security.enabled=false
-    ports:
-      - "9200:9200"
-    volumes:
-      - esdata:/usr/share/elasticsearch/data
-    networks:
-      - elk
-
-  kibana:
-    image: docker.elastic.co/kibana/kibana:8.10.2
-    container_name: kibana1
-    environment:
-      - ELASTICSEARCH_HOSTS=http://elasticsearch:9200
-    ports:
-      - "5601:5601"
-    depends_on:
-      - elasticsearch
-    networks:
-      - elk
-
-volumes:
-  esdata:
-    driver: local
+version: '3.8'
 
 networks:
-  elk:
-    driver: bridge
+  net:
+    
+    
+services:
+  nginx:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - /etc/letsencrypt/live/api.chatflowonline.ru:/etc/letsencrypt/live/api.chatflowonline.ru:ro
+      - /etc/letsencrypt/archive/api.chatflowonline.ru:/etc/letsencrypt/archive/api.chatflowonline.ru:ro
+      - /etc/letsencrypt/options-ssl-nginx.conf:/etc/letsencrypt/options-ssl-nginx.conf:ro
+      - /etc/letsencrypt/ssl-dhparams.pem:/etc/letsencrypt/ssl-dhparams.pem:ro
+    depends_on:
+      - auth-service
+      - chat-service
+      - message-service
+      - profile-service
+      - search-service
+      - websocket-service
+      - load-balancer-service
+    networks:
+      - net
+  
+  auth-service:
+    image: chatflow-auth-service:latest
+    networks:
+      - net
+  
+  chat-service:
+    image: chatflow-chat-service:latest
+    networks:
+      - net
+  
+  message-service:
+    image: chatflow-message-service:latest
+    networks:
+      - net
+      
+  profile-service:
+    image: chatflow-profile-service:latest
+    networks:
+      - net
+  
+  search-service:
+    image: chatflow-search-service:latest
+    networks:
+      - net
+  
+  websocket-service:
+    image: chatflow-websocket-service:latest
+    networks:
+      - net
+  
+  load-balancer-service:
+    image: chatflow-loadbalancer-service:latest
+    networks:
+      - net

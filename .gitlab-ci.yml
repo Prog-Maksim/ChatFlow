@@ -1,0 +1,79 @@
+image: docker:24.0.7
+
+stages:
+  - test
+  - build
+  - deploy
+
+
+# ──────── TEST JOBS ────────
+
+test-service:
+  stage: test
+  image: mcr.microsoft.com/dotnet/sdk:9.0
+  tags:
+    - prod
+  script:
+    - cd Backend
+    - dotnet restore --disable-parallel
+    - dotnet test
+
+# ──────── BUILD JOBS ────────
+
+build-auth-service-job:
+  stage: build
+  tags:
+    - prod
+  script:
+    - docker build -t chatflow-auth-service -f Backend/AuthService/Dockerfile Backend/AuthService
+
+build-chat-service-job:
+  stage: build
+  tags:
+    - prod
+  script:
+    - docker build -t chatflow-chat-service -f Backend/ChatService/Dockerfile Backend/ChatService
+
+build-message-service-job:
+  stage: build
+  tags:
+    - prod
+  script:
+    - docker build -t chatflow-message-service -f Backend/MessageService/Dockerfile Backend/MessageService
+
+build-profile-service-job:
+  stage: build
+  tags:
+    - prod
+  script:
+    - docker build -t chatflow-profile-service -f Backend/ProfileService/Dockerfile Backend/ProfileService
+
+build-search-service-job:
+  stage: build
+  tags:
+    - prod
+  script:
+    - docker build -t chatflow-search-service -f Backend/SearchService/Dockerfile Backend/SearchService
+
+build-websocket-service-job:
+  stage: build
+  tags:
+    - prod
+  script:
+    - docker build -t chatflow-websocket-service -f Backend/WebSocketService/Dockerfile Backend/WebSocketService
+
+build-loadbalancer-service-job:
+  stage: build
+  tags:
+    - prod
+  script:
+    - docker build -t chatflow-loadbalancer-service -f Backend/WsLoadBalancer/Dockerfile Backend/WsLoadBalancer
+
+# ──────── DEPLOY JOB ────────
+
+deploy-job:
+  stage: deploy
+  tags:
+    - prod
+  script:
+    - docker compose up -d

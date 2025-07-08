@@ -12,7 +12,7 @@ namespace MessageService.Controllers;
 [ApiController]
 [ApiVersion("1.0")]
 [Produces("application/json")]
-[Route("backend-c/v{version:apiVersion}/[controller]")]
+[Route("c/v{version:apiVersion}/chats")]
 public class ChatsController(ILogger<ChatsController> logger, Service.MessageService messageService): ControllerBase
 {
     /// <summary>
@@ -26,6 +26,7 @@ public class ChatsController(ILogger<ChatsController> logger, Service.MessageSer
     /// <response code="403">Невалидный jwt токен или пользователь не состоит в чате</response>
     /// <response code="404">Чат или сообщения не найдены</response>
     [Authorize]
+    [ApiVersion("1.0")]
     [HttpGet("{chatId}/messages")]
     [ProducesResponseType(typeof(BaseResponse<string, MessagesPagination>),StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(BaseResponse<string, MessagesPagination>),StatusCodes.Status403Forbidden)]
@@ -60,6 +61,7 @@ public class ChatsController(ILogger<ChatsController> logger, Service.MessageSer
     /// <response code="403">Невалидный jwt токен или пользователь не состоит в чате</response>
     /// <response code="404">Чат или сообщения не найдены</response>
     [Authorize]
+    [ApiVersion("1.0")]
     [HttpGet("{chatId}/messages/last")]
     [ProducesResponseType(typeof(BaseResponse<string, MessageData>),StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(BaseResponse<string, MessageData>),StatusCodes.Status403Forbidden)]
@@ -97,6 +99,7 @@ public class ChatsController(ILogger<ChatsController> logger, Service.MessageSer
     /// <response code="403">Невалидный jwt токен или пользователь не состоит в чате или нет прав на редактирование</response>
     /// <response code="404">Чат или сообщения не найдены</response>
     [Authorize]
+    [ApiVersion("1.0")]
     [HttpPut("{chatId}/messages/{messageId}")]
     [ProducesResponseType(typeof(BaseResponse<string, MessageData>),StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(BaseResponse<string, MessageData>),StatusCodes.Status400BadRequest)]
@@ -134,6 +137,7 @@ public class ChatsController(ILogger<ChatsController> logger, Service.MessageSer
     /// <response code="403">Невалидный jwt токен или пользователь не состоит в чате или нет прав на редактирование</response>
     /// <response code="404">Чат или сообщения не найдены</response>
     [Authorize]
+    [ApiVersion("1.0")]
     [HttpDelete("{chatId}/messages/{messageId}")]
     [ProducesResponseType(typeof(BaseResponse<string, MessageData>),StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(BaseResponse<string, MessageData>),StatusCodes.Status400BadRequest)]

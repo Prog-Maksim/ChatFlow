@@ -11,7 +11,7 @@ namespace ProfileService.Controllers;
 [ApiController]
 [ApiVersion("1.0")]
 [Produces("application/json")]
-[Route("backend-d/v{version:apiVersion}/[controller]")]
+[Route("d/v{version:apiVersion}/profiles")]
 public class ProfilesController(ILogger<ProfilesController> _logger, Service.ProfileService profileService): ControllerBase
 {
     /// <summary>
@@ -22,6 +22,7 @@ public class ProfilesController(ILogger<ProfilesController> _logger, Service.Pro
     /// <response code="403">Невалидный jwt токен</response>
     /// <response code="404">Пользователь не найден</response>
     [Authorize]
+    [ApiVersion("1.0")]
     [HttpGet("me/summary")]
     [ProducesResponseType(typeof(BaseResponse<string, SummaryDataPerson>),StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(BaseResponse<string, SummaryDataPerson>),StatusCodes.Status403Forbidden)]
@@ -56,6 +57,7 @@ public class ProfilesController(ILogger<ProfilesController> _logger, Service.Pro
     /// <response code="403">Невалидный jwt токен</response>
     /// <response code="404">Пользователь не найден</response>
     [Authorize]
+    [ApiVersion("1.0")]
     [HttpGet("{personId?}/summary")]
     [ProducesResponseType(typeof(BaseResponse<string, SummaryDataPerson>),StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(BaseResponse<string, SummaryDataPerson>),StatusCodes.Status403Forbidden)]
@@ -89,6 +91,7 @@ public class ProfilesController(ILogger<ProfilesController> _logger, Service.Pro
     /// <response code="403">Невалидный jwt токен</response>
     /// <response code="404">Пользователь не найден</response>
     [Authorize]
+    [ApiVersion("1.0")]
     [HttpGet("me/images")]
     [ProducesResponseType(typeof(BaseResponse<string, List<DataImage>>),StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(BaseResponse<string, object>),StatusCodes.Status403Forbidden)]
@@ -122,6 +125,7 @@ public class ProfilesController(ILogger<ProfilesController> _logger, Service.Pro
     /// <response code="403">Невалидный jwt токен</response>
     /// <response code="404">Пользователь не найден</response>
     [Authorize]
+    [ApiVersion("1.0")]
     [HttpGet("{personId}/images")]
     [ProducesResponseType(typeof(BaseResponse<string, List<DataImage>>),StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(BaseResponse<string, object>),StatusCodes.Status403Forbidden)]
@@ -155,6 +159,7 @@ public class ProfilesController(ILogger<ProfilesController> _logger, Service.Pro
     /// <response code="403">Невалидный jwt токен</response>
     /// <response code="404">Пользователь не найден</response>
     [Authorize]
+    [ApiVersion("1.0")]
     [HttpGet("")]
     [ProducesResponseType(typeof(BaseResponse<string, DataPerson>),StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(BaseResponse<string, DataPerson>),StatusCodes.Status403Forbidden)]
@@ -189,6 +194,7 @@ public class ProfilesController(ILogger<ProfilesController> _logger, Service.Pro
     /// <response code="403">Невалидный jwt токен</response>
     /// <response code="404">Пользователь не найден</response>
     [Authorize]
+    [ApiVersion("1.0")]
     [HttpGet("{personId}")]
     [ProducesResponseType(typeof(BaseResponse<string, DataPerson>),StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(BaseResponse<string, DataPerson>),StatusCodes.Status403Forbidden)]
@@ -224,6 +230,7 @@ public class ProfilesController(ILogger<ProfilesController> _logger, Service.Pro
     /// <response code="409">Тег занят</response>
     [Authorize]
     [HttpPut]
+    [ApiVersion("1.0")]
     [ProducesResponseType(typeof(BaseResponse<string, string>),StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(BaseResponse<string, string>),StatusCodes.Status403Forbidden)]
     [ProducesResponseType(typeof(BaseResponse<string, string>),StatusCodes.Status409Conflict)]

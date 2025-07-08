@@ -12,17 +12,21 @@ namespace AuthService.Controllers;
 [ApiController]
 [ApiVersion("1.0")]
 [Produces("application/json")]
-[Route("backend-a/v{version:apiVersion}/[controller]")]
+[Route("a/v{version:apiVersion}/twofactor")]
 public class TwoFactorController(ILogger<AuthController> logger, TwoFactorService twoFactorService): ControllerBase
 {
     /// <summary>
     /// Добавление двухфакторной аутентификации через Google Authenticator
     /// </summary>
+    /// <remarks>
+    /// <b>Требует обязательную передачу User-Agent.</b>
+    /// </remarks>
     /// <param name="code">Код авторизации</param>
     /// <returns></returns>
     /// <response code="200">Успешно</response>
     /// <response code="404">Код авторизации не найден</response>
     [AllowAnonymous]
+    [ApiVersion("1.0")]
     [HttpPost("enable")]
     [ProducesResponseType(typeof(BaseResponse<string, Token2Fa>),StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(BaseResponse<string, Token2Fa>),StatusCodes.Status403Forbidden)]
@@ -68,6 +72,9 @@ public class TwoFactorController(ILogger<AuthController> logger, TwoFactorServic
     /// <summary>
     /// Проверяет код полученный из Google Authenticator
     /// </summary>
+    /// <remarks>
+    /// <b>Требует обязательную передачу User-Agent.</b>
+    /// </remarks>
     /// <param name="code">Код авторизации</param>
     /// <param name="key">Проверочный код</param>
     /// <returns></returns>
@@ -75,6 +82,7 @@ public class TwoFactorController(ILogger<AuthController> logger, TwoFactorServic
     /// <response code="403">Код не верен или достигнуто максимальное кол-во устройств</response>
     /// <response code="404">Код авторизации не найден</response>
     [AllowAnonymous]
+    [ApiVersion("1.0")]
     [HttpPost("verify")]
     [ProducesResponseType(typeof(BaseResponse<string, AuthTokens>),StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(BaseResponse<string, AuthTokens>),StatusCodes.Status403Forbidden)]
@@ -125,6 +133,7 @@ public class TwoFactorController(ILogger<AuthController> logger, TwoFactorServic
     /// <response code="403">Qr-code не может быть создан!</response>
     /// <response code="404">Данные не найдены</response>
     [AllowAnonymous]
+    [ApiVersion("1.0")]
     [HttpGet("qr-code")]
     [ProducesResponseType(typeof(byte[]),StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(BaseResponse<string, string>),StatusCodes.Status403Forbidden)]

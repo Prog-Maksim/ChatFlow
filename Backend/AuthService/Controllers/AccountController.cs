@@ -13,7 +13,7 @@ namespace AuthService.Controllers;
 [ApiController]
 [ApiVersion("1.0")]
 [Produces("application/json")]
-[Route("backend-a/v{version:apiVersion}/[controller]")]
+[Route("a/v{version:apiVersion}/account")]
 public class AccountController(ILogger<AuthController> logger, AccountService accountService): ControllerBase
 {
     /// <summary>
@@ -25,6 +25,7 @@ public class AccountController(ILogger<AuthController> logger, AccountService ac
     /// <response code="403">Невалидный jwt токен или номер телефона занят</response>
     /// <response code="404">Пользователь не найден</response>
     [Authorize]
+    [ApiVersion("1.0")]
     [HttpPatch("phone")]
     [ProducesResponseType(typeof(BaseResponse<string, string>),StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(BaseResponse<string, string>),StatusCodes.Status403Forbidden)]
@@ -59,6 +60,7 @@ public class AccountController(ILogger<AuthController> logger, AccountService ac
     /// <response code="403">Невалидный jwt токен и невалидный пароль</response>
     /// <response code="404">Пользователь не найден</response>
     [Authorize]
+    [ApiVersion("1.0")]
     [HttpPatch("password")]
     [ProducesResponseType(typeof(BaseResponse<string, RegistrationCode>),StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(BaseResponse<string, RegistrationCode>),StatusCodes.Status403Forbidden)]
@@ -109,6 +111,7 @@ public class AccountController(ILogger<AuthController> logger, AccountService ac
     /// <response code="200">Успешно</response>
     /// <response code="403">Невалидный jwt токен и невалидный пароль</response>
     [Authorize]
+    [ApiVersion("1.0")]
     [HttpPost("exit")]
     [ProducesResponseType(typeof(BaseResponse<string, RevokeSession>),StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(BaseResponse<string, string>),StatusCodes.Status403Forbidden)]

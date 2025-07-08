@@ -5,7 +5,6 @@ using AuthService.Repository;
 using AuthService.Repository.Interfaces;
 using AuthService.Scripts;
 using AuthService.Service;
-using Elasticsearch.Net;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.Mvc;
@@ -30,23 +29,21 @@ builder.Configuration
 
 var elasticSection = builder.Configuration.GetSection("ElasticSearch");
 var uri = elasticSection.GetValue<string>("Uri");
-var serviceToken = elasticSection.GetValue<string>("ServiceToken");
 
 var sinkOptions = new ElasticsearchSinkOptions(new Uri(uri))
 {
-    AutoRegisterTemplate = true,
+    AutoRegisterTemplate = false,
     IndexFormat = "logs-{0:yyyy.MM.dd}",
     FailureCallback = e => Console.WriteLine($"Не удалось отправить лог в Elasticsearch: {e.Exception.Message}"),
     MinimumLogEventLevel = LogEventLevel.Information,
-    ModifyConnectionSettings = conn => conn.ApiKeyAuthentication(new ApiKeyAuthenticationCredentials(serviceToken))
+    CustomFormatter = new JsonFormatter(),
+    EmitEventFailure = EmitEventFailureHandling.WriteToSelfLog
 };
 
 // Настройка логирования
 Log.Logger = new LoggerConfiguration()
     .MinimumLevel.Debug()
     .WriteTo.Elasticsearch(sinkOptions)
-    .WriteTo.File("Logs/log-.log", rollingInterval: RollingInterval.Hour,
-        restrictedToMinimumLevel: LogEventLevel.Information)
     .WriteTo.Console(restrictedToMinimumLevel: LogEventLevel.Information)
     .CreateLogger();
 

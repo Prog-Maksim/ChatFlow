@@ -9,7 +9,7 @@ namespace SearchService.Controllers;
 [ApiController]
 [ApiVersion("1.0")]
 [Produces("application/json")]
-[Route("backend-e/v{version:apiVersion}/[controller]")]
+[Route("e/v{version:apiVersion}/search")]
 public class SearchController(ILogger<SearchController> logger, Service.SearchService searchService): ControllerBase
 {
     /// <summary>
@@ -22,6 +22,7 @@ public class SearchController(ILogger<SearchController> logger, Service.SearchSe
     /// <response code="503">Поиск ничего не дал</response>
     [Authorize]
     [HttpGet]
+    [ApiVersion("1.0")]
     [ProducesResponseType(typeof(BaseResponse<string, SearchResult>),StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(BaseResponse<string, SearchResult>),StatusCodes.Status403Forbidden)]
     [ProducesResponseType(typeof(BaseResponse<string, SearchResult>),StatusCodes.Status503ServiceUnavailable)]

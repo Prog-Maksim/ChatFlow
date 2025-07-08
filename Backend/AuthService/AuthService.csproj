@@ -50,10 +50,6 @@
     </ItemGroup>
 
     <ItemGroup>
-      <Folder Include="Logs\" />
-    </ItemGroup>
-
-    <ItemGroup>
       <Content Include="..\.dockerignore">
         <Link>.dockerignore</Link>
       </Content>

@@ -11,7 +11,7 @@ namespace MessageService.Controllers;
 [ApiController]
 [ApiVersion("1.0")]
 [Produces("application/json")]
-[Route("backend-c/v{version:apiVersion}/[controller]")]
+[Route("c/v{version:apiVersion}/messages")]
 public class MessagesController(ILogger<MessagesController> logger, Service.MessageService messageService): ControllerBase
 {
     /// <summary>
@@ -25,6 +25,7 @@ public class MessagesController(ILogger<MessagesController> logger, Service.Mess
     /// <response code="404">Чат не найден</response>
     [Authorize]
     [HttpPost]
+    [ApiVersion("1.0")]
     [ProducesResponseType(typeof(BaseResponse<string, SendMessage>),StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(BaseResponse<string, SendMessage>),StatusCodes.Status403Forbidden)]
     [ProducesResponseType(typeof(BaseResponse<string, SendMessage>),StatusCodes.Status404NotFound)]

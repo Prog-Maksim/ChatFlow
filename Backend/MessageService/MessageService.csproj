@@ -42,7 +42,6 @@
     </ItemGroup>
 
     <ItemGroup>
-      <Folder Include="Logs\" />
       <Folder Include="Tests\" />
     </ItemGroup>
 

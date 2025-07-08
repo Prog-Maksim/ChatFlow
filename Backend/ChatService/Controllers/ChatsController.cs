@@ -11,7 +11,7 @@ namespace ChatService.Controllers;
 [ApiController]
 [ApiVersion("1.0")]
 [Produces("application/json")]
-[Route("backend-b/v{version:apiVersion}/[controller]")]
+[Route("b/v{version:apiVersion}/chats")]
 public class ChatsController(ILogger<ChatsController> logger, Service.ChatService chatService): ControllerBase
 {
     /// <summary>
@@ -23,6 +23,7 @@ public class ChatsController(ILogger<ChatsController> logger, Service.ChatServic
     /// <response code="403">Невалидный jwt токен</response>
     /// <response code="404">Невозможно создать чат</response>
     [Authorize]
+    [ApiVersion("1.0")]
     [HttpPost("private")]
     [ProducesResponseType(typeof(BaseResponse<string, string>),StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(BaseResponse<string, string>),StatusCodes.Status403Forbidden)]
@@ -56,6 +57,7 @@ public class ChatsController(ILogger<ChatsController> logger, Service.ChatServic
     /// <response code="403">Невалидный jwt токен</response>
     [Authorize]
     [HttpGet]
+    [ApiVersion("1.0")]
     [ProducesResponseType(typeof(BaseResponse<string, Chats>),StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(BaseResponse<string, Chats>),StatusCodes.Status403Forbidden)]
     public async Task<IActionResult> GetChats()

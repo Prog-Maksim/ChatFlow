@@ -11,7 +11,7 @@ namespace ProfileService.Controllers;
 [ApiController]
 [ApiVersion("1.0")]
 [Produces("application/json")]
-[Route("backend-d/v{version:apiVersion}/[controller]")]
+[Route("d/v{version:apiVersion}/users")]
 public class UsersController(ILogger<UsersController> _logger, ImageService imageService): ControllerBase
 {
     /// <summary>
@@ -28,6 +28,7 @@ public class UsersController(ILogger<UsersController> _logger, ImageService imag
     /// <response code="409">Допущено предельное кол-во изображений</response>
     /// <response code="500">Не удалось обработать изображение</response>
     [Authorize]
+    [ApiVersion("1.0")]
     [HttpPost("me/avatar")]
     [ProducesResponseType(typeof(BaseResponse<string, string>),StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(BaseResponse<string, string>),StatusCodes.Status400BadRequest)]
@@ -82,6 +83,7 @@ public class UsersController(ILogger<UsersController> _logger, ImageService imag
     /// <response code="403">Невалидный jwt токен</response>
     /// <response code="404">Пользователь не найден</response>
     [Authorize]
+    [ApiVersion("1.0")]
     [HttpGet("me/images/count")]
     [ProducesResponseType(typeof(BaseResponse<string, CountImage>),StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(BaseResponse<string, CountImage>),StatusCodes.Status403Forbidden)]
@@ -116,6 +118,7 @@ public class UsersController(ILogger<UsersController> _logger, ImageService imag
     /// <response code="403">Невалидный jwt токен</response>
     /// <response code="404">Пользователь не найден</response>
     [Authorize]
+    [ApiVersion("1.0")]
     [HttpGet("{personId}/images/count")]
     [ProducesResponseType(typeof(BaseResponse<string, int>),StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(BaseResponse<string, int>),StatusCodes.Status403Forbidden)]
@@ -149,6 +152,7 @@ public class UsersController(ILogger<UsersController> _logger, ImageService imag
     /// <response code="403">Невалидный jwt токен</response>
     /// <response code="404">Пользователь или главное изображение не найдено</response>
     [Authorize]
+    [ApiVersion("1.0")]
     [HttpGet("me/images/primary")]
     [ProducesResponseType(typeof(BaseResponse<string, DataImage>),StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(BaseResponse<string, DataImage>),StatusCodes.Status403Forbidden)]
@@ -183,6 +187,7 @@ public class UsersController(ILogger<UsersController> _logger, ImageService imag
     /// <response code="403">Невалидный jwt токен</response>
     /// <response code="404">Пользователь или главное изображение не найдено</response>
     [Authorize]
+    [ApiVersion("1.0")]
     [HttpGet("{personId}/images/primary")]
     [ProducesResponseType(typeof(BaseResponse<string, string>),StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(BaseResponse<string, string>),StatusCodes.Status403Forbidden)]
@@ -217,6 +222,7 @@ public class UsersController(ILogger<UsersController> _logger, ImageService imag
     /// <response code="403">Невалидный jwt токен</response>
     /// <response code="404">Изображение не найдено</response>
     [Authorize]
+    [ApiVersion("1.0")]
     [HttpPut("me/images/{imageId}/primary")]
     [ProducesResponseType(typeof(BaseResponse<string, string>),StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(BaseResponse<string, string>),StatusCodes.Status403Forbidden)]
@@ -251,6 +257,7 @@ public class UsersController(ILogger<UsersController> _logger, ImageService imag
     /// <response code="403">Невалидный jwt токен</response>
     /// <response code="404">Изображение не найдено</response>
     [Authorize]
+    [ApiVersion("1.0")]
     [HttpDelete("me/images/{imageId}")]
     [ProducesResponseType(typeof(BaseResponse<string, string>),StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(BaseResponse<string, string>),StatusCodes.Status403Forbidden)]

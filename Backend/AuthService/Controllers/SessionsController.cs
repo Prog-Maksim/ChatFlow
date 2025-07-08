@@ -10,7 +10,7 @@ namespace AuthService.Controllers;
 [ApiController]
 [ApiVersion("1.0")]
 [Produces("application/json")]
-[Route("backend-a/v{version:apiVersion}/[controller]")]
+[Route("a/v{version:apiVersion}/sessions")]
 public class SessionsController(ILogger<AuthController> logger, SessionService sessionService): ControllerBase
 {
     /// <summary>
@@ -21,6 +21,7 @@ public class SessionsController(ILogger<AuthController> logger, SessionService s
     /// <response code="403">Невалидный jwt токен</response>
     [Authorize]
     [HttpGet]
+    [ApiVersion("1.0")]
     [ProducesResponseType(typeof(BaseResponse<string, List<DataSession>>),StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(BaseResponse<string, List<DataSession>>),StatusCodes.Status403Forbidden)]
     public async Task<IActionResult> GetSessions()
@@ -53,6 +54,7 @@ public class SessionsController(ILogger<AuthController> logger, SessionService s
     /// <response code="404">Активные сессии не найдены</response>
     [Authorize]
     [HttpDelete]
+    [ApiVersion("1.0")]
     [ProducesResponseType(typeof(BaseResponse<string, List<RevokeSession>>),StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(BaseResponse<string, List<string>>),StatusCodes.Status403Forbidden)]
     [ProducesResponseType(typeof(BaseResponse<string, List<string>>),StatusCodes.Status404NotFound)]
@@ -86,6 +88,7 @@ public class SessionsController(ILogger<AuthController> logger, SessionService s
     /// <response code="403">Невалидный jwt токен</response>
     /// <response code="404">Активные сессии не найдены</response>
     [Authorize]
+    [ApiVersion("1.0")]
     [HttpDelete("{sessionId}")]
     [ProducesResponseType(typeof(BaseResponse<string, List<RevokeSession>>),StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(BaseResponse<string, List<string>>),StatusCodes.Status403Forbidden)]

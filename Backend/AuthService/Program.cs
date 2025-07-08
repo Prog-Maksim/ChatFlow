@@ -27,6 +27,7 @@ builder.Configuration
     .AddJsonFile($"appsettings.{builder.Environment.EnvironmentName}.json", optional: true, reloadOnChange: true)
     .AddEnvironmentVariables();
 
+
 var elasticSection = builder.Configuration.GetSection("ElasticSearch");
 var uri = elasticSection.GetValue<string>("Uri");
 var serviceToken = elasticSection.GetValue<string>("ServiceToken");

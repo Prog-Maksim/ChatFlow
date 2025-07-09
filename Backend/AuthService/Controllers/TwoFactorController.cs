@@ -124,6 +124,7 @@ public class TwoFactorController(ILogger<AuthController> logger, TwoFactorServic
         }
     }
 
+    
     /// <summary>
     /// Генерирует qr-code для добавления в сервис
     /// </summary>

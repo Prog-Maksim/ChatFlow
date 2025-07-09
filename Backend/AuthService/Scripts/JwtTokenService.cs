@@ -4,6 +4,7 @@ using AuthService.Enums;
 using AuthService.Models.DB;
 using AuthService.Models.Other;
 using AuthService.Repository.Interfaces;
+using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 
 namespace AuthService.Scripts;
@@ -13,9 +14,9 @@ public class JwtTokenService
     private readonly AuthOptions _authOptions;
     private readonly IAuthRepository _authRepository;
 
-    public JwtTokenService(AuthOptions authOptions, IAuthRepository authRepository)
+    public JwtTokenService(IOptions<AuthOptions> options, IAuthRepository authRepository)
     {
-        _authOptions = authOptions;
+        _authOptions = options.Value;
         _authRepository = authRepository;
     }
     

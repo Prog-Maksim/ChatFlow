@@ -28,13 +28,16 @@ builder.Configuration
 
 
 var elasticSection = builder.Configuration.GetSection("ElasticSearch");
-var uri = elasticSection.GetValue<string>("Uri");
+string? uri = elasticSection.GetValue<string>("Uri");
+
+if (uri is null)
+    throw new NullReferenceException("ElasticSearch uri is null");
 
 var sinkOptions = new ElasticsearchSinkOptions(new Uri(uri))
 {
     AutoRegisterTemplate = false,
     IndexFormat = "logs-{0:yyyy.MM.dd}",
-    FailureCallback = e => Console.WriteLine($"Не удалось отправить лог в Elasticsearch: {e.Exception.Message}"),
+    FailureCallback = e => Console.WriteLine($"Не удалось отправить лог в Elasticsearch: {e.Exception?.Message}"),
     MinimumLogEventLevel = LogEventLevel.Information,
     CustomFormatter = new JsonFormatter(),
     EmitEventFailure = EmitEventFailureHandling.WriteToSelfLog
@@ -49,9 +52,8 @@ Log.Logger = new LoggerConfiguration()
 
 builder.Host.UseSerilog();
 
-
-builder.Services.AddSingleton<AuthOptions>(sp =>
-    new AuthOptions(sp.GetRequiredService<IConfiguration>()));
+builder.Services.Configure<AuthOptions>(
+    builder.Configuration.GetSection("Auth"));
 
 // Добавление сервисов
 builder.Services.AddScoped<IAuthRepository, AuthRepository>();
@@ -87,7 +89,7 @@ builder.Services.AddVersionedApiExplorer(options =>
 builder.Services.AddAuthorization();
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme).AddJwtBearer(options => 
 {
-    var authOptions = builder.Services.BuildServiceProvider().GetRequiredService<AuthOptions>();
+    var authOptions = builder.Configuration.GetSection("Auth").Get<AuthOptions>()!;
     
     options.TokenValidationParameters = new TokenValidationParameters
     {

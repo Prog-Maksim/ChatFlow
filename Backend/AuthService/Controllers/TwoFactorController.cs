@@ -16,7 +16,7 @@ namespace AuthService.Controllers;
 public class TwoFactorController(ILogger<AuthController> logger, TwoFactorService twoFactorService): ControllerBase
 {
     /// <summary>
-    /// Добавление двухфакторной аутентификации через Google Authenticator
+    /// Включение двухфакторной аутентификации
     /// </summary>
     /// <remarks>
     /// <b>Требует обязательную передачу User-Agent.</b>
@@ -70,7 +70,7 @@ public class TwoFactorController(ILogger<AuthController> logger, TwoFactorServic
     }
 
     /// <summary>
-    /// Проверяет код полученный из Google Authenticator
+    /// Проверяет код
     /// </summary>
     /// <remarks>
     /// <b>Требует обязательную передачу User-Agent.</b>
@@ -115,7 +115,7 @@ public class TwoFactorController(ILogger<AuthController> logger, TwoFactorServic
                 return StatusCode(error.Status, error);
             }
             
-            var response = await twoFactorService.CheckGoogleAuthenticatorAsync(code, key, userIpAddress, userAgent);
+            var response = await twoFactorService.CheckGoogleAuthenticatorAsync(code, key, userIpAddress, userAgent!);
         
             if (!response.Successfully)
                 return StatusCode(response.Status, response);
@@ -124,12 +124,13 @@ public class TwoFactorController(ILogger<AuthController> logger, TwoFactorServic
         }
     }
 
+    
     /// <summary>
-    /// Генерирует qr-code для Google Authenticator
+    /// Генерирует qr-code для добавления в сервис
     /// </summary>
     /// <param name="code">Код авторизации</param>
     /// <returns></returns>
-    /// <response code="200">Успешно (картинка)</response>
+    /// <response code="200">Успешно (картинка png)</response>
     /// <response code="403">Qr-code не может быть создан!</response>
     /// <response code="404">Данные не найдены</response>
     [AllowAnonymous]

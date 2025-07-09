@@ -1,4 +1,5 @@
-﻿using AuthService.Models.DB;
+﻿using System.Text.Json;
+using AuthService.Models.DB;
 using AuthService.Models.Other;
 using AuthService.Repository.Interfaces;
 using AuthService.Scripts;
@@ -13,17 +14,19 @@ public class AuthRepository: IAuthRepository
     private readonly ApplicationContext _context;
     private readonly TokenPublisherService _tokenPublisherService;
     private readonly IDatabase _database;
+    private readonly ILogger<AuthRepository> _logger;
     
     private const int MaxAttempts = 5;
     private static readonly TimeSpan AttemptPeriod = TimeSpan.FromMinutes(1);
 
     public const int CodeLifetimeMinute = 15;
 
-    public AuthRepository(ApplicationContext context, IConnectionMultiplexer connection, TokenPublisherService tokenPublisherService)
+    public AuthRepository(ApplicationContext context, IConnectionMultiplexer connection, TokenPublisherService tokenPublisherService, ILogger<AuthRepository> logger)
     {
         _context = context;
         _database = connection.GetDatabase();
         _tokenPublisherService = tokenPublisherService;
+        _logger = logger;
     }
     
 
@@ -59,7 +62,7 @@ public class AuthRepository: IAuthRepository
         };
         
         var redisKey = $"TOTP:{code}";
-        var redisValue = System.Text.Json.JsonSerializer.Serialize(totpData);
+        var redisValue = JsonSerializer.Serialize(totpData);
         
         await _database.StringSetAsync(redisKey, redisValue);
         await _database.KeyExpireAsync(redisKey, TimeSpan.FromMinutes(CodeLifetimeMinute));
@@ -82,7 +85,7 @@ public class AuthRepository: IAuthRepository
         };
         
         var redisKey = $"TOTP:{code}";
-        var redisValue = System.Text.Json.JsonSerializer.Serialize(totpData);
+        var redisValue = JsonSerializer.Serialize(totpData);
         
         await _database.StringSetAsync(redisKey, redisValue);
         await _database.KeyExpireAsync(redisKey, TimeSpan.FromMinutes(CodeLifetimeMinute));
@@ -99,30 +102,48 @@ public class AuthRepository: IAuthRepository
     public async Task<TotpData?> GetTotpDataByCodeAsync(string code)
     {
         var redisKey = $"TOTP:{code}";
-
         var redisValue = await _database.StringGetAsync(redisKey);
         
-        if (!redisValue.HasValue)
+        if (!redisValue.HasValue || redisValue.IsNullOrEmpty)
             return null;
         
-        var data = System.Text.Json.JsonSerializer.Deserialize<TotpData>(redisValue);
+        var json = (string)redisValue!;
+        if (string.IsNullOrWhiteSpace(json))
+            return null;
+        
+        var data = JsonSerializer.Deserialize<TotpData>(json, new JsonSerializerOptions
+        {
+            PropertyNameCaseInsensitive = true
+        });
         return data;
     }
 
     public async Task<bool> UpdateTotpDataByCodeAsync(string code, string totpCode)
     {
         var redisKey = $"TOTP:{code}";
-
         var redisValue = await _database.StringGetAsync(redisKey);
         
-        if (!redisValue.HasValue)
+        if (!redisValue.HasValue || redisValue.IsNullOrEmpty)
             return false;
-
         
-        var data = System.Text.Json.JsonSerializer.Deserialize<TotpData>(redisValue);
+        var json = (string)redisValue!;
+        if (string.IsNullOrWhiteSpace(json))
+            return false;
+        
+        var data = JsonSerializer.Deserialize<TotpData>(json, new JsonSerializerOptions
+        {
+            PropertyNameCaseInsensitive = true
+        });
+
+        if (data is null)
+        {
+            _logger.LogWarning("Не удалось преобразовать структуру из Redis. Структура: {obj}", json);
+            return false;
+        }
+        
         data.TotpCode = totpCode;
         
-        var updatedRedisValue = System.Text.Json.JsonSerializer.Serialize(data);
+        var updatedRedisValue = JsonSerializer.Serialize(data);
         await _database.StringSetAsync(redisKey, updatedRedisValue);
 
         return true;
@@ -193,11 +214,14 @@ public class AuthRepository: IAuthRepository
     public async Task<bool> IsBlockedAsync(string ip)
     {
         string redisKey = $"login_attempts:{ip}";
+        var attemptsValue = await _database.StringGetAsync(redisKey);
 
-        var attempts = await _database.StringGetAsync(redisKey);
-
-        if (attempts.HasValue && int.Parse(attempts) >= MaxAttempts)
-            return true; // Заблокировать IP
+        if (attemptsValue.HasValue)
+        {
+            var attemptsStr = (string?)attemptsValue;
+            if (!string.IsNullOrWhiteSpace(attemptsStr) && int.TryParse(attemptsStr, out var attempts) && attempts >= MaxAttempts)
+                return true; // IP заблокирован
+        }
 
         return false;
     }

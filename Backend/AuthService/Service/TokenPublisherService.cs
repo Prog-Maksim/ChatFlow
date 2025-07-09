@@ -27,7 +27,7 @@ public class TokenPublisherService
             RevokedAt = DateTime.UtcNow
         });
 
-        await _subscriber.PublishAsync("token-revoked", message);
+        await _subscriber.PublishAsync(RedisChannel.Literal("token-revoked"), message);
     }
     
     /// <summary>
@@ -46,7 +46,7 @@ public class TokenPublisherService
                 RevokedAt = DateTime.UtcNow
             });
 
-            return _subscriber.PublishAsync("token-revoked", message);
+            return _subscriber.PublishAsync(RedisChannel.Literal("token-revoked"), message);
         });
 
         await Task.WhenAll(tasks);

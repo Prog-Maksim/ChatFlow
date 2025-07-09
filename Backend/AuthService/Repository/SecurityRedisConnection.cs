@@ -10,6 +10,10 @@ public class SecurityRedisConnection: ISecurityRedisConnection
     public SecurityRedisConnection(IConfiguration configuration)
     {
         var connStr = configuration.GetConnectionString("RedisSecurity");
+        
+        if (string.IsNullOrEmpty(connStr))
+            throw new NullReferenceException("RedisSecurity connection string is null or empty");
+        
         Connection = ConnectionMultiplexer.Connect(connStr);
     }
 }

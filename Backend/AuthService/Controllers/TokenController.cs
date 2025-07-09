@@ -11,7 +11,7 @@ namespace AuthService.Controllers;
 [ApiVersion("1.0")]
 [Produces("application/json")]
 [Route("a/v{version:apiVersion}/token")]
-public class TokenController(ILogger<AuthController> logger, TokenService tokenService): ControllerBase
+public class TokenController(TokenService tokenService): ControllerBase
 {
     /// <summary>
     /// Обновление токена

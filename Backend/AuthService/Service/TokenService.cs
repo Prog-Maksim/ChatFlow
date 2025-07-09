@@ -3,7 +3,6 @@ using AuthService.Models.DB;
 using AuthService.Models.Response;
 using AuthService.Repository.Interfaces;
 using AuthService.Scripts;
-using Serilog.Core;
 
 namespace AuthService.Service;
 
@@ -11,15 +10,10 @@ public class TokenService
 {
     private readonly IAuthRepository _authRepository;
     private readonly JwtTokenService _jwtTokenService;
-    private readonly TokenValidator _tokenValidator;
-    private readonly ILogger<TokenService> _logger;
-
-    public TokenService(ILogger<TokenService> logger, IAuthRepository authRepository, JwtTokenService jwtTokenService, TokenValidator tokenValidator)
+    public TokenService(IAuthRepository authRepository, JwtTokenService jwtTokenService)
     {
         _authRepository = authRepository;
         _jwtTokenService = jwtTokenService;
-        _tokenValidator = tokenValidator;
-        _logger = logger;
     }
     
     /// <summary>

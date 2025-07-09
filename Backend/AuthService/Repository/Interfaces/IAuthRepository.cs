@@ -109,14 +109,14 @@ public interface IAuthRepository
     /// <summary>
     /// Проверка не заблокирован ли ip адрес за частый перебор пароля
     /// </summary>
-    /// <param name="ip"></param>
-    /// <returns></returns>
+    /// <param name="ip">IP адрес пользователя</param>
+    /// <returns>true - ip адрес заблокирован</returns>
     public Task<bool> IsBlockedAsync(string ip);
 
     /// <summary>
     ///  Увеличиваем счетчик неправильных попыток ввода пароля
     /// </summary>
-    /// <param name="ip"></param>
+    /// <param name="ip">IP адрес пользователя</param>
     /// <returns></returns>
     public Task IncrementLoginAttemptsAsync(string ip);
     
@@ -151,7 +151,7 @@ public interface IAuthRepository
     /// <summary>
     /// Возвращает все сессии для пользователя 
     /// </summary>
-    /// <param name="personId"></param>
+    /// <param name="personId">Идентификатор пользователя</param>
     /// <param name="state">Состояние сессии</param>
     /// <returns></returns>
     public IQueryable<Session> GetSessionsAsync(string personId, bool state = false);

@@ -41,7 +41,7 @@ public class TwoFactorService
         if (data.TotpCode != null && !data.IsUpdate)
             return ResponseFactory.Forbidden<Token2Fa>("Код уже был создан", ResponseType.CodeIsCreated);
             
-        var secretKey = GoogleAuthenticatorService.GenerateKey();
+        var secretKey = AuthenticatorService.GenerateKey();
         await _authRepository.UpdateTotpDataByCodeAsync(code, secretKey);
             
         var tokenResult = new Token2Fa { Token = secretKey };
@@ -75,7 +75,7 @@ public class TwoFactorService
         if (data.TotpCode == null)
             return ResponseFactory.NotFound<AuthTokens>("Подключаемый сервис не найден", ResponseType.ServiceConnectedNotFound);
             
-        if (!GoogleAuthenticatorService.CheckValidKey(key, data.TotpCode))
+        if (!AuthenticatorService.CheckValidKey(key, data.TotpCode))
             return ResponseFactory.Forbidden<AuthTokens>("Код Google Authenticator не верен", ResponseType.CodeIsNotValid);
         
         if (data.TotpCode != null)
@@ -192,7 +192,7 @@ public class TwoFactorService
 
 
         var userData = data.PersonData.Email ?? data.PersonData.NumberPhone;
-        string url = GoogleAuthenticatorService.GenerateUrl(data.TotpCode, userData);
-        return GoogleAuthenticatorService.GenerateQrCode(url);
+        string url = AuthenticatorService.GenerateUrl(data.TotpCode, userData);
+        return AuthenticatorService.GenerateQrCode(url);
     }
 }

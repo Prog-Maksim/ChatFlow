@@ -11,7 +11,7 @@ namespace AuthService.Controllers;
 [ApiVersion("1.0")]
 [Produces("application/json")]
 [Route("a/v{version:apiVersion}/sessions")]
-public class SessionsController(ILogger<AuthController> logger, SessionService sessionService): ControllerBase
+public class SessionsController(SessionService sessionService): ControllerBase
 {
     /// <summary>
     /// Возвращает все активные сессии

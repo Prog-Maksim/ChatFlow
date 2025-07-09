@@ -3,7 +3,6 @@ version: '3.8'
 networks:
   net:
     
-    
 services:
   nginx:
     build:
@@ -12,6 +11,7 @@ services:
     ports:
       - "80:80"
       - "443:443"
+    restart: always
     volumes:
       - /etc/letsencrypt/live/api.chatflowonline.ru:/etc/letsencrypt/live/api.chatflowonline.ru:ro
       - /etc/letsencrypt/archive/api.chatflowonline.ru:/etc/letsencrypt/archive/api.chatflowonline.ru:ro
@@ -30,35 +30,42 @@ services:
   
   auth-service:
     image: chatflow-auth-service:latest
+    restart: always
     networks:
       - net
   
   chat-service:
     image: chatflow-chat-service:latest
+    restart: always
     networks:
       - net
   
   message-service:
     image: chatflow-message-service:latest
+    restart: always
     networks:
       - net
       
   profile-service:
     image: chatflow-profile-service:latest
+    restart: always
     networks:
       - net
   
   search-service:
     image: chatflow-search-service:latest
+    restart: always
     networks:
       - net
   
   websocket-service:
     image: chatflow-websocket-service:latest
+    restart: always
     networks:
       - net
   
   load-balancer-service:
     image: chatflow-loadbalancer-service:latest
+    restart: always
     networks:
       - net

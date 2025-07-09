@@ -15,7 +15,7 @@ public static class DeterminingIpAddress
         }
     }
     
-    public static async Task<PersonRegion> GetPositionUser(string ipAddress)
+    public static async Task<PersonRegion> GetPositionUser(string ipAddress, ILogger logger)
     {
         if (ipAddress == "::1" || ipAddress == "127.0.0.1")
             return new PersonRegion { Country = "Russia", City = "Rostov Oblast" };
@@ -25,6 +25,13 @@ public static class DeterminingIpAddress
         var region = json["regionName"]?.ToString();
         var country = json["country"]?.ToString();
         
-        return new PersonRegion { Country = country, City = region };
+        if (region is null || country is null)
+            logger.LogWarning("Не удалось получить ip адрес пользователя. IP: {ip}", ipAddress);
+        
+        return new PersonRegion
+        {
+            Country = country ?? "Unknown country", 
+            City = region ?? "Unknown region"
+        };
     }
 }

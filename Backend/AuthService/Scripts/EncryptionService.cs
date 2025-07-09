@@ -9,11 +9,10 @@ public class EncryptionService: IEncryptionService
 
     public EncryptionService(IConfiguration configuration)
     {
-        string keyString = configuration["Encryption:Key"];
+        string? keyString = configuration["Encryption:Key"];
         if (string.IsNullOrEmpty(keyString) || keyString.Length != 32)
-        {
             throw new ArgumentException("Encryption key must be 32 characters long.");
-        }
+        
         _key = Encoding.UTF8.GetBytes(keyString);
     }
     
@@ -51,7 +50,7 @@ public class EncryptionService: IEncryptionService
             using (MemoryStream ms = new MemoryStream(encryptedBytes))
             {
                 byte[] iv = new byte[16];
-                ms.Read(iv, 0, iv.Length);
+                ms.ReadExactly(iv, 0, iv.Length);
                 aes.IV = iv;
 
                 using (CryptoStream cs = new CryptoStream(ms, aes.CreateDecryptor(), CryptoStreamMode.Read))

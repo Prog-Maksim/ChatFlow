@@ -16,7 +16,7 @@ namespace AuthService.Controllers;
 public class TwoFactorController(ILogger<AuthController> logger, TwoFactorService twoFactorService): ControllerBase
 {
     /// <summary>
-    /// Добавление двухфакторной аутентификации через Google Authenticator
+    /// Включение двухфакторной аутентификации
     /// </summary>
     /// <remarks>
     /// <b>Требует обязательную передачу User-Agent.</b>
@@ -115,7 +115,7 @@ public class TwoFactorController(ILogger<AuthController> logger, TwoFactorServic
                 return StatusCode(error.Status, error);
             }
             
-            var response = await twoFactorService.CheckGoogleAuthenticatorAsync(code, key, userIpAddress, userAgent);
+            var response = await twoFactorService.CheckGoogleAuthenticatorAsync(code, key, userIpAddress, userAgent!);
         
             if (!response.Successfully)
                 return StatusCode(response.Status, response);

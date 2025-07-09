@@ -29,7 +29,7 @@ ChatFlow — это масштабируемое, отказоустойчиво
 - **Хранение файлов:** Amazon S3
 - **Поиск:** Elasticsearch
 - **Контейнеризация:** Docker + Docker Compose
-- **CI/CD:** GitHub Actions
+- **CI/CD:** GitLab CI/CD
 - **Мониторинг:** Prometheus + Grafana
 - **Сбор логов** ElasticSearch + Kibana
 

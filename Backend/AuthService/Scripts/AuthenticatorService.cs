@@ -3,7 +3,7 @@ using QRCoder;
 
 namespace AuthService.Scripts;
 
-public static class GoogleAuthenticatorService
+public static class AuthenticatorService
 {
     /// <summary>
     /// Генерирует ключ для пользователя
@@ -40,7 +40,9 @@ public static class GoogleAuthenticatorService
     public static string GenerateUrl(string secret, string user)
     {
         string service = "ChatFlow";
-        string qrUri = $"otpauth://totp/{service}:{user}?secret={secret}&issuer={service}";
+        string qrUri = $"otpauth://totp/{Uri.EscapeDataString(service)}:{Uri.EscapeDataString(user)}" +
+                       $"?secret={secret}&issuer={Uri.EscapeDataString(service)}&algorithm=SHA1&digits=6&period=30";
+        
         return qrUri;
     }
     

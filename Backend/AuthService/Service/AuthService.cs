@@ -138,8 +138,8 @@ public class AuthService
             Metrics.TrackFailedLogin(userIpAddress);
             return ResponseFactory.InvalidPassword<RegistrationCode>("Данный пароль не верен");
         }
-
-        var code = await _authRepository.GenerateCodeAndSaveAsync(person, userIpAddress, _encryptionService.Decrypt(person.TotpCode));
+        
+        var code = await _authRepository.GenerateCodeAndSaveAsync(person, userIpAddress, _encryptionService.Decrypt(person.TotpCode!));
         var codeResult = new RegistrationCode
         {
             Code = code,
@@ -157,6 +157,6 @@ public class AuthService
     /// <returns>True - пароль валиден</returns>
     private bool IsPasswordValid(Person person, string password)
     {
-        return _passwordHasher.VerifyHashedPassword(person, person.PasswordHash, password) == PasswordVerificationResult.Success;
+        return _passwordHasher.VerifyHashedPassword(person, person.PasswordHash!, password) == PasswordVerificationResult.Success;
     }
 }

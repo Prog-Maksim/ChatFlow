@@ -10,12 +10,14 @@ public class SessionService
     private readonly IAuthRepository _authRepository;
     private readonly IEncryptionService _encryptionService;
     private readonly TokenValidator _tokenValidator;
+    private readonly ILogger<SessionService> _logger;
 
-    public SessionService(IAuthRepository authRepository, IEncryptionService encryptionService, TokenValidator tokenValidator)
+    public SessionService(IAuthRepository authRepository, IEncryptionService encryptionService, TokenValidator tokenValidator, ILogger<SessionService> logger)
     {
         _authRepository = authRepository;
         _encryptionService = encryptionService;
         _tokenValidator = tokenValidator;
+        _logger = logger;
     }
     
     /// <summary>
@@ -29,7 +31,7 @@ public class SessionService
         if (!isValid)
             return ResponseFactory.JwtTokenInvalid<DataSession>();
         
-        var sessions = _authRepository.GetSessionsAsync(dataToken.PersonId).ToList();
+        var sessions = _authRepository.GetSessionsAsync(dataToken!.PersonId).ToList();
         if (sessions.Count == 0)
             return ResponseFactory.SessionNotFound<DataSession>();
         
@@ -48,7 +50,7 @@ public class SessionService
         var sessionResults = await Task.WhenAll(sessions.Select(async session =>
         {
             var decryptedIp = _encryptionService.Decrypt(session.IpAddress);
-            var location = await DeterminingIpAddress.GetPositionUser(decryptedIp);
+            var location = await DeterminingIpAddress.GetPositionUser(decryptedIp, _logger);
 
             return new Sessions
             {
@@ -84,7 +86,7 @@ public class SessionService
         if (!isValid)
             return ResponseFactory.JwtTokenInvalid<List<RevokeSession>>();
 
-        var sessions = _authRepository.GetSessionsAsync(dataToken.PersonId).ToList();
+        var sessions = _authRepository.GetSessionsAsync(dataToken!.PersonId).ToList();
         if (sessions.Count == 0)
             return ResponseFactory.SessionNotFound<List<RevokeSession>>();
 

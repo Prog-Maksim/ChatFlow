@@ -105,6 +105,16 @@ builder.Services.Configure<ForwardedHeadersOptions>(options =>
     options.KnownProxies.Add(IPAddress.Parse("::ffff:172.17.0.1"));
 });
 
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("AllowLocalhost5173", policy =>
+    {
+        policy.WithOrigins("http://localhost:5173")
+            .AllowAnyHeader()
+            .AllowAnyMethod(); // разрешить все методы
+    });
+});
+
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 
@@ -140,6 +150,8 @@ builder.Services.AddSingleton<ISecurityRedisConnection, SecurityRedisConnection>
 
 
 var app = builder.Build();
+
+app.UseCors("AllowLocalhost5173");
 
 // Настройки среды
 if (app.Environment.IsDevelopment())

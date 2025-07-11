@@ -5,6 +5,11 @@ namespace AuthService.Models.Response;
 public class AuthTokens
 {
     /// <summary>
+    /// Идентификатор пользователя
+    /// </summary>
+    public required string PersonId { get; set; }
+    
+    /// <summary>
     /// Access токен
     /// </summary>
     public required string AccessToken { get; set; }

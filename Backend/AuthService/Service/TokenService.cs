@@ -63,6 +63,7 @@ public class TokenService
 
         return new AuthTokens
         {
+            PersonId = person.PersonId,
             AccessToken = tokens.AccessToken,
             RefreshToken = tokens.RefreshToken,
             AccessTokenExpiration = DateTime.UtcNow.AddMinutes(JwtTokenService.AccessTokenLifetimeMinute),

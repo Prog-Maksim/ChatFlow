@@ -76,7 +76,7 @@ public class TwoFactorService
             return ResponseFactory.NotFound<AuthTokens>("Подключаемый сервис не найден", ResponseType.ServiceConnectedNotFound);
             
         if (!AuthenticatorService.CheckValidKey(key, data.TotpCode))
-            return ResponseFactory.Forbidden<AuthTokens>("Код Google Authenticator не верен", ResponseType.CodeIsNotValid);
+            return ResponseFactory.Forbidden<AuthTokens>("Код 2FA не верен", ResponseType.CodeIsNotValid);
         
         if (data.TotpCode != null)
             await TryAddTotpCodeAsync(data.PersonId, data.TotpCode);
@@ -96,6 +96,7 @@ public class TwoFactorService
 
         var tokenResult = new AuthTokens
         {
+            PersonId = data.PersonId,
             AccessToken = tokens.AccessToken,
             RefreshToken = tokens.RefreshToken,
             AccessTokenExpiration = DateTime.UtcNow.AddMinutes(JwtTokenService.AccessTokenLifetimeMinute),

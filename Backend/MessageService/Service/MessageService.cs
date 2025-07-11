@@ -79,7 +79,7 @@ public class MessageService
         {
             Message = "Сообщение успешно отправлено",
             Type = ResponseType.Ok, Status = 200,
-            Successfully = true, Errors = null, Data = new SendMessage{ MessageId = messageData.MessageId}
+            Successfully = true, Errors = null, Data = new SendMessage{ Message = messageData}
         };
     }
 

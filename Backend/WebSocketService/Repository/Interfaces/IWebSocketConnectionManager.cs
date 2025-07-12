@@ -47,4 +47,12 @@ public interface IWebSocketConnectionManager
     /// <param name="message">Объект сообщения</param>
     /// <returns></returns>
     public Task SendMessageToUserAsync(string personId, MessageData message);
+
+    /// <summary>
+    /// Отправляет сообщение о том что был создан чат
+    /// </summary>
+    /// <param name="chatId"></param>
+    /// <param name="personId"></param>
+    /// <returns></returns>
+    public Task SendMessageCreateChat(string chatId, string personId);
 }

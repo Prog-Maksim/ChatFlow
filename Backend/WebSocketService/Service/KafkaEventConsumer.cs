@@ -11,6 +11,7 @@ public class KafkaEventConsumer : BackgroundService
     private readonly IConfiguration _configuration;
     private readonly ILogger<KafkaEventConsumer> _logger;
     private readonly string _topic1 = "message";
+    private readonly string _topic2 = "chat.created";
     private readonly string _groupId;
     
     private readonly IWebSocketConnectionManager _webSocketConnectionManager;
@@ -22,7 +23,7 @@ public class KafkaEventConsumer : BackgroundService
         _webSocketConnectionManager = webSocketConnectionManager;
         
         var hostname = Environment.MachineName;
-        _groupId = $"main-websocket-service-consumer-group-{hostname}";
+        _groupId = $"websocket-service-consumer-group-{hostname}";
     }
     
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -37,7 +38,7 @@ public class KafkaEventConsumer : BackgroundService
         };
 
         using var consumer = new ConsumerBuilder<Ignore, string>(config).Build();
-        consumer.Subscribe(_topic1);
+        consumer.Subscribe(new List<string> { _topic1, _topic2 });
         _logger.LogInformation("KafkaEventConsumer запущен");
 
         try
@@ -45,6 +46,7 @@ public class KafkaEventConsumer : BackgroundService
             while (!stoppingToken.IsCancellationRequested)
             {
                 var result = consumer.Consume(stoppingToken);
+                _logger.LogInformation($"Получено новое сообщение в топик: {result.Topic}");
                 
                 if (result.Topic == _topic1)
                 {
@@ -59,6 +61,20 @@ public class KafkaEventConsumer : BackgroundService
                     _logger.LogDebug("Получено сообщение: {@ex}", message);
                     foreach (var person in message.Persons)
                         await _webSocketConnectionManager.SendMessageToUserAsync(person, message.MessageData);
+                }
+                else if (result.Topic == _topic2)
+                {
+                    var message = JsonSerializer.Deserialize<ChatCreated>(result.Message.Value);
+
+                    if (message is null)
+                    {
+                        _logger.LogWarning("Не удалось преобразовать структуру полученную через kafka: {@message}", result.Message.Value);
+                        return;
+                    }
+
+                    _logger.LogDebug("Получено сообщение: {@ex}", message);
+                    foreach (var person in message.Users)
+                        await _webSocketConnectionManager.SendMessageCreateChat(message.ChatId, person.PersonId);
                 }
             }
         }

@@ -34,6 +34,7 @@ public class WebSocketService
         PersonRegion region = await DeterminingIpAddress.GetPositionUser(userIpAdress);
         
         _connectionManager.AddConnection(region, dataToken.PersonId, dataToken.SessionId, socket);
+        _logger.LogInformation("Подключен новый пользователь");
         await ListenAndHoldOpenConnectionAsync(region, dataToken.PersonId, dataToken.SessionId, socket);
         return new BaseResponse<string, string> 
             { Message = "Соединение закрыто", Type = ResponseType.Ok, Successfully = true, Status = 200, Errors = null, Data = null };

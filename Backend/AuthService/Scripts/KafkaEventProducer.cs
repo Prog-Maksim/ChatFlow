@@ -27,6 +27,8 @@ public class KafkaEventProducer
     /// <param name="event">Обьект события</param>
     public async Task PublishUserCreatedAsync(UserCreated @event)
     {
+        Random rnd = new Random();
+        @event.Tag = $"@{rnd.Next(1111, 9999)}-{rnd.Next(1111, 9999)}";
         var message = new Message<Null, string>
         {
             Value = JsonSerializer.Serialize(@event)

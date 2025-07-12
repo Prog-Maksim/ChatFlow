@@ -16,4 +16,9 @@ public class UserCreated
     /// Фамилия пользователя
     /// </summary>
     public required string Surname { get; set; }
+    
+    /// <summary>
+    /// Тег пользователя
+    /// </summary>
+    public string? Tag { get; set; }
 }

@@ -43,7 +43,7 @@ public class KafkaEventProducer
         try
         {
             var deliveryResult = await _producer.ProduceAsync(TopicName, message);
-            _logger.LogInformation($"Сообщение успешно доставлено{deliveryResult.TopicPartitionOffset}");
+            _logger.LogInformation($"Сообщение успешно доставлено {deliveryResult.TopicPartitionOffset}");
         }
         catch (ProduceException<Null, string> ex)
         {

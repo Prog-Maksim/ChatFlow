@@ -16,6 +16,7 @@ public class JsonFormatter : ITextFormatter
             @timestamp = logEvent.Timestamp.ToString("o"),
             Level = logEvent.Level.ToString(),
             Message = logEvent.RenderMessage(),
+            Service = "ChatService",
 
             // Детали исключения (если есть)
             Exception = exception?.Message,

@@ -27,7 +27,7 @@ public class SearchRepository: ISearchRepository
             Name = user.Name,
             Surname = user.Surname,
             Title = null,
-            Tag = null
+            Tag = user.Tag
         };
         
         var response = await _elasticClient.IndexAsync(indexPerson, idx => idx.Index(IndexName).Id(indexPerson.ChatId));

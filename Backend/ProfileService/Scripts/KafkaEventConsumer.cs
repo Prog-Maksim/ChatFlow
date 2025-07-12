@@ -55,8 +55,6 @@ public class KafkaEventConsumer : BackgroundService
                 using (var scope = _scopeFactory.CreateScope())
                 {
                     var repository = scope.ServiceProvider.GetRequiredService<IProfileRepository>();
-                    Random rnd = new Random();
-                    userCreatedEvent.Tag = $"{rnd.Next(1111, 9999)}-{rnd.Next(1111, 9999)}";
                     await repository.CreatePersonAsync(userCreatedEvent);
                     await repository.SaveChangesAsync();
                 }

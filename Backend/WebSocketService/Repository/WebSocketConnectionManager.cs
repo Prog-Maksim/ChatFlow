@@ -126,4 +126,41 @@ public class WebSocketConnectionManager: IWebSocketConnectionManager
             }
         }
     }
+
+    public async Task SendMessageCreateChat(string chatId, string personId)
+    {
+        if (!_connections.TryGetValue(personId, out var sessions))
+        {
+            _logger.LogDebug($"Нет активных сессий для пользователя: {personId}");
+            return;
+        }
+
+        var message = new
+        {
+            ChatId = chatId
+        };
+
+        var buffer = System.Text.Encoding.UTF8.GetBytes(JsonSerializer.Serialize(message));
+        var segment = new ArraySegment<byte>(buffer);
+
+        foreach (var (sessionId, socket) in sessions)
+        {
+            if (socket.State == WebSocketState.Open)
+            {
+                try
+                {
+                    await socket.SendAsync(segment, WebSocketMessageType.Text, true, CancellationToken.None);
+                    _logger.LogDebug($"Сообщение отправлено пользователю {personId}, сессия {sessionId}");
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, $"Ошибка при отправке сообщения пользователю {personId}, сессия {sessionId}");
+                }
+            }
+            else
+            {
+                _logger.LogDebug($"Сессия {sessionId} пользователя {personId} не в состоянии Open");
+            }
+        }
+    }
 }

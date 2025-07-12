@@ -22,7 +22,7 @@ public class KafkaEventConsumer : BackgroundService
         _webSocketConnectionManager = webSocketConnectionManager;
         
         var hostname = Environment.MachineName;
-        _groupId = $"websocket-service-consumer-group-{hostname}";
+        _groupId = $"main-websocket-service-consumer-group-{hostname}";
     }
     
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -38,7 +38,7 @@ public class KafkaEventConsumer : BackgroundService
 
         using var consumer = new ConsumerBuilder<Ignore, string>(config).Build();
         consumer.Subscribe(_topic1);
-        _logger.LogDebug("KafkaEventConsumer запущен");
+        _logger.LogInformation("KafkaEventConsumer запущен");
 
         try
         {

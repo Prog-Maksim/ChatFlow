@@ -9,7 +9,7 @@ public class KafkaEventConsumer : BackgroundService
     private readonly IConfiguration _configuration;
     private readonly ILogger<KafkaEventConsumer> _logger;
     private readonly string _topic1 = "send-message";
-    private readonly string _groupId = "wsloadbalancer-service-consumer-group";
+    private readonly string _groupId = "loadbalancer-service-consumer-group";
     private readonly BalancedService _balancedService;
     
 

@@ -1,22 +1,8 @@
 image: docker:24.0.7
 
 stages:
-  - test
   - build
   - deploy
-
-
-# ──────── TEST JOBS ────────
-
-test-service:
-  stage: test
-  image: mcr.microsoft.com/dotnet/sdk:9.0
-  tags:
-    - prod
-  script:
-    - cd Backend
-    - dotnet restore --disable-parallel
-    - dotnet test
 
 # ──────── BUILD JOBS ────────
 

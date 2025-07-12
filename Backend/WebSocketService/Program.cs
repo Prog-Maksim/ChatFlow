@@ -36,7 +36,7 @@ var sinkOptions = new ElasticsearchSinkOptions(new Uri(uri))
 Log.Logger = new LoggerConfiguration()
     .MinimumLevel.Debug()
     .WriteTo.Elasticsearch(sinkOptions)
-    .WriteTo.Console(restrictedToMinimumLevel: LogEventLevel.Information)
+    .WriteTo.Console(restrictedToMinimumLevel: LogEventLevel.Debug)
     .CreateLogger();
 
 builder.Host.UseSerilog();

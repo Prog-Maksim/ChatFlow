@@ -10,7 +10,7 @@ public class KafkaEventConsumer : BackgroundService
     private readonly IConfiguration _configuration;
     private readonly ILogger<KafkaEventConsumer> _logger;
     private readonly string _topic1 = "user.created";
-    private readonly string _groupId = "chat-service-consumer-group";
+    private readonly string _groupId = "main-chat-service-consumer-group";
     
     private readonly IServiceScopeFactory _scopeFactory;
 

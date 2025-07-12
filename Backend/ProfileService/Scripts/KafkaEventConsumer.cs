@@ -11,7 +11,7 @@ public class KafkaEventConsumer : BackgroundService
     private readonly IConfiguration _configuration;
     private readonly ILogger<KafkaEventConsumer> _logger;
     private readonly string _topic = "user.created";
-    private readonly string _groupId = "profile-service-consumer-group";
+    private readonly string _groupId = "main-profile-service-consumer-group";
     
     private readonly IServiceScopeFactory _scopeFactory;
 

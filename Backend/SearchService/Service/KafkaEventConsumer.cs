@@ -11,7 +11,7 @@ public class KafkaEventConsumer : BackgroundService
     private readonly ILogger<KafkaEventConsumer> _logger;
     private readonly string _topic1 = "user.created";
     private readonly string _topic2 = "user.updated";
-    private readonly string _groupId = "search-service-consumer-group";
+    private readonly string _groupId = "main-search-service-consumer-group";
     
     private readonly IServiceScopeFactory _scopeFactory;
 
@@ -20,6 +20,7 @@ public class KafkaEventConsumer : BackgroundService
         _configuration = configuration;
         _logger = logger;
         _scopeFactory = scopeFactory;
+        _logger.LogInformation("KafkaEventConsumer started");
     }
 
     

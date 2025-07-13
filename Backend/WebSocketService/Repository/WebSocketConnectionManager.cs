@@ -103,7 +103,11 @@ public class WebSocketConnectionManager: IWebSocketConnectionManager
             return;
         }
 
-        var buffer = System.Text.Encoding.UTF8.GetBytes(JsonSerializer.Serialize(message));
+        var buffer = System.Text.Encoding.UTF8.GetBytes(JsonSerializer.Serialize(new
+        {
+            Type = "message",
+            Data = message
+        }));
         var segment = new ArraySegment<byte>(buffer);
 
         foreach (var (sessionId, socket) in sessions)
@@ -137,6 +141,7 @@ public class WebSocketConnectionManager: IWebSocketConnectionManager
 
         var message = new
         {
+            Type = "new-chat",
             ChatId = chatId
         };
 

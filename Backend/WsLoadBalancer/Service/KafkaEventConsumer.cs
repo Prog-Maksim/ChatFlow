@@ -9,6 +9,8 @@ public class KafkaEventConsumer : BackgroundService
     private readonly IConfiguration _configuration;
     private readonly ILogger<KafkaEventConsumer> _logger;
     private readonly string _topic1 = "send-message";
+    private readonly string _topic2 = "update-message";
+    private readonly string _topic3 = "delete-message";
     private readonly string _groupId = "loadbalancer-service-consumer-group";
     private readonly BalancedService _balancedService;
     
@@ -32,7 +34,7 @@ public class KafkaEventConsumer : BackgroundService
         };
 
         using var consumer = new ConsumerBuilder<Ignore, string>(config).Build();
-        consumer.Subscribe(_topic1);
+        consumer.Subscribe(new List<string> { _topic1, _topic2, _topic3 });
         _logger.LogInformation("KafkaEventConsumer запущен");
 
         try
@@ -41,7 +43,7 @@ public class KafkaEventConsumer : BackgroundService
             {
                 var result = consumer.Consume(stoppingToken);
 
-                if (result.Topic == _topic1)
+                if (result.Topic == _topic1 || result.Topic == _topic2 || result.Topic == _topic3)
                 {
                     var message = JsonSerializer.Deserialize<NewMessage>(result.Message.Value);
                     
@@ -52,7 +54,7 @@ public class KafkaEventConsumer : BackgroundService
                     }
                         
                     await _balancedService.AddMessageToStack(message);
-                    _logger.LogError("Получено сообщение: {@ex}", message);
+                    _logger.LogInformation("Получено сообщение в топик ({result})", result.Topic);
                 }
             }
         }

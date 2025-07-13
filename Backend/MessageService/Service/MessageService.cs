@@ -295,8 +295,12 @@ public class MessageService
                 Successfully = false, Data = null
             };
 
-        await _kafkaEventProducer.PublishNewMessageAsync(message, chat.Users, CancellationToken.None);
-        return null;
+        await _kafkaEventProducer.PublishDeleteMessageAsync(message, chat.Users, CancellationToken.None);
+        return new BaseResponse<string, MessageData>
+        {
+            Message = "Сообщение успешно удалено",
+            Type = ResponseType.Ok, Status = 200, Successfully = true, Errors = null, Data = message
+        };
     }
 
     /// <summary>
@@ -368,7 +372,7 @@ public class MessageService
                 Successfully = false, Data = null
             };
 
-        await _kafkaEventProducer.PublishNewMessageAsync(message, chat.Users, CancellationToken.None);
+        await _kafkaEventProducer.PublishUpdateMessageAsync(message, chat.Users, CancellationToken.None);
         return new BaseResponse<string, MessageData>
         {
             Message = "Сообщение успешно изменено",

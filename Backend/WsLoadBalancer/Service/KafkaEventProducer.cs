@@ -11,7 +11,7 @@ public class KafkaEventProducer
 {
     private readonly IProducer<Null, string> _producer;
     private readonly ILogger<KafkaEventProducer> _logger;
-    private const string TopicName = "message";
+    private const string TopicName1 = "message";
 
     public KafkaEventProducer(IConfiguration configuration, ILogger<KafkaEventProducer> logger)
     {
@@ -42,7 +42,7 @@ public class KafkaEventProducer
         
         try
         {
-            var deliveryResult = await _producer.ProduceAsync(TopicName, message);
+            var deliveryResult = await _producer.ProduceAsync(TopicName1, message);
             _logger.LogInformation($"Сообщение успешно доставлено {deliveryResult.TopicPartitionOffset}");
         }
         catch (ProduceException<Null, string> ex)

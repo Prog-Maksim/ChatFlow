@@ -21,6 +21,10 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "WebSocketService", "WebSock
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "WsLoadBalancer", "WsLoadBalancer\WsLoadBalancer.csproj", "{7B2338F3-0C64-4F2C-8299-529BB23EA726}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ChatFlow", "ChatFlow\ChatFlow.csproj", "{093C4CDE-0498-4430-98AB-6227EDC03C93}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ChatFlow.Tests", "ChatFlow.Tests\ChatFlow.Tests.csproj", "{1764A38A-4BB3-4695-B746-385F341BB8BB}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -59,5 +63,13 @@ Global
 		{7B2338F3-0C64-4F2C-8299-529BB23EA726}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{7B2338F3-0C64-4F2C-8299-529BB23EA726}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{7B2338F3-0C64-4F2C-8299-529BB23EA726}.Release|Any CPU.Build.0 = Release|Any CPU
+		{093C4CDE-0498-4430-98AB-6227EDC03C93}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{093C4CDE-0498-4430-98AB-6227EDC03C93}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{093C4CDE-0498-4430-98AB-6227EDC03C93}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{093C4CDE-0498-4430-98AB-6227EDC03C93}.Release|Any CPU.Build.0 = Release|Any CPU
+		{1764A38A-4BB3-4695-B746-385F341BB8BB}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{1764A38A-4BB3-4695-B746-385F341BB8BB}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{1764A38A-4BB3-4695-B746-385F341BB8BB}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{1764A38A-4BB3-4695-B746-385F341BB8BB}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 EndGlobal

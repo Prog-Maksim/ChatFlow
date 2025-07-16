@@ -9,7 +9,7 @@ stages:
 build-chatflow-service-job:
   stage: build
   tags:
-    - prod
+    - dev
   script:
     - docker build -t chatflow-service -f Backend/ChatFlow/Dockerfile Backend/ChatFlow
 
@@ -18,7 +18,7 @@ build-chatflow-service-job:
 deploy-job:
   stage: deploy
   tags:
-    - prod
+    - dev
   script:
     - docker compose down
     - docker compose build --no-cache

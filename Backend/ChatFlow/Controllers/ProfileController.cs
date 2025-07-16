@@ -245,10 +245,10 @@ public class ProfileController(ILogger<ProfileController> logger, ProfileService
     {
         logger.LogInformation("Начало обработки запроса: (обновление информации в профиле)");
         MetricsRegistry.EndpointRequestCounter
-            .WithLabels("update-profile", "PUT", "profile").Inc();
+            .WithLabels("update-profile", "PUT").Inc();
         
         using (MetricsRegistry.EndpointDuration
-                   .WithLabels("update-profile", "PUT", "profile")
+                   .WithLabels("update-profile", "PUT")
                    .NewTimer())
         {
             var authHeader = HttpContext.Request.Headers["Authorization"].ToString();

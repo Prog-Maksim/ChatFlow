@@ -21,11 +21,10 @@ public class WebSocketConnectionManager: IWebSocketConnectionManager
     public void AddConnection(PersonRegion region, string personId, string sessionId, WebSocket socket)
     {
         MetricsRegistry.TotalActiveConnections
-            .WithLabels("web-socket", Environment.MachineName)
             .Inc();
         
         MetricsRegistry.ActiveConnectionsByGeo
-            .WithLabels("web-socket", Environment.MachineName, region.Country, region.City, region.Latitude, region.Longitude)
+            .WithLabels(region.Country, region.City, region.Latitude, region.Longitude)
             .Inc();
 
         if (!_connections.ContainsKey(personId))
@@ -55,11 +54,10 @@ public class WebSocketConnectionManager: IWebSocketConnectionManager
             }
 
             MetricsRegistry.TotalActiveConnections
-                .WithLabels("web-socket", Environment.MachineName)
                 .Dec();
             
             MetricsRegistry.ActiveConnectionsByGeo
-                .WithLabels("web-socket", Environment.MachineName, region.Country, region.City, region.Latitude, region.Longitude)
+                .WithLabels(region.Country, region.City, region.Latitude, region.Longitude)
                 .Inc();
         }
     }
@@ -83,7 +81,6 @@ public class WebSocketConnectionManager: IWebSocketConnectionManager
             }
 
             MetricsRegistry.TotalActiveConnections
-                .WithLabels("web-socket", Environment.MachineName)
                 .Dec();
         }
     }

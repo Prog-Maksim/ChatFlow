@@ -52,8 +52,6 @@ public static class MetricsRegistry
             {
                 LabelNames = 
                 [
-                    "service",
-                    "instance",
                     "country", 
                     "city", 
                     "Latitude", 

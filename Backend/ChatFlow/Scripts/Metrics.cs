@@ -11,7 +11,7 @@ public static class Metrics
     public static void TrackFailedLogin(string ip)
     {
         MetricsRegistry.BruteForceDetection
-            .WithLabels(ip, "auth", Environment.MachineName)
+            .WithLabels(ip)
             .Inc();
     }
 }

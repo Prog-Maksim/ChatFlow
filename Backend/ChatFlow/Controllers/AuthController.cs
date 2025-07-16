@@ -104,7 +104,7 @@ public class AuthController(ILogger<AuthController> logger, AuthService service)
             return BadRequest("User-Agent header is missing.");
         
         MetricsRegistry.EndpointRequestCounter
-            .WithLabels("authorization", "POST", "auth").Inc();
+            .WithLabels("authorization", "POST").Inc();
         
         using (MetricsRegistry.EndpointDuration
                    .WithLabels("authorization", "POST")

@@ -13,10 +13,8 @@ services:
       - "443:443"
     restart: always
     volumes:
-      - /etc/letsencrypt/live/api.chatflowonline.ru:/etc/letsencrypt/live/api.chatflowonline.ru:ro
-      - /etc/letsencrypt/archive/api.chatflowonline.ru:/etc/letsencrypt/archive/api.chatflowonline.ru:ro
-      - /etc/letsencrypt/live/chatflowonline.ru-0001:/etc/letsencrypt/live/chatflowonline.ru:ro
-      - /etc/letsencrypt/archive/chatflowonline.ru-0001:/etc/letsencrypt/archive/chatflowonline.ru:ro
+      - /etc/letsencrypt/live:/etc/letsencrypt/live:ro
+      - /etc/letsencrypt/archive:/etc/letsencrypt/archive:ro
       - /etc/letsencrypt/options-ssl-nginx.conf:/etc/letsencrypt/options-ssl-nginx.conf:ro
       - /etc/letsencrypt/ssl-dhparams.pem:/etc/letsencrypt/ssl-dhparams.pem:ro
     depends_on:

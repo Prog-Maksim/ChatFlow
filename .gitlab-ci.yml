@@ -6,7 +6,7 @@ stages:
 
 # ──────── BUILD JOBS ────────
 
-build-auth-service-job:
+build-chatflow-service-job:
   stage: build
   tags:
     - prod

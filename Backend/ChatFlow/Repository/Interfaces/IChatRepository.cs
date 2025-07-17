@@ -33,4 +33,11 @@ public interface IChatRepository
     /// <param name="personId">Идентификатор пользователя</param>
     /// <returns></returns>
     public Task<List<ChatDocument>?> GetChats(string personId);
+    
+    /// <summary>
+    /// Возвращает чаты по идентификатору
+    /// </summary>
+    /// <param name="chatId">Идентификатор чата</param>
+    /// <returns></returns>
+    public Task<ChatDocument?> GetChat(string chatId);
 }

@@ -83,4 +83,34 @@ public class ChatsController(ILogger<ChatsController> logger, ChatService servic
             return Ok(response);
         }
     }
+
+    /// <summary>
+    /// Выдает информацию о чате
+    /// </summary>
+    /// <param name="chatId">Идентификатор чата</param>
+    /// <returns></returns>
+    [Authorize]
+    [HttpGet("{chatId}/info")]
+    [ApiVersion("1.0")]
+    public async Task<IActionResult> GetChatInfo([Required] [FromRoute] string chatId)
+    {
+        logger.LogInformation("Начало обработки запроса: (информация чата)");
+        MetricsRegistry.EndpointRequestCounter
+            .WithLabels("chat-info", "GET").Inc();
+        
+        using (MetricsRegistry.EndpointDuration
+                   .WithLabels("chat-info", "GET")
+                   .NewTimer())
+        {
+            var authHeader = HttpContext.Request.Headers["Authorization"].ToString();
+            var token = authHeader.Substring("Bearer ".Length);
+
+            var response = await service.GetChatInfo(token, chatId);
+
+            if (!response.Successfully)
+                return StatusCode(response.Status, response);
+
+            return Ok(response);
+        }
+    }
 }

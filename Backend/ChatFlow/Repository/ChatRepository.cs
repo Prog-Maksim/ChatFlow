@@ -90,4 +90,11 @@ public class ChatRepository: IChatRepository
         var chat = await _chatCollections.Find(filter).ToListAsync();
         return chat;
     }
+
+    public async Task<ChatDocument?> GetChat(string chatId)
+    {
+        var filter = Builders<ChatDocument>.Filter.Eq(c => c.ChatId, chatId);
+        var chat = await _chatCollections.Find(filter).FirstOrDefaultAsync();
+        return chat;
+    }
 }

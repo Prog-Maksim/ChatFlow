@@ -11,12 +11,14 @@ public class ChatService
     private readonly JwtTokenService _jwtTokenService;
     private readonly ILogger<ChatService> _logger;
     private readonly IChatRepository _chatRepository;
+    private readonly IProfileRepository _profileRepository;
     private readonly IWebSocketConnectionManager _manager;
 
-    public ChatService(ILogger<ChatService> logger, IChatRepository chatRepository, JwtTokenService jwtTokenService, IWebSocketConnectionManager manager)
+    public ChatService(ILogger<ChatService> logger, IChatRepository chatRepository, JwtTokenService jwtTokenService, IProfileRepository profileRepository, IWebSocketConnectionManager manager)
     {
         _logger = logger;
         _chatRepository = chatRepository;
+        _profileRepository = profileRepository;
         _jwtTokenService = jwtTokenService;
         _manager = manager;
     }
@@ -141,6 +143,84 @@ public class ChatService
             ChatId = chat.ChatId,
             Title = chat.Title,
             ImageUrl = chat.PhotoId
+        };
+    }
+
+    public async Task<BaseResponse<string, ChatInfo>> GetChatInfo(string accessToken, string chatId)
+    {
+        var dataToken = _jwtTokenService.GetJwtTokenData(accessToken);
+        if (!await _jwtTokenService.ValidateJwtAccessToken(dataToken))
+            return new BaseResponse<string, ChatInfo> 
+                { Message = "Не удалось проверить корректность jwt токена", Type = ResponseType.JwtTokenVerificationFailed, Errors = "Forbidden", Status = 403, Successfully = false, Data = null};
+
+        var chat = await _chatRepository.GetChat(chatId);
+        
+        if (chat is null)
+            return new BaseResponse<string, ChatInfo>
+            {
+                Message = "Данный чат не найден",
+                Type = ResponseType.ChatNotFound,
+                Successfully = true,
+                Status = 404,
+                Errors = null,
+                Data = null
+            };
+
+        if (chat.Persons.All(p => p.PersonId != dataToken.PersonId))
+            return new BaseResponse<string, ChatInfo>
+            {
+                Message = "Вы не состоите в этом чате",
+                Type = ResponseType.UserNotInChat, 
+                Errors = "Forbidden", 
+                Status = 403,
+                Successfully = false, 
+                Data = null
+            };
+
+        ChatInfo info = new ChatInfo();
+        if (chat.Type == ChatType.Private)
+        {
+            var personId = chat.Persons.FirstOrDefault(p => p.PersonId != dataToken.PersonId);
+            
+            if (personId is null)
+                return new BaseResponse<string, ChatInfo>
+                {
+                    Message = "Пользователь не найден",
+                    Type = ResponseType.PersonNotFound,
+                    Errors = "Not Found",
+                    Status = 404,
+                    Successfully = false,
+                    Data = null
+                };
+            
+            var personData = await _profileRepository.GetSummaryPersonDataAsync(personId.PersonId);
+            
+            info = new ChatInfo
+            {
+                ChatId = chat.ChatId,
+                Title = $"{personData.Surname} {personData.Name}",
+                ImageUrl = personData.Image?.Url
+            };
+        }
+        else
+        {
+            // TODO: исправить идентификатор на ссылку 
+            info = new ChatInfo
+            {
+                ChatId = chat.ChatId,
+                Title = chat.Title,
+                ImageUrl = chat.PhotoId
+            };
+        }
+
+        return new BaseResponse<string, ChatInfo>
+        {
+            Message = "Данные чата",
+            Type = ResponseType.Ok,
+            Errors = null,
+            Status = 200,
+            Successfully = true,
+            Data = info
         };
     }
 }

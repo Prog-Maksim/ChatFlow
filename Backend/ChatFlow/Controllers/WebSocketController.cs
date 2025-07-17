@@ -6,8 +6,7 @@ using Microsoft.AspNetCore.Mvc;
 namespace ChatFlow.Controllers;
 
 [ApiController]
-[ApiVersion("1.0")]
-[Route("v{version:apiVersion}/ws")]
+[Route("ws")]
 public class WebSocketController(ILogger<WebSocketController> logger, WebSocketService service): ControllerBase
 {
     /// <summary>
@@ -21,7 +20,6 @@ public class WebSocketController(ILogger<WebSocketController> logger, WebSocketS
     /// </remarks>
     [Authorize]
     [HttpGet]
-    [ApiVersion("1.0")]
     public async Task Connect()
     {
         logger.LogInformation("Начало обработки запроса: (подключение WebSocket)");

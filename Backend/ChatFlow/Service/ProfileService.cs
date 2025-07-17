@@ -12,13 +12,15 @@ public class ProfileService
 {
     private readonly ILogger<ProfileService> _logger;
     private readonly IProfileRepository _profileRepository;
+    private readonly ISearchRepository _searchRepository;
     private readonly JwtTokenService _jwtTokenService;
     
-    public ProfileService(ILogger<ProfileService> logger, IProfileRepository profileRepository, JwtTokenService jwtTokenService)
+    public ProfileService(ILogger<ProfileService> logger, IProfileRepository profileRepository, JwtTokenService jwtTokenService, ISearchRepository searchRepository)
     {
         _logger = logger;
         _profileRepository = profileRepository;
         _jwtTokenService = jwtTokenService;
+        _searchRepository = searchRepository;
     }
     
     /// <summary>
@@ -127,6 +129,14 @@ public class ProfileService
             return new BaseResponse<string, string> { Message = "Данный тег занят", Type = ResponseType.TagAlreadyExists, Errors = "Conflict", Status = 409, Successfully = false, Data = null};
         
         await _profileRepository.UpdateProfileDataAsync(dataToken.PersonId, profile);
+        await _searchRepository.UpdatePersonAsync(new UserCreated
+        {
+            PersonId = dataToken.PersonId,
+            Name = profile.Name,
+            Surname = profile.Surname,
+            Tag = "@" + profile.Tag
+        });
+        
             
         return new BaseResponse<string, string>
         {

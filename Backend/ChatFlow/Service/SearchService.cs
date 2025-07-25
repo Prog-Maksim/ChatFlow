@@ -3,10 +3,11 @@ using ChatFlow.Models.Response;
 using ChatFlow.Models.Response.SearchObject;
 using ChatFlow.Repository.Interfaces;
 using ChatFlow.Scripts;
+using ChatFlow.Service.Interfaces;
 
 namespace ChatFlow.Service;
 
-public class SearchService
+public class SearchService: ISearchService
 {
     private readonly ILogger<SearchService> _logger;
     private readonly ISearchRepository _repository;
@@ -19,11 +20,6 @@ public class SearchService
         _jwtTokenService = jwtTokenService;
     }
 
-    /// <summary>
-    /// Производит поиск людей и чатов
-    /// </summary>
-    /// <param name="accessToken">Access токен</param>
-    /// <param name="query">Поисковой запрос</param>
     public async Task<BaseResponse<string, SearchResult>> SearchAsync(string accessToken, string query)
     {
         var dataToken = _jwtTokenService.GetJwtTokenData(accessToken);

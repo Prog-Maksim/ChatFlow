@@ -4,6 +4,7 @@ using ChatFlow.Models.Requests;
 using ChatFlow.Models.Response;
 using ChatFlow.Monitoring;
 using ChatFlow.Service;
+using ChatFlow.Service.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Prometheus;
@@ -14,7 +15,7 @@ namespace ChatFlow.Controllers;
 [ApiVersion("1.0")]
 [Produces("application/json")]
 [Route("v{version:apiVersion}/auth")]
-public class AuthController(ILogger<AuthController> logger, AuthService service): ControllerBase
+public class AuthController(ILogger<AuthController> logger, IAuthService service): ControllerBase
 {
     /// <summary>
     /// Регистрация нового пользователя

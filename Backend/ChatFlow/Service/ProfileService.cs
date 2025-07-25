@@ -5,10 +5,11 @@ using ChatFlow.Models.Requests;
 using ChatFlow.Models.Response;
 using ChatFlow.Repository.Interfaces;
 using ChatFlow.Scripts;
+using ChatFlow.Service.Interfaces;
 
 namespace ChatFlow.Service;
 
-public class ProfileService
+public class ProfileService: IProfileService
 {
     private readonly ILogger<ProfileService> _logger;
     private readonly IProfileRepository _profileRepository;
@@ -23,12 +24,6 @@ public class ProfileService
         _searchRepository = searchRepository;
     }
     
-    /// <summary>
-    /// Выдает краткую информацию о профиле
-    /// </summary>
-    /// <param name="accessToken">Access токен</param>
-    /// <param name="personId">Идентификатор пользователя</param>
-    /// <returns></returns>
     public async Task<BaseResponse<string, SummaryDataPerson>> GetSummaryProfileData(string accessToken, string? personId = null)
     {
         var dataToken = _jwtTokenService.GetJwtTokenData(accessToken);
@@ -68,12 +63,6 @@ public class ProfileService
         };
     }
     
-    /// <summary>
-    /// Выдает полную информацию о профиле
-    /// </summary>
-    /// <param name="accessToken">Access токен</param>
-    /// <param name="personId">Идентификатор пользователя</param>
-    /// <returns></returns>
     public async Task<BaseResponse<string, DataPerson>> GetProfileData(string accessToken, string? personId = null)
     {
         var dataToken = _jwtTokenService.GetJwtTokenData(accessToken);
@@ -109,12 +98,6 @@ public class ProfileService
         };
     }
     
-    /// <summary>
-    /// Обновляет информацию в профиле
-    /// </summary>
-    /// <param name="accessToken">Access токен</param>
-    /// <param name="profile">Данные профиля</param>
-    /// <returns></returns>
     public async Task<BaseResponse<string, string>> UpdateProfileData(string accessToken, Profile profile)
     {
         var dataToken = _jwtTokenService.GetJwtTokenData(accessToken);
@@ -144,13 +127,7 @@ public class ProfileService
             Data = null
         };
     }
-
-    /// <summary>
-    /// Возвращает все изображения пользователя
-    /// </summary>
-    /// <param name="accessToken">Access токен</param>
-    /// <param name="personId">Идентификатор пользователя</param>
-    /// <returns></returns>
+    
     public async Task<BaseResponse<string, List<DataImage>>> GetProfileImages(string accessToken,
         string? personId = null)
     {

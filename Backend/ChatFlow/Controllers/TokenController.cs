@@ -1,6 +1,7 @@
 using ChatFlow.Models.Response;
 using ChatFlow.Monitoring;
 using ChatFlow.Service;
+using ChatFlow.Service.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Prometheus;
@@ -11,7 +12,7 @@ namespace ChatFlow.Controllers;
 [ApiVersion("1.0")]
 [Produces("application/json")]
 [Route("v{version:apiVersion}/token")]
-public class TokenController(ILogger<TokenController> logger, TokenService service): ControllerBase
+public class TokenController(ILogger<TokenController> logger, ITokenService service): ControllerBase
 {
     /// <summary>
     /// Обновление токена

@@ -6,6 +6,7 @@ using ChatFlow.Repository;
 using ChatFlow.Repository.Interfaces;
 using ChatFlow.Scripts;
 using ChatFlow.Service;
+using ChatFlow.Service.Interfaces;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.Mvc;
@@ -59,17 +60,17 @@ builder.Services.Configure<AuthOptions>(
     builder.Configuration.GetSection("Auth"));
 
 builder.Services.AddScoped<AccountService>();
-builder.Services.AddScoped<AuthService>();
-builder.Services.AddScoped<ChatService>();
-builder.Services.AddScoped<ImageService>();
-builder.Services.AddScoped<MessageService>();
-builder.Services.AddScoped<ProfileService>();
+builder.Services.AddScoped<IAuthService, AuthService>();
+builder.Services.AddScoped<IChatService, ChatService>();
+builder.Services.AddScoped<IImageService, ImageService>();
+builder.Services.AddScoped<IMessageService, MessageService>();
+builder.Services.AddScoped<IProfileService, ProfileService>();
 builder.Services.AddScoped<S3Service>();
-builder.Services.AddScoped<SessionService>();
-builder.Services.AddScoped<TokenService>();
-builder.Services.AddScoped<TwoFactorService>();
+builder.Services.AddScoped<ISessionService, SessionService>();
+builder.Services.AddScoped<ITokenService, TokenService>();
+builder.Services.AddScoped<ITwoFactorService, TwoFactorService>();
 builder.Services.AddScoped<WebSocketService>();
-builder.Services.AddScoped<SearchService>();
+builder.Services.AddScoped<ISearchService, SearchService>();
 
 builder.Services.AddScoped<IAuthRepository, AuthRepository>();
 builder.Services.AddScoped<ISearchRepository, SearchRepository>();
@@ -78,7 +79,7 @@ builder.Services.AddScoped<IMessageRepository, MessageRepository>();
 builder.Services.AddScoped<IProfileRepository, ProfileRepository>();
 builder.Services.AddSingleton<IWebSocketConnectionManager, WebSocketConnectionManager>();
 
-builder.Services.AddScoped<TokenValidator>();
+builder.Services.AddScoped<ITokenValidator, TokenValidator>();
 
 builder.Services.AddSingleton<S3Service>();
 builder.Services.AddSingleton<IEncryptionService, EncryptionService>();

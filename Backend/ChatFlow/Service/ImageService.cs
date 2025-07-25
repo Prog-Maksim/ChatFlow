@@ -3,12 +3,13 @@ using ChatFlow.Models.DB;
 using ChatFlow.Models.Response;
 using ChatFlow.Repository.Interfaces;
 using ChatFlow.Scripts;
+using ChatFlow.Service.Interfaces;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.Processing;
 
 namespace ChatFlow.Service;
 
-public class ImageService
+public class ImageService: IImageService
 {
     private const long MaxFileSize = 4_194_304; // 4 МБ
     private readonly ILogger<ImageService> _logger;
@@ -23,15 +24,7 @@ public class ImageService
         _jwtTokenService = jwtTokenService;
         _profileRepository = profileRepository;
     }
-
-    /// <summary>
-    /// Сохраняет изображение в профиле
-    /// </summary>
-    /// <param name="file">Загружаемый файл</param>
-    /// <param name="accessToken">Access токен</param>
-    /// <param name="top">Отступ сверху</param>
-    /// <param name="left">Отступ слева</param>
-    /// <returns></returns>
+    
     public async Task<BaseResponse<string, string>> UploadFile(IFormFile file, string accessToken, double? top = 0, double? left = 0)
     {
         var dataToken = _jwtTokenService.GetJwtTokenData(accessToken);
@@ -93,13 +86,7 @@ public class ImageService
             return new BaseResponse<string, string> { Message = "Ошибка при обработке изображения", Successfully = false, Status = 500, Type = ResponseType.ErrorUploadFile, Errors = ex.Message, Data = null };
         }
     }
-
-    /// <summary>
-    /// Выдает кол-во фотографий у пользователя
-    /// </summary>
-    /// <param name="accessToken">Access токен</param>
-    /// <param name="personId">Идентификатор пользователя</param>
-    /// <returns></returns>
+    
     public async Task<BaseResponse<string, CountImage>> GetCountImages(string accessToken, string? personId = null)
     {
         var dataToken = _jwtTokenService.GetJwtTokenData(accessToken);
@@ -136,13 +123,7 @@ public class ImageService
             Data = new CountImage { Count = await _profileRepository.GetNumImageInByIdAsync(personId) },
         };
     }
-
-    /// <summary>
-    /// Выдает ссылку на основное изображение пользователя
-    /// </summary>
-    /// <param name="accessToken">Access токен</param>
-    /// <param name="personId">Идентификатор пользователя</param>
-    /// <returns></returns>
+    
     public async Task<BaseResponse<string, DataImage>> GetPrimaryImage(string accessToken, string? personId = null)
     {
         var dataToken = _jwtTokenService.GetJwtTokenData(accessToken);
@@ -212,13 +193,7 @@ public class ImageService
             }
         };
     }
-
-    /// <summary>
-    /// Устанавливает изображение основным
-    /// </summary>
-    /// <param name="accessToken">Access токена</param>
-    /// <param name="imageId">Идентификатор изображения</param>
-    /// <returns></returns>
+    
     public async Task<BaseResponse<string, string>> SetImageIsPrimary(string accessToken, string imageId)
     {
         var dataToken = _jwtTokenService.GetJwtTokenData(accessToken);

@@ -1,8 +1,10 @@
+using ChatFlow.Enums;
 using ChatFlow.Models.DB;
 using ChatFlow.Models.Response;
 using ChatFlow.Repository;
 using ChatFlow.Repository.Interfaces;
 using ChatFlow.Scripts;
+using ChatFlow.Service.Interfaces;
 using Microsoft.AspNetCore.Identity;
 using Sessions = ChatFlow.Models.DB.Sessions;
 
@@ -12,12 +14,12 @@ public class AccountService
 {
     private readonly IAuthRepository _authRepository;
     private readonly IEncryptionService _encryptionService;
-    private readonly TokenValidator _tokenValidator;
+    private readonly ITokenValidator _tokenValidator;
     private readonly PasswordHasher<Persons> _passwordHasher;
-    private readonly SessionService _sessionService;
+    private readonly ISessionService _sessionService;
     private readonly ILogger<AccountService> _logger;
     
-    public AccountService(IAuthRepository authRepository, IEncryptionService encryptionService, TokenValidator tokenValidator, SessionService sessionService, ILogger<AccountService> logger)
+    public AccountService(IAuthRepository authRepository, IEncryptionService encryptionService, ITokenValidator tokenValidator, ISessionService sessionService, ILogger<AccountService> logger)
     {
         _authRepository = authRepository;
         _encryptionService = encryptionService;
@@ -51,7 +53,7 @@ public class AccountService
         person.NumberPhone = phoneNumber;
         await _authRepository.SaveChangesAsync();
             
-        return ResponseFactory.Success("Номер телефона успешно обновлен", "Номер телефона обнолвен");
+        return ResponseFactory.Success("Номер телефона успешно обновлен", "Номер телефона обновлен");
     }
     
     /// <summary>
@@ -74,6 +76,9 @@ public class AccountService
         var person = await _authRepository.GetUserByIdAsync(dataToken!.PersonId);
         if (person is null)
             return ResponseFactory.PersonNotFound<RegistrationCode>();
+        
+        if (person.AccountState == AccountState.Blocked)
+            return ResponseFactory.AccountBlocked<RegistrationCode>();
 
         if (person.PasswordHash is null)
         {

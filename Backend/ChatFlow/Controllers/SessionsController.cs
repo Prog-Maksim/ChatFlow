@@ -1,6 +1,7 @@
 using ChatFlow.Models.Response;
 using ChatFlow.Monitoring;
 using ChatFlow.Service;
+using ChatFlow.Service.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Prometheus;
@@ -11,7 +12,7 @@ namespace ChatFlow.Controllers;
 [ApiVersion("1.0")]
 [Produces("application/json")]
 [Route("v{version:apiVersion}/sessions")]
-public class SessionsController(ILogger<SessionsController> logger, SessionService service): ControllerBase
+public class SessionsController(ILogger<SessionsController> logger, ISessionService service): ControllerBase
 {
     /// <summary>
     /// Возвращает все активные сессии

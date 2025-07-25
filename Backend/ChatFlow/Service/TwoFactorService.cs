@@ -3,19 +3,20 @@ using ChatFlow.Models.DB;
 using ChatFlow.Models.Response;
 using ChatFlow.Repository.Interfaces;
 using ChatFlow.Scripts;
+using ChatFlow.Service.Interfaces;
 using UAParser;
 using Sessions = ChatFlow.Models.DB.Sessions;
 
 namespace ChatFlow.Service;
 
-public class TwoFactorService
+public class TwoFactorService: ITwoFactorService
 {
     private readonly IAuthRepository _authRepository;
     private readonly IEncryptionService _encryptionService;
     private readonly JwtTokenService _jwtTokenService;
-    private readonly ILogger<AuthService> _logger;
+    private readonly ILogger<TwoFactorService> _logger;
 
-    public TwoFactorService(IAuthRepository authRepository, IEncryptionService encryptionService, JwtTokenService jwtTokenService, ILogger<AuthService> logger)
+    public TwoFactorService(IAuthRepository authRepository, IEncryptionService encryptionService, JwtTokenService jwtTokenService, ILogger<TwoFactorService> logger)
     {
         _authRepository = authRepository;
         _encryptionService = encryptionService;
@@ -23,12 +24,6 @@ public class TwoFactorService
         _logger = logger;
     }
     
-    /// <summary>
-    /// Создает Secret для добавления в GoogleAuthenticator
-    /// </summary>
-    /// <param name="code">Код создания</param>
-    /// <param name="userIpAddress">IP адрес пользователя</param>
-    /// <returns></returns>
     public async Task<BaseResponse<string, Token2Fa>> AddGoogleAuthenticatorAsync(string code, string userIpAddress)
     {
         if (!await _authRepository.CheckCodeAsync(code))
@@ -48,15 +43,7 @@ public class TwoFactorService
         var tokenResult = new Token2Fa { Token = secretKey };
         return ResponseFactory.Success("Ваш код аутентификации", tokenResult);
     }
-
-    /// <summary>
-    /// Проверяет код и выдает токены
-    /// </summary>
-    /// <param name="code">Код создания</param>
-    /// <param name="key">Код из Google Authenticator</param>
-    /// <param name="userIpAddress">IP адрес пользователя</param>
-    /// <param name="userAgent">user agent пользователя</param>
-    /// <returns></returns>
+    
     public async Task<BaseResponse<string, AuthTokens>> CheckGoogleAuthenticatorAsync(string code, string key, string userIpAddress, string userAgent)
     {
         if (!await _authRepository.CheckCodeAsync(code))
@@ -104,6 +91,31 @@ public class TwoFactorService
             RefreshTokenExpiration = DateTime.UtcNow.AddDays(JwtTokenService.RefreshTokenLifetimeDay)
         };
         return ResponseFactory.Success("Вы успешно авторизовались", tokenResult);
+    }
+    
+    public async Task<byte[]> GetQrCodeGoogleAuthenticatorAsync(string code, string userIpAddress)
+    {
+        if (!await _authRepository.CheckCodeAsync(code))
+            throw new NullReferenceException("Данный код не найден");
+        
+        var data = await _authRepository.GetTotpDataByCodeAsync(code);
+            
+        if (data == null)
+            throw new NullReferenceException("Вы не создали подключение");
+            
+        if (data.IpAddress != userIpAddress)
+            throw new UnauthorizedAccessException("Qr-code не может быть создан!");
+            
+        if (!data.IsRead)
+            throw new UnauthorizedAccessException("Qr-code не может быть создан!");
+
+        if (data.TotpCode == null)
+            throw new NullReferenceException("Подключаемый сервис не найден");
+
+
+        var userData = data.PersonData.Email ?? data.PersonData.NumberPhone;
+        string url = AuthenticatorService.GenerateUrl(data.TotpCode, userData);
+        return AuthenticatorService.GenerateQrCode(url);
     }
     
     /// <summary>
@@ -163,38 +175,5 @@ public class TwoFactorService
         {
             _logger.LogError("Произошла ошибка {@ex}", ex);
         }
-    }
-    
-    /// <summary>
-    /// Создает Qr-code для добавления в Google Authenticator
-    /// </summary>
-    /// <param name="code"></param>
-    /// <param name="userIpAddress">IP адрес пользователя</param>
-    /// <returns></returns>
-    /// <exception cref="NullReferenceException"></exception>
-    /// <exception cref="UnauthorizedAccessException"></exception>
-    public async Task<byte[]> GetQrCodeGoogleAuthenticatorAsync(string code, string userIpAddress)
-    {
-        if (!await _authRepository.CheckCodeAsync(code))
-            throw new NullReferenceException("Данный код не найден");
-        
-        var data = await _authRepository.GetTotpDataByCodeAsync(code);
-            
-        if (data == null)
-            throw new NullReferenceException("Вы не создали подключение");
-            
-        if (data.IpAddress != userIpAddress)
-            throw new UnauthorizedAccessException("Qr-code не может быть создан!");
-            
-        if (!data.IsRead)
-            throw new UnauthorizedAccessException("Qr-code не может быть создан!");
-
-        if (data.TotpCode == null)
-            throw new NullReferenceException("Подключаемый сервис не найден");
-
-
-        var userData = data.PersonData.Email ?? data.PersonData.NumberPhone;
-        string url = AuthenticatorService.GenerateUrl(data.TotpCode, userData);
-        return AuthenticatorService.GenerateQrCode(url);
     }
 }

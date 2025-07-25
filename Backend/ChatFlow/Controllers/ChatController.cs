@@ -3,6 +3,7 @@ using ChatFlow.Models.Requests;
 using ChatFlow.Models.Response;
 using ChatFlow.Monitoring;
 using ChatFlow.Service;
+using ChatFlow.Service.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Prometheus;
@@ -13,7 +14,7 @@ namespace ChatFlow.Controllers;
 [ApiVersion("1.0")]
 [Produces("application/json")]
 [Route("v{version:apiVersion}/chats")]
-public class ChatsController(ILogger<ChatsController> logger, ChatService service): ControllerBase
+public class ChatsController(ILogger<ChatsController> logger, IChatService service): ControllerBase
 {
     /// <summary>
     /// Создает личный чат между двумя пользователями

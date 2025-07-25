@@ -3,11 +3,12 @@ using ChatFlow.Models.DB;
 using ChatFlow.Models.Response;
 using ChatFlow.Repository.Interfaces;
 using ChatFlow.Scripts;
+using ChatFlow.Service.Interfaces;
 using Sessions = ChatFlow.Models.DB.Sessions;
 
 namespace ChatFlow.Service;
 
-public class TokenService
+public class TokenService: ITokenService
 {
     private readonly IAuthRepository _authRepository;
     private readonly JwtTokenService _jwtTokenService;
@@ -17,11 +18,6 @@ public class TokenService
         _jwtTokenService = jwtTokenService;
     }
     
-    /// <summary>
-    /// Обновляет Refresh токен
-    /// </summary>
-    /// <param name="refreshToken">Refresh токен</param>
-    /// <returns></returns>
     public async Task<BaseResponse<string, AuthTokens>> RefreshAccessToken(string refreshToken)
     {
         var dataToken = _jwtTokenService.GetJwtTokenData(refreshToken);

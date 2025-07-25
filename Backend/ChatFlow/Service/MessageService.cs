@@ -5,11 +5,12 @@ using ChatFlow.Models.Requests;
 using ChatFlow.Models.Response;
 using ChatFlow.Repository.Interfaces;
 using ChatFlow.Scripts;
+using ChatFlow.Service.Interfaces;
 using ChatUser = ChatFlow.Models.Other.ChatUser;
 
 namespace ChatFlow.Service;
 
-public class MessageService
+public class MessageService: IMessageService
 {
     private readonly ILogger<MessageService> _logger;
     private readonly IMessageRepository _messageRepository;
@@ -23,14 +24,7 @@ public class MessageService
         _jwtTokenService = jwtTokenService;
         _manager = manager;
     }
-
-    /// <summary>
-    /// Создает сообщение и отправляет в чат
-    /// </summary>
-    /// <param name="accessToken">Токен пользователя</param>
-    /// <param name="message">Объект сообщения</param>
-    /// <param name="cancellationToken">Токен отмены</param>
-    /// <returns></returns>
+    
     public async Task<BaseResponse<string, SendMessage>> SendMessageAsync(string accessToken, Message message, CancellationToken cancellationToken)
     {
         var dataToken = _jwtTokenService.GetJwtTokenData(accessToken);
@@ -84,43 +78,7 @@ public class MessageService
             Successfully = true, Errors = null, Data = new SendMessage{ Message = messageData}
         };
     }
-
-    private async Task SendMessageUsersAsync(List<Models.DB.ChatUser> users, MessageData message)
-    {
-        foreach (var user in users)
-            await _manager.SendMessageToUserAsync(user.PersonId, message);
-    }
-
-    /// <summary>
-    /// Создает объект сообщения и сохраняет в БД
-    /// </summary>
-    /// <param name="message">Данные сообщения</param>
-    /// <param name="ownerPersonId">Автор сообщения</param>
-    /// <param name="cancellationToken">Токен отмены</param>
-    /// <returns></returns>
-    private async Task<MessageData> CreateMessageAsync(Message message, string ownerPersonId, CancellationToken cancellationToken)
-    {
-        MessageData messageData = new MessageData
-        {
-            MessageId = Guid.NewGuid().ToString(),
-            ChatId = message.ChatId,
-            Text = message.Text,
-            Created = DateTime.UtcNow,
-            MessageType = MessageStatus.Send,
-            OwnerId = ownerPersonId
-        };
-
-        await _messageRepository.SaveMessageAsync(messageData, cancellationToken);
-        return messageData;
-    }
-
-    /// <summary>
-    /// Выдает все сообщения чата с пагинацией
-    /// </summary>
-    /// <param name="accessToken">Токен пользователя</param>
-    /// <param name="chatId">Идентификатор чата</param>
-    /// <param name="limit">Кол-во сообщений в выдаче</param>
-    /// <param name="offset">Смещение от начала списка</param>
+    
     public async Task<BaseResponse<string, MessagesPagination>> GetMessagesChatAsync(string accessToken, string chatId, int limit, int offset)
     {
         var dataToken = _jwtTokenService.GetJwtTokenData(accessToken);
@@ -181,13 +139,7 @@ public class MessageService
             }
         };
     }
-
-    /// <summary>
-    /// Возвращает последнее сообщение чата
-    /// </summary>
-    /// <param name="accessToken">Токен пользователя</param>
-    /// <param name="chatId">Идентификатор чата</param>
-    /// <returns></returns>
+    
     public async Task<BaseResponse<string, MessageData>> GetLastMessageAsync(string accessToken, string chatId)
     {
         var dataToken = _jwtTokenService.GetJwtTokenData(accessToken);
@@ -235,14 +187,7 @@ public class MessageService
             Errors = null, Data = message
         };
     }
-
-    /// <summary>
-    /// Удаляет сообщение
-    /// </summary>
-    /// <param name="accessToken">Токен пользователя</param>
-    /// <param name="chatId">Идентификатор чата</param>
-    /// <param name="messageId">Идентификатор сообщения</param>
-    /// <returns></returns>
+    
     public async Task<BaseResponse<string, MessageData>> DeleteMessageAsync(string accessToken, string chatId, string messageId)
     {
         var dataToken = _jwtTokenService.GetJwtTokenData(accessToken);
@@ -310,15 +255,7 @@ public class MessageService
             Type = ResponseType.Ok, Status = 200, Successfully = true, Errors = null, Data = message
         };
     }
-
-    /// <summary>
-    /// Обновляет сообщение
-    /// </summary>
-    /// <param name="accessToken">Токен пользователя</param>
-    /// <param name="chatId">Идентификатор чата</param>
-    /// <param name="messageId">Идентификатор сообщения</param>
-    /// <param name="messageData">Объект обновляемого сообщения</param>
-    /// <returns></returns>
+    
     public async Task<BaseResponse<string, MessageData>> UpdateMessageAsync(string accessToken, string chatId, string messageId, UpdateMessage messageData)
     {
         var dataToken = _jwtTokenService.GetJwtTokenData(accessToken);
@@ -386,5 +323,35 @@ public class MessageService
             Message = "Сообщение успешно изменено",
             Type = ResponseType.Ok, Status = 200, Successfully = true, Errors = null, Data = message
         };
+    }
+    
+    private async Task SendMessageUsersAsync(List<Models.DB.ChatUser> users, MessageData message)
+    {
+        foreach (var user in users)
+            await _manager.SendMessageToUserAsync(user.PersonId, message);
+    }
+
+    
+    /// <summary>
+    /// Создает объект сообщения и сохраняет в БД
+    /// </summary>
+    /// <param name="message">Данные сообщения</param>
+    /// <param name="ownerPersonId">Автор сообщения</param>
+    /// <param name="cancellationToken">Токен отмены</param>
+    /// <returns></returns>
+    private async Task<MessageData> CreateMessageAsync(Message message, string ownerPersonId, CancellationToken cancellationToken)
+    {
+        MessageData messageData = new MessageData
+        {
+            MessageId = Guid.NewGuid().ToString(),
+            ChatId = message.ChatId,
+            Text = message.Text,
+            Created = DateTime.UtcNow,
+            MessageType = MessageStatus.Send,
+            OwnerId = ownerPersonId
+        };
+
+        await _messageRepository.SaveMessageAsync(messageData, cancellationToken);
+        return messageData;
     }
 }

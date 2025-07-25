@@ -2,7 +2,7 @@ using ChatFlow.Models.Other;
 
 namespace ChatFlow.Scripts;
 
-public class TokenValidator
+public class TokenValidator: ITokenValidator
 {
     private readonly JwtTokenService _jwtTokenService;
 

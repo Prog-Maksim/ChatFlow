@@ -6,62 +6,24 @@ stages:
 
 # ──────── BUILD JOBS ────────
 
-build-auth-service-job:
+build-chatflow-service-job:
   stage: build
   tags:
-    - prod
+    - dev
   script:
-    - docker build -t chatflow-auth-service -f Backend/AuthService/Dockerfile Backend/AuthService
-
-build-chat-service-job:
-  stage: build
-  tags:
-    - prod
-  script:
-    - docker build -t chatflow-chat-service -f Backend/ChatService/Dockerfile Backend/ChatService
-
-build-message-service-job:
-  stage: build
-  tags:
-    - prod
-  script:
-    - docker build -t chatflow-message-service -f Backend/MessageService/Dockerfile Backend/MessageService
-
-build-profile-service-job:
-  stage: build
-  tags:
-    - prod
-  script:
-    - docker build -t chatflow-profile-service -f Backend/ProfileService/Dockerfile Backend/ProfileService
-
-build-search-service-job:
-  stage: build
-  tags:
-    - prod
-  script:
-    - docker build -t chatflow-search-service -f Backend/SearchService/Dockerfile Backend/SearchService
-
-build-websocket-service-job:
-  stage: build
-  tags:
-    - prod
-  script:
-    - docker build -t chatflow-websocket-service -f Backend/WebSocketService/Dockerfile Backend/WebSocketService
-
-build-loadbalancer-service-job:
-  stage: build
-  tags:
-    - prod
-  script:
-    - docker build -t chatflow-loadbalancer-service -f Backend/WsLoadBalancer/Dockerfile Backend/WsLoadBalancer
+    - docker build -t chatflow-service -f Backend/ChatFlow/Dockerfile Backend/ChatFlow
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "main"'
 
 # ──────── DEPLOY JOB ────────
 
 deploy-job:
   stage: deploy
   tags:
-    - prod
+    - dev
   script:
     - docker compose down
     - docker compose build --no-cache
     - docker compose up -d --force-recreate
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "main"'

@@ -13,59 +13,17 @@ services:
       - "443:443"
     restart: always
     volumes:
-      - /etc/letsencrypt/live/api.chatflowonline.ru:/etc/letsencrypt/live/api.chatflowonline.ru:ro
-      - /etc/letsencrypt/archive/api.chatflowonline.ru:/etc/letsencrypt/archive/api.chatflowonline.ru:ro
+      - /etc/letsencrypt/live:/etc/letsencrypt/live:ro
+      - /etc/letsencrypt/archive:/etc/letsencrypt/archive:ro
       - /etc/letsencrypt/options-ssl-nginx.conf:/etc/letsencrypt/options-ssl-nginx.conf:ro
       - /etc/letsencrypt/ssl-dhparams.pem:/etc/letsencrypt/ssl-dhparams.pem:ro
     depends_on:
-      - auth-service
-      - chat-service
-      - message-service
-      - profile-service
-      - search-service
-      - websocket-service
-      - load-balancer-service
+      - chat-flow
     networks:
       - net
-  
-  auth-service:
-    image: chatflow-auth-service:latest
-    restart: always
-    networks:
-      - net
-  
-  chat-service:
-    image: chatflow-chat-service:latest
-    restart: always
-    networks:
-      - net
-  
-  message-service:
-    image: chatflow-message-service:latest
-    restart: always
-    networks:
-      - net
-      
-  profile-service:
-    image: chatflow-profile-service:latest
-    restart: always
-    networks:
-      - net
-  
-  search-service:
-    image: chatflow-search-service:latest
-    restart: always
-    networks:
-      - net
-  
-  websocket-service:
-    image: chatflow-websocket-service:latest
-    restart: always
-    networks:
-      - net
-  
-  load-balancer-service:
-    image: chatflow-loadbalancer-service:latest
+    
+  chat-flow:
+    image: chatflow-service:latest
     restart: always
     networks:
       - net

@@ -3,8 +3,8 @@ import {
   createRoute,
   createRouter,
 } from '@tanstack/react-router';
-import { Layout } from '../../pages/layout/Layout';
-import { MainPage } from '../../pages/MainPage/MainPage';
+import { Layout } from '../pages/layout/Layout';
+import { MainPage } from '../pages/MainPage/MainPage';
 
 const rootRoute = createRootRoute();
 const mainLayoutRoute = createRoute({ getParentRoute: () => rootRoute, path: '/', component: Layout });

@@ -4,11 +4,11 @@ import { queryClient } from './QueryClient';
 // import { authStore } from '../../features/auth/model/auth.store';
 
 export function RootProvider({ children }: { children: React.ReactNode }) {
-  return (
-    // <Provider authStore={authStore}>
-      <QueryClientProvider client={queryClient}>
-        {children}
-      </QueryClientProvider>
-    // </Provider>
-  );
+	return (
+	// <Provider authStore={authStore}>
+		<QueryClientProvider client={queryClient}>
+			{children}
+		</QueryClientProvider>
+	// </Provider>
+	);
 }

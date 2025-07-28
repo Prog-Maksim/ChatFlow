@@ -21,6 +21,11 @@ services:
       - chat-flow
     networks:
       - net
+        
+  nginx-exporter:
+    build: Dockerfile.nginx-exporter
+    volumes:
+      - nginx_log_volume:/var/log/nginx/
     
   chat-flow:
     image: chatflow-service:latest

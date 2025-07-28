@@ -3,6 +3,9 @@ version: '3.8'
 networks:
   net:
     
+volumes:
+  nginx_log_volume:
+    
 services:
   nginx:
     build:

@@ -29,8 +29,12 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.nginx-exporter
+    ports:
+      - "4040:4040"
     volumes:
       - nginx_log_volume:/var/log/nginx/
+    networks:
+      - net
     
   chat-flow:
     image: chatflow-service:latest

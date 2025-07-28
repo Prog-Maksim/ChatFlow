@@ -10,10 +10,10 @@ namespace ChatFlow.Service;
 public class WebSocketService
 {
     private readonly ILogger<WebSocketService> _logger;
-    private readonly JwtTokenService _jwtTokenService;
+    private readonly IJwtTokenService _jwtTokenService;
     private readonly IWebSocketConnectionManager _connectionManager;
 
-    public WebSocketService(IWebSocketConnectionManager connectionManager, ILogger<WebSocketService> logger, JwtTokenService jwtTokenService)
+    public WebSocketService(IWebSocketConnectionManager connectionManager, ILogger<WebSocketService> logger, IJwtTokenService jwtTokenService)
     {
         _connectionManager = connectionManager;
         _logger = logger;

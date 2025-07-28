@@ -11,8 +11,8 @@ namespace ChatFlow.Service;
 public class TokenService: ITokenService
 {
     private readonly IAuthRepository _authRepository;
-    private readonly JwtTokenService _jwtTokenService;
-    public TokenService(IAuthRepository authRepository, JwtTokenService jwtTokenService)
+    private readonly IJwtTokenService _jwtTokenService;
+    public TokenService(IAuthRepository authRepository, IJwtTokenService jwtTokenService)
     {
         _authRepository = authRepository;
         _jwtTokenService = jwtTokenService;

@@ -11,9 +11,9 @@ public class SearchService: ISearchService
 {
     private readonly ILogger<SearchService> _logger;
     private readonly ISearchRepository _repository;
-    private readonly JwtTokenService _jwtTokenService;
+    private readonly IJwtTokenService _jwtTokenService;
     
-    public SearchService(ILogger<SearchService> logger, ISearchRepository repository, JwtTokenService jwtTokenService)
+    public SearchService(ILogger<SearchService> logger, ISearchRepository repository, IJwtTokenService jwtTokenService)
     {
         _logger = logger;
         _repository = repository;

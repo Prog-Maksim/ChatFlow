@@ -14,10 +14,10 @@ public class MessageService: IMessageService
 {
     private readonly ILogger<MessageService> _logger;
     private readonly IMessageRepository _messageRepository;
-    private readonly JwtTokenService _jwtTokenService;
+    private readonly IJwtTokenService _jwtTokenService;
     private readonly IWebSocketConnectionManager _manager;
 
-    public MessageService(ILogger<MessageService> logger, IMessageRepository messageRepository, JwtTokenService jwtTokenService, IWebSocketConnectionManager manager)
+    public MessageService(ILogger<MessageService> logger, IMessageRepository messageRepository, IJwtTokenService jwtTokenService, IWebSocketConnectionManager manager)
     {
         _logger = logger;
         _messageRepository = messageRepository;
@@ -325,12 +325,12 @@ public class MessageService: IMessageService
         };
     }
     
+    
     private async Task SendMessageUsersAsync(List<Models.DB.ChatUser> users, MessageData message)
     {
         foreach (var user in users)
             await _manager.SendMessageToUserAsync(user.PersonId, message);
     }
-
     
     /// <summary>
     /// Создает объект сообщения и сохраняет в БД

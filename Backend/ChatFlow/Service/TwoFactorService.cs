@@ -13,10 +13,10 @@ public class TwoFactorService: ITwoFactorService
 {
     private readonly IAuthRepository _authRepository;
     private readonly IEncryptionService _encryptionService;
-    private readonly JwtTokenService _jwtTokenService;
+    private readonly IJwtTokenService _jwtTokenService;
     private readonly ILogger<TwoFactorService> _logger;
 
-    public TwoFactorService(IAuthRepository authRepository, IEncryptionService encryptionService, JwtTokenService jwtTokenService, ILogger<TwoFactorService> logger)
+    public TwoFactorService(IAuthRepository authRepository, IEncryptionService encryptionService, IJwtTokenService jwtTokenService, ILogger<TwoFactorService> logger)
     {
         _authRepository = authRepository;
         _encryptionService = encryptionService;

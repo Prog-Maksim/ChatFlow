@@ -65,7 +65,7 @@ builder.Services.AddScoped<IChatService, ChatService>();
 builder.Services.AddScoped<IImageService, ImageService>();
 builder.Services.AddScoped<IMessageService, MessageService>();
 builder.Services.AddScoped<IProfileService, ProfileService>();
-builder.Services.AddScoped<S3Service>();
+builder.Services.AddScoped<IS3Service, S3Service>();
 builder.Services.AddScoped<ISessionService, SessionService>();
 builder.Services.AddScoped<ITokenService, TokenService>();
 builder.Services.AddScoped<ITwoFactorService, TwoFactorService>();
@@ -83,7 +83,7 @@ builder.Services.AddScoped<ITokenValidator, TokenValidator>();
 
 builder.Services.AddSingleton<S3Service>();
 builder.Services.AddSingleton<IEncryptionService, EncryptionService>();
-builder.Services.AddScoped<JwtTokenService>();
+builder.Services.AddScoped<IJwtTokenService, JwtTokenService>();
 
 // ElasticSearch
 var settings = new ConnectionSettings(new Uri(uri))

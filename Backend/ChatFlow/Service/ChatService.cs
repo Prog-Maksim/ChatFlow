@@ -9,13 +9,13 @@ namespace ChatFlow.Service;
 
 public class ChatService: IChatService
 {
-    private readonly JwtTokenService _jwtTokenService;
+    private readonly IJwtTokenService _jwtTokenService;
     private readonly ILogger<ChatService> _logger;
     private readonly IChatRepository _chatRepository;
     private readonly IProfileRepository _profileRepository;
     private readonly IWebSocketConnectionManager _manager;
 
-    public ChatService(ILogger<ChatService> logger, IChatRepository chatRepository, JwtTokenService jwtTokenService, IProfileRepository profileRepository, IWebSocketConnectionManager manager)
+    public ChatService(ILogger<ChatService> logger, IChatRepository chatRepository, IJwtTokenService jwtTokenService, IProfileRepository profileRepository, IWebSocketConnectionManager manager)
     {
         _logger = logger;
         _chatRepository = chatRepository;
@@ -107,6 +107,7 @@ public class ChatService: IChatService
                 Data = null
             };
 
+        // TODO: возможно убрать ограничение на пользователей, сделать общедоступной
         if (chat.Persons.All(p => p.PersonId != dataToken.PersonId))
             return new BaseResponse<string, ChatInfo>
             {
@@ -118,7 +119,7 @@ public class ChatService: IChatService
                 Data = null
             };
 
-        ChatInfo info = new ChatInfo();
+        ChatInfo info;
         if (chat.Type == ChatType.Private)
         {
             var personId = chat.Persons.FirstOrDefault(p => p.PersonId != dataToken.PersonId);
@@ -139,7 +140,7 @@ public class ChatService: IChatService
             info = new ChatInfo
             {
                 ChatId = chat.ChatId,
-                Title = $"{personData.Surname} {personData.Name}",
+                Title = $"{personData!.Surname} {personData.Name}",
                 ImageUrl = personData.Image?.Url
             };
         }

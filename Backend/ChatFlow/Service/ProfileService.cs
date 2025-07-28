@@ -14,9 +14,9 @@ public class ProfileService: IProfileService
     private readonly ILogger<ProfileService> _logger;
     private readonly IProfileRepository _profileRepository;
     private readonly ISearchRepository _searchRepository;
-    private readonly JwtTokenService _jwtTokenService;
+    private readonly IJwtTokenService _jwtTokenService;
     
-    public ProfileService(ILogger<ProfileService> logger, IProfileRepository profileRepository, JwtTokenService jwtTokenService, ISearchRepository searchRepository)
+    public ProfileService(ILogger<ProfileService> logger, IProfileRepository profileRepository, IJwtTokenService jwtTokenService, ISearchRepository searchRepository)
     {
         _logger = logger;
         _profileRepository = profileRepository;

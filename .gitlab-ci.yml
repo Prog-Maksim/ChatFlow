@@ -13,7 +13,7 @@ build-chatflow-service-job:
   script:
     - docker build -t chatflow-service -f Backend/ChatFlow/Dockerfile Backend/ChatFlow
   rules:
-    - if: '$CI_COMMIT_BRANCH == "main" || $CI_COMMIT_BRANCH == "dev" || $CI_COMMIT_BRANCH == "create-tests"'
+    - if: '$CI_COMMIT_BRANCH == "main" || $CI_COMMIT_BRANCH == "dev" '
 
 # ──────── DEPLOY JOB ────────
 
@@ -26,4 +26,4 @@ deploy-job:
     - docker compose build --no-cache
     - docker compose up -d --force-recreate
   rules:
-    - if: '$CI_COMMIT_BRANCH == "main" || $CI_COMMIT_BRANCH == "dev" || $CI_COMMIT_BRANCH == "create-tests"'
+    - if: '$CI_COMMIT_BRANCH == "main" || $CI_COMMIT_BRANCH == "dev"'

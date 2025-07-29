@@ -2,11 +2,9 @@ using System.ComponentModel.DataAnnotations;
 using ChatFlow.Enums;
 using ChatFlow.Models.Requests;
 using ChatFlow.Models.Response;
-using ChatFlow.Monitoring;
 using ChatFlow.Service;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Prometheus;
 
 namespace ChatFlow.Controllers;
 
@@ -33,23 +31,15 @@ public class AccountController(ILogger<AuthController> logger, AccountService se
     public async Task<IActionResult> UpdatePhoneNumber([Required] [FromBody] UpdatePhoneRequest request)
     {
         logger.LogInformation("Начало обработки запроса: (обновление номера телефона)");
-        MetricsRegistry.EndpointRequestCounter
-            .WithLabels("update-phone", "PATCH", "auth").Inc();
-
-        using (MetricsRegistry.EndpointDuration
-                   .WithLabels("update-phone", "PATCH")
-                   .NewTimer())
-        {
-            var authHeader = HttpContext.Request.Headers["Authorization"].ToString();
-            var token = authHeader.Substring("Bearer ".Length);
+        var authHeader = HttpContext.Request.Headers["Authorization"].ToString();
+        var token = authHeader.Substring("Bearer ".Length);
             
-            var response = await service.UpdateNumberPhone(token, request.PhoneNumber);
+        var response = await service.UpdateNumberPhone(token, request.PhoneNumber);
             
-            if (!response.Successfully)
-                return StatusCode(response.Status, response);
+        if (!response.Successfully)
+            return StatusCode(response.Status, response);
         
-            return Ok(response);
-        }
+        return Ok(response);
     }
 
     /// <summary>
@@ -69,41 +59,33 @@ public class AccountController(ILogger<AuthController> logger, AccountService se
     public async Task<IActionResult> UpdatePassword([Required] [FromBody] UpdatePassword requests)
     {
         logger.LogInformation("Начало обработки запроса: (обновление пароля)");
-        MetricsRegistry.EndpointRequestCounter
-            .WithLabels("update-password", "PATCH").Inc();
-
-        using (MetricsRegistry.EndpointDuration
-                   .WithLabels("update-password", "PATCH")
-                   .NewTimer())
+        string? userIpAddress = HttpContext.Request.Headers["X-Forwarded-For"].FirstOrDefault() ?? HttpContext.Connection.RemoteIpAddress?.ToString();
+        
+        if (userIpAddress is null)
         {
-            string? userIpAddress = HttpContext.Request.Headers["X-Forwarded-For"].FirstOrDefault() ?? HttpContext.Connection.RemoteIpAddress?.ToString();
-        
-            if (userIpAddress is null)
+            var error = new BaseResponse<string, object>
             {
-                var error = new BaseResponse<string, object>
-                {
-                    Message = "Невозможно определить ip адрес",
-                    Successfully = false,
-                    Status = 406,
-                    Type = ResponseType.IpAddressResolutionFailed,
-                    Errors = "Not Acceptable",
-                    Data = null
-                };
-                logger.LogError("Невозможно определить ip адрес");
-                return StatusCode(error.Status, error);
-            }
-
-            
-            var authHeader = HttpContext.Request.Headers["Authorization"].ToString();
-            var token = authHeader.Substring("Bearer ".Length);
-
-            var response = await service.UpdatePassword(token, requests.OldPassword, requests.NewPassword, userIpAddress);
-            
-            if (!response.Successfully)
-                return StatusCode(response.Status, response);
-        
-            return Ok(response);
+                Message = "Невозможно определить ip адрес",
+                Successfully = false,
+                Status = 406,
+                Type = ResponseType.IpAddressResolutionFailed,
+                Errors = "Not Acceptable",
+                Data = null
+            };
+            logger.LogError("Невозможно определить ip адрес");
+            return StatusCode(error.Status, error);
         }
+
+            
+        var authHeader = HttpContext.Request.Headers["Authorization"].ToString();
+        var token = authHeader.Substring("Bearer ".Length);
+
+        var response = await service.UpdatePassword(token, requests.OldPassword, requests.NewPassword, userIpAddress);
+            
+        if (!response.Successfully)
+            return StatusCode(response.Status, response);
+        
+        return Ok(response);
     }
 
     /// <summary>
@@ -120,22 +102,14 @@ public class AccountController(ILogger<AuthController> logger, AccountService se
     public async Task<IActionResult> Exit()
     {
         logger.LogInformation("Начало обработки запроса: (выход из аккаунта)");
-        MetricsRegistry.EndpointRequestCounter
-            .WithLabels("update-password", "PATCH").Inc();
-
-        using (MetricsRegistry.EndpointDuration
-                   .WithLabels("update-password", "PATCH")
-                   .NewTimer())
-        {
-            var authHeader = HttpContext.Request.Headers["Authorization"].ToString();
-            var token = authHeader.Substring("Bearer ".Length);
+        var authHeader = HttpContext.Request.Headers["Authorization"].ToString();
+        var token = authHeader.Substring("Bearer ".Length);
             
-            var response = await service.ExitTheSession(token);
+        var response = await service.ExitTheSession(token);
             
-            if (!response.Successfully)
-                return StatusCode(response.Status, response);
+        if (!response.Successfully)
+            return StatusCode(response.Status, response);
         
-            return Ok(response);
-        }
+        return Ok(response);
     }
 }

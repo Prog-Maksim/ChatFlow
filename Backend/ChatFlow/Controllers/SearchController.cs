@@ -1,10 +1,7 @@
 using ChatFlow.Models.Response;
-using ChatFlow.Monitoring;
-using ChatFlow.Service;
 using ChatFlow.Service.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Prometheus;
 
 namespace ChatFlow.Controllers;
 
@@ -25,29 +22,20 @@ public class SearchController(ILogger<SearchController> logger, ISearchService s
     [Authorize]
     [HttpGet]
     [ApiVersion("1.0")]
-    [ProducesResponseType(typeof(BaseResponse<string, SearchResult>),StatusCodes.Status200OK)]
-    [ProducesResponseType(typeof(BaseResponse<string, SearchResult>),StatusCodes.Status403Forbidden)]
-    [ProducesResponseType(typeof(BaseResponse<string, SearchResult>),StatusCodes.Status503ServiceUnavailable)]
+    [ProducesResponseType(typeof(BaseResponse<string, SearchResult>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(BaseResponse<string, SearchResult>), StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(typeof(BaseResponse<string, SearchResult>), StatusCodes.Status503ServiceUnavailable)]
     public async Task<IActionResult> Search([FromQuery] string query)
     {
         logger.LogInformation("Начало обработки запроса: (поиск)");
-        
-        MetricsRegistry.EndpointRequestCounter
-            .WithLabels("search", "GET").Inc();
-        
-        using (MetricsRegistry.EndpointDuration
-                   .WithLabels("search", "GET")
-                   .NewTimer())
-        {
-            var authHeader = HttpContext.Request.Headers["Authorization"].ToString();
-            var token = authHeader.Substring("Bearer ".Length);
+        var authHeader = HttpContext.Request.Headers["Authorization"].ToString();
+        var token = authHeader.Substring("Bearer ".Length);
 
-            var response = await service.SearchAsync(token, query);
+        var response = await service.SearchAsync(token, query);
 
-            if (!response.Successfully)
-                return StatusCode(response.Status, response);
+        if (!response.Successfully)
+            return StatusCode(response.Status, response);
 
-            return Ok(response);
-        }
+        return Ok(response);
     }
 }

@@ -2,12 +2,9 @@ using System.ComponentModel.DataAnnotations;
 using ChatFlow.Enums;
 using ChatFlow.Models.Requests;
 using ChatFlow.Models.Response;
-using ChatFlow.Monitoring;
-using ChatFlow.Service;
 using ChatFlow.Service.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Prometheus;
 
 namespace ChatFlow.Controllers;
 
@@ -42,37 +39,29 @@ public class AuthController(ILogger<AuthController> logger, IAuthService service
         if (!Request.Headers.TryGetValue("User-Agent", out var userAgent) || string.IsNullOrWhiteSpace(userAgent))
             return BadRequest("User-Agent header is missing.");
         
-        MetricsRegistry.EndpointRequestCounter
-            .WithLabels("registration", "POST").Inc();
+        string? userIpAddress = HttpContext.Request.Headers["X-Forwarded-For"].FirstOrDefault() ?? HttpContext.Connection.RemoteIpAddress?.ToString();
         
-        using (MetricsRegistry.EndpointDuration
-                   .WithLabels("registration", "POST")
-                   .NewTimer())
+        if (userIpAddress is null)
         {
-            string? userIpAddress = HttpContext.Request.Headers["X-Forwarded-For"].FirstOrDefault() ?? HttpContext.Connection.RemoteIpAddress?.ToString();
-        
-            if (userIpAddress is null)
+            var error = new BaseResponse<string, object>
             {
-                var error = new BaseResponse<string, object>
-                {
-                    Message = "Невозможно определить ip адрес",
-                    Successfully = false,
-                    Status = 406,
-                    Type = ResponseType.IpAddressResolutionFailed,
-                    Errors = "Not Acceptable",
-                    Data = null
-                };
-                logger.LogError("Невозможно определить ip адрес");
-                return StatusCode(error.Status, error);
-            }
-        
-            var response = await service.RegistrationUserAsync(registrationUser, userIpAddress);
-        
-            if (!response.Successfully)
-                return StatusCode(response.Status, response);
-        
-            return Ok(response);
+                Message = "Невозможно определить ip адрес",
+                Successfully = false,
+                Status = 406,
+                Type = ResponseType.IpAddressResolutionFailed,
+                Errors = "Not Acceptable",
+                Data = null
+            };
+            logger.LogError("Невозможно определить ip адрес");
+            return StatusCode(error.Status, error);
         }
+        
+        var response = await service.RegistrationUserAsync(registrationUser, userIpAddress);
+        
+        if (!response.Successfully)
+            return StatusCode(response.Status, response);
+        
+        return Ok(response);
     }
 
     /// <summary>
@@ -104,36 +93,28 @@ public class AuthController(ILogger<AuthController> logger, IAuthService service
         if (!Request.Headers.TryGetValue("User-Agent", out var userAgent) || string.IsNullOrWhiteSpace(userAgent))
             return BadRequest("User-Agent header is missing.");
         
-        MetricsRegistry.EndpointRequestCounter
-            .WithLabels("authorization", "POST").Inc();
+        string? userIpAddress = HttpContext.Request.Headers["X-Forwarded-For"].FirstOrDefault() ?? HttpContext.Connection.RemoteIpAddress?.ToString();
         
-        using (MetricsRegistry.EndpointDuration
-                   .WithLabels("authorization", "POST")
-                   .NewTimer())
+        if (userIpAddress is null)
         {
-            string? userIpAddress = HttpContext.Request.Headers["X-Forwarded-For"].FirstOrDefault() ?? HttpContext.Connection.RemoteIpAddress?.ToString();
-        
-            if (userIpAddress is null)
+            var error = new BaseResponse<string, object>
             {
-                var error = new BaseResponse<string, object>
-                {
-                    Message = "Невозможно определить ip адрес",
-                    Successfully = false,
-                    Status = 406,
-                    Type = ResponseType.IpAddressResolutionFailed,
-                    Errors = "Not Acceptable",
-                    Data = null
-                };
-                logger.LogError("Невозможно определить ip адрес");
-                return StatusCode(error.Status, error);
-            }
-        
-            var response = await service.AuthorizationUserAsync(authUser.Login, authUser.Password, userIpAddress);
-        
-            if (!response.Successfully)
-                return StatusCode(response.Status, response);
-        
-            return Ok(response);
+                Message = "Невозможно определить ip адрес",
+                Successfully = false,
+                Status = 406,
+                Type = ResponseType.IpAddressResolutionFailed,
+                Errors = "Not Acceptable",
+                Data = null
+            };
+            logger.LogError("Невозможно определить ip адрес");
+            return StatusCode(error.Status, error);
         }
+        
+        var response = await service.AuthorizationUserAsync(authUser.Login, authUser.Password, userIpAddress);
+        
+        if (!response.Successfully)
+            return StatusCode(response.Status, response);
+        
+        return Ok(response);
     }
 }

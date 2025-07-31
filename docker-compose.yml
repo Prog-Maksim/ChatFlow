@@ -16,6 +16,7 @@ services:
       - "443:443"
     restart: always
     volumes:
+      - ./unicode.mapping:/etc/modsecurity/unicode.mapping:ro
       - /etc/letsencrypt/live:/etc/letsencrypt/live:ro
       - /etc/letsencrypt/archive:/etc/letsencrypt/archive:ro
       - /etc/letsencrypt/options-ssl-nginx.conf:/etc/letsencrypt/options-ssl-nginx.conf:ro

@@ -71,9 +71,15 @@ public class ChatsController(ILogger<ChatsController> logger, IChatService servi
     /// </summary>
     /// <param name="chatId">Идентификатор чата</param>
     /// <returns></returns>
+    /// <response code="200">Успешно</response>
+    /// <response code="403">Пользователь не состоит в чате или токен не валиден</response>
+    /// <response code="404">Чат не найден</response>
     [Authorize]
     [HttpGet("{chatId}/info")]
     [ApiVersion("1.0")]
+    [ProducesResponseType(typeof(BaseResponse<string, ChatInfo>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(BaseResponse<string, string>), StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(typeof(BaseResponse<string, string>), StatusCodes.Status404NotFound)]
     public async Task<IActionResult> GetChatInfo([Required] [FromRoute] string chatId)
     {
         logger.LogInformation("Начало обработки запроса: (информация чата)");

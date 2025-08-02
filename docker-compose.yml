@@ -3,6 +3,9 @@ version: '3.8'
 networks:
   net:
     
+volumes:
+  nginx_log_volume:
+    
 services:
   nginx:
     build:
@@ -17,8 +20,20 @@ services:
       - /etc/letsencrypt/archive:/etc/letsencrypt/archive:ro
       - /etc/letsencrypt/options-ssl-nginx.conf:/etc/letsencrypt/options-ssl-nginx.conf:ro
       - /etc/letsencrypt/ssl-dhparams.pem:/etc/letsencrypt/ssl-dhparams.pem:ro
+      - nginx_log_volume:/var/log/nginx/
     depends_on:
       - chat-flow
+    networks:
+      - net
+        
+  nginx-exporter:
+    build:
+      context: .
+      dockerfile: Dockerfile.nginx-exporter
+    ports:
+      - "4040:4040"
+    volumes:
+      - nginx_log_volume:/var/log/nginx/
     networks:
       - net
     

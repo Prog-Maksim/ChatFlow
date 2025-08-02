@@ -61,7 +61,7 @@ public static class ResponseFactory
     /// <typeparam name="TData"></typeparam>
     /// <returns></returns>
     public static BaseResponse<string, TData> TooManyRequests<TData>() =>
-        new() { Status = 429, Message = "Слишком много попыток входа. Попробуйте еще раз позже.", Type = ResponseType.TooManyRequests, Errors = "Too Many Requests", Successfully = false };
+        new() { Status = 429, Message = "Слишком много попыток. Попробуйте еще раз позже.", Type = ResponseType.TooManyRequests, Errors = "Too Many Requests", Successfully = false };
 
     /// <summary>
     /// Успешно

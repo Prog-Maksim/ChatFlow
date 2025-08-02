@@ -1,9 +1,7 @@
 using ChatFlow.Models.Response;
-using ChatFlow.Monitoring;
-using ChatFlow.Service;
+using ChatFlow.Service.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Prometheus;
 
 namespace ChatFlow.Controllers;
 
@@ -11,7 +9,7 @@ namespace ChatFlow.Controllers;
 [ApiVersion("1.0")]
 [Produces("application/json")]
 [Route("v{version:apiVersion}/sessions")]
-public class SessionsController(ILogger<SessionsController> logger, SessionService service): ControllerBase
+public class SessionsController(ILogger<SessionsController> logger, ISessionService service): ControllerBase
 {
     /// <summary>
     /// Возвращает все активные сессии
@@ -22,30 +20,22 @@ public class SessionsController(ILogger<SessionsController> logger, SessionServi
     [Authorize]
     [HttpGet]
     [ApiVersion("1.0")]
-    [ProducesResponseType(typeof(BaseResponse<string, List<DataSession>>),StatusCodes.Status200OK)]
-    [ProducesResponseType(typeof(BaseResponse<string, List<DataSession>>),StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(typeof(BaseResponse<string, List<DataSession>>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(BaseResponse<string, List<DataSession>>), StatusCodes.Status403Forbidden)]
     public async Task<IActionResult> GetSessions()
     {
         logger.LogInformation("Начало обработки запроса: (все сессии)");
-        MetricsRegistry.EndpointRequestCounter
-            .WithLabels("get-sessions", "GET").Inc();
+        var authHeader = HttpContext.Request.Headers["Authorization"].ToString();
+        var token = authHeader.Substring("Bearer ".Length);
 
-        using (MetricsRegistry.EndpointDuration
-                   .WithLabels("get_sessions", "GET")
-                   .NewTimer())
-        {
-            var authHeader = HttpContext.Request.Headers["Authorization"].ToString();
-            var token = authHeader.Substring("Bearer ".Length);
-            
-            var response = await service.GetSessions(token);
-            
-            if (!response.Successfully)
-                return StatusCode(response.Status, response);
-        
-            return Ok(response);
-        }
+        var response = await service.GetSessions(token);
+
+        if (!response.Successfully)
+            return StatusCode(response.Status, response);
+
+        return Ok(response);
     }
-    
+
     /// <summary>
     /// Удаляет все сессии, кроме текущей
     /// </summary>
@@ -56,31 +46,23 @@ public class SessionsController(ILogger<SessionsController> logger, SessionServi
     [Authorize]
     [HttpDelete]
     [ApiVersion("1.0")]
-    [ProducesResponseType(typeof(BaseResponse<string, List<RevokeSession>>),StatusCodes.Status200OK)]
-    [ProducesResponseType(typeof(BaseResponse<string, List<string>>),StatusCodes.Status403Forbidden)]
-    [ProducesResponseType(typeof(BaseResponse<string, List<string>>),StatusCodes.Status404NotFound)]
+    [ProducesResponseType(typeof(BaseResponse<string, List<RevokeSession>>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(BaseResponse<string, List<string>>), StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(typeof(BaseResponse<string, List<string>>), StatusCodes.Status404NotFound)]
     public async Task<IActionResult> DeleteSessions()
     {
         logger.LogInformation("Начало обработки запроса: (удаление всех сессий)");
-        MetricsRegistry.EndpointRequestCounter
-            .WithLabels("delete-all-sessions", "DELETE").Inc();
+        var authHeader = HttpContext.Request.Headers["Authorization"].ToString();
+        var token = authHeader.Substring("Bearer ".Length);
 
-        using (MetricsRegistry.EndpointDuration
-                   .WithLabels("delete-all-sessions", "DELETE")
-                   .NewTimer())
-        {
-            var authHeader = HttpContext.Request.Headers["Authorization"].ToString();
-            var token = authHeader.Substring("Bearer ".Length);
+        var response = await service.RevokeSession(token);
 
-            var response = await service.RevokeSession(token);
-            
-            if (!response.Successfully)
-                return StatusCode(response.Status, response);
-        
-            return Ok(response);
-        }
+        if (!response.Successfully)
+            return StatusCode(response.Status, response);
+
+        return Ok(response);
     }
-    
+
     /// <summary>
     /// Удаляет сессию
     /// </summary>
@@ -92,28 +74,20 @@ public class SessionsController(ILogger<SessionsController> logger, SessionServi
     [Authorize]
     [ApiVersion("1.0")]
     [HttpDelete("{sessionId}")]
-    [ProducesResponseType(typeof(BaseResponse<string, List<RevokeSession>>),StatusCodes.Status200OK)]
-    [ProducesResponseType(typeof(BaseResponse<string, List<string>>),StatusCodes.Status403Forbidden)]
-    [ProducesResponseType(typeof(BaseResponse<string, List<string>>),StatusCodes.Status404NotFound)]
+    [ProducesResponseType(typeof(BaseResponse<string, List<RevokeSession>>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(BaseResponse<string, List<string>>), StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(typeof(BaseResponse<string, List<string>>), StatusCodes.Status404NotFound)]
     public async Task<IActionResult> DeleteSessions([FromRoute] string sessionId)
     {
         logger.LogInformation("Начало обработки запроса: (удаление сессии)");
-        MetricsRegistry.EndpointRequestCounter
-            .WithLabels("delete-session-by-id", "DELETE").Inc();
+        var authHeader = HttpContext.Request.Headers["Authorization"].ToString();
+        var token = authHeader.Substring("Bearer ".Length);
 
-        using (MetricsRegistry.EndpointDuration
-                   .WithLabels("delete-session-by-id", "DELETE")
-                   .NewTimer())
-        {
-            var authHeader = HttpContext.Request.Headers["Authorization"].ToString();
-            var token = authHeader.Substring("Bearer ".Length);
+        var response = await service.RevokeSession(token, sessionId);
 
-            var response = await service.RevokeSession(token, sessionId);
-            
-            if (!response.Successfully)
-                return StatusCode(response.Status, response);
-        
-            return Ok(response);
-        }
+        if (!response.Successfully)
+            return StatusCode(response.Status, response);
+
+        return Ok(response);
     }
 }

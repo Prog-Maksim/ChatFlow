@@ -3,18 +3,19 @@ using ChatFlow.Models.DB;
 using ChatFlow.Models.Response;
 using ChatFlow.Repository.Interfaces;
 using ChatFlow.Scripts;
+using ChatFlow.Service.Interfaces;
 
 namespace ChatFlow.Service;
 
-public class ChatService
+public class ChatService: IChatService
 {
-    private readonly JwtTokenService _jwtTokenService;
+    private readonly IJwtTokenService _jwtTokenService;
     private readonly ILogger<ChatService> _logger;
     private readonly IChatRepository _chatRepository;
     private readonly IProfileRepository _profileRepository;
     private readonly IWebSocketConnectionManager _manager;
 
-    public ChatService(ILogger<ChatService> logger, IChatRepository chatRepository, JwtTokenService jwtTokenService, IProfileRepository profileRepository, IWebSocketConnectionManager manager)
+    public ChatService(ILogger<ChatService> logger, IChatRepository chatRepository, IJwtTokenService jwtTokenService, IProfileRepository profileRepository, IWebSocketConnectionManager manager)
     {
         _logger = logger;
         _chatRepository = chatRepository;
@@ -52,12 +53,6 @@ public class ChatService
             Data = chatData.ChatId
         };
     }
-
-    private async Task SendMessageToCreateChatAsync(List<ChatUser> users, string chatId)
-    {
-        foreach (var user in users)
-            await _manager.SendMessageCreateChat(chatId, user.PersonId);
-    }
     
     public async Task<BaseResponse<string, Chats>> GetChats(string accessToken)
     {
@@ -91,7 +86,103 @@ public class ChatService
             Data = chatsResult
         };
     }
+    
+    public async Task<BaseResponse<string, ChatInfo>> GetChatInfo(string accessToken, string chatId)
+    {
+        var dataToken = _jwtTokenService.GetJwtTokenData(accessToken);
+        if (!await _jwtTokenService.ValidateJwtAccessToken(dataToken))
+            return new BaseResponse<string, ChatInfo> 
+                { Message = "Не удалось проверить корректность jwt токена", Type = ResponseType.JwtTokenVerificationFailed, Errors = "Forbidden", Status = 403, Successfully = false, Data = null};
 
+        var chat = await _chatRepository.GetChat(chatId);
+        
+        if (chat is null)
+            return new BaseResponse<string, ChatInfo>
+            {
+                Message = "Данный чат не найден",
+                Type = ResponseType.ChatNotFound,
+                Successfully = true,
+                Status = 404,
+                Errors = null,
+                Data = null
+            };
+
+        // TODO: возможно убрать ограничение на пользователей, сделать общедоступной
+        if (chat.Persons.All(p => p.PersonId != dataToken.PersonId))
+            return new BaseResponse<string, ChatInfo>
+            {
+                Message = "Вы не состоите в этом чате",
+                Type = ResponseType.UserNotInChat, 
+                Errors = "Forbidden", 
+                Status = 403,
+                Successfully = false, 
+                Data = null
+            };
+
+        ChatInfo info;
+        if (chat.Type == ChatType.Private)
+        {
+            var personId = chat.Persons.FirstOrDefault(p => p.PersonId != dataToken.PersonId);
+            
+            if (personId is null)
+                return new BaseResponse<string, ChatInfo>
+                {
+                    Message = "Пользователь не найден",
+                    Type = ResponseType.PersonNotFound,
+                    Errors = "Not Found",
+                    Status = 404,
+                    Successfully = false,
+                    Data = null
+                };
+            
+            var personData = await _profileRepository.GetSummaryPersonDataAsync(personId.PersonId);
+            
+            info = new ChatInfo
+            {
+                ChatId = chat.ChatId,
+                Title = $"{personData!.Surname} {personData.Name}",
+                ImageUrl = personData.Image?.Url
+            };
+        }
+        else
+        {
+            // TODO: исправить идентификатор на ссылку 
+            info = new ChatInfo
+            {
+                ChatId = chat.ChatId,
+                Title = chat.Title,
+                ImageUrl = chat.PhotoId
+            };
+        }
+
+        return new BaseResponse<string, ChatInfo>
+        {
+            Message = "Данные чата",
+            Type = ResponseType.Ok,
+            Errors = null,
+            Status = 200,
+            Successfully = true,
+            Data = info
+        };
+    }
+    
+    
+    private T MapTo<T>(ChatDocument chat) where T : BaseChat, new()
+    {
+        return new T
+        {
+            ChatId = chat.ChatId,
+            Title = chat.Title,
+            ImageUrl = chat.PhotoId
+        };
+    }
+    
+    private async Task SendMessageToCreateChatAsync(List<ChatUser> users, string chatId)
+    {
+        foreach (var user in users)
+            await _manager.SendMessageCreateChat(chatId, user.PersonId);
+    }
+    
     private Chats GetPersonChats(string personId, List<ChatDocument> chats)
     {
         Chats chatsResult = new Chats { Count = chats.Count };
@@ -134,93 +225,5 @@ public class ChatService
         if (botChatsResult.Count is not 0) chatsResult.BotChats = botChatsResult;
         
         return chatsResult;
-    }
-    
-    private T MapTo<T>(ChatDocument chat) where T : BaseChat, new()
-    {
-        return new T
-        {
-            ChatId = chat.ChatId,
-            Title = chat.Title,
-            ImageUrl = chat.PhotoId
-        };
-    }
-
-    public async Task<BaseResponse<string, ChatInfo>> GetChatInfo(string accessToken, string chatId)
-    {
-        var dataToken = _jwtTokenService.GetJwtTokenData(accessToken);
-        if (!await _jwtTokenService.ValidateJwtAccessToken(dataToken))
-            return new BaseResponse<string, ChatInfo> 
-                { Message = "Не удалось проверить корректность jwt токена", Type = ResponseType.JwtTokenVerificationFailed, Errors = "Forbidden", Status = 403, Successfully = false, Data = null};
-
-        var chat = await _chatRepository.GetChat(chatId);
-        
-        if (chat is null)
-            return new BaseResponse<string, ChatInfo>
-            {
-                Message = "Данный чат не найден",
-                Type = ResponseType.ChatNotFound,
-                Successfully = true,
-                Status = 404,
-                Errors = null,
-                Data = null
-            };
-
-        if (chat.Persons.All(p => p.PersonId != dataToken.PersonId))
-            return new BaseResponse<string, ChatInfo>
-            {
-                Message = "Вы не состоите в этом чате",
-                Type = ResponseType.UserNotInChat, 
-                Errors = "Forbidden", 
-                Status = 403,
-                Successfully = false, 
-                Data = null
-            };
-
-        ChatInfo info = new ChatInfo();
-        if (chat.Type == ChatType.Private)
-        {
-            var personId = chat.Persons.FirstOrDefault(p => p.PersonId != dataToken.PersonId);
-            
-            if (personId is null)
-                return new BaseResponse<string, ChatInfo>
-                {
-                    Message = "Пользователь не найден",
-                    Type = ResponseType.PersonNotFound,
-                    Errors = "Not Found",
-                    Status = 404,
-                    Successfully = false,
-                    Data = null
-                };
-            
-            var personData = await _profileRepository.GetSummaryPersonDataAsync(personId.PersonId);
-            
-            info = new ChatInfo
-            {
-                ChatId = chat.ChatId,
-                Title = $"{personData.Surname} {personData.Name}",
-                ImageUrl = personData.Image?.Url
-            };
-        }
-        else
-        {
-            // TODO: исправить идентификатор на ссылку 
-            info = new ChatInfo
-            {
-                ChatId = chat.ChatId,
-                Title = chat.Title,
-                ImageUrl = chat.PhotoId
-            };
-        }
-
-        return new BaseResponse<string, ChatInfo>
-        {
-            Message = "Данные чата",
-            Type = ResponseType.Ok,
-            Errors = null,
-            Status = 200,
-            Successfully = true,
-            Data = info
-        };
     }
 }

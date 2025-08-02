@@ -2,11 +2,11 @@ using ChatFlow.Models.Other;
 
 namespace ChatFlow.Scripts;
 
-public class TokenValidator
+public class TokenValidator: ITokenValidator
 {
-    private readonly JwtTokenService _jwtTokenService;
+    private readonly IJwtTokenService _jwtTokenService;
 
-    public TokenValidator(JwtTokenService jwtTokenService)
+    public TokenValidator(IJwtTokenService jwtTokenService)
     {
         _jwtTokenService = jwtTokenService;
     }

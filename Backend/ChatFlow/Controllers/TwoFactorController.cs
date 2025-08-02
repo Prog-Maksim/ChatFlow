@@ -1,11 +1,9 @@
 using System.ComponentModel.DataAnnotations;
 using ChatFlow.Enums;
 using ChatFlow.Models.Response;
-using ChatFlow.Monitoring;
-using ChatFlow.Service;
+using ChatFlow.Service.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Prometheus;
 
 namespace ChatFlow.Controllers;
 
@@ -13,7 +11,7 @@ namespace ChatFlow.Controllers;
 [ApiVersion("1.0")]
 [Produces("application/json")]
 [Route("v{version:apiVersion}/twofactor")]
-public class TwoFactorController(ILogger<AuthController> logger, TwoFactorService service): ControllerBase
+public class TwoFactorController(ILogger<AuthController> logger, ITwoFactorService service): ControllerBase
 {
     /// <summary>
     /// Включение двухфакторной аутентификации
@@ -28,46 +26,39 @@ public class TwoFactorController(ILogger<AuthController> logger, TwoFactorServic
     [AllowAnonymous]
     [ApiVersion("1.0")]
     [HttpPost("enable")]
-    [ProducesResponseType(typeof(BaseResponse<string, Token2Fa>),StatusCodes.Status200OK)]
-    [ProducesResponseType(typeof(BaseResponse<string, Token2Fa>),StatusCodes.Status403Forbidden)]
-    [ProducesResponseType(typeof(BaseResponse<string, Token2Fa>),StatusCodes.Status404NotFound)]
+    [ProducesResponseType(typeof(BaseResponse<string, Token2Fa>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(BaseResponse<string, Token2Fa>), StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(typeof(BaseResponse<string, Token2Fa>), StatusCodes.Status404NotFound)]
     public async Task<IActionResult> CreateGoogleAuthenticator([Required] [FromQuery] string code)
     {
         logger.LogInformation("Начало обработки запроса: (включение двухфакторной аутентификации)");
         if (!Request.Headers.TryGetValue("User-Agent", out var userAgent) || string.IsNullOrWhiteSpace(userAgent))
             return BadRequest("User-Agent header is missing.");
-        
-        MetricsRegistry.EndpointRequestCounter
-            .WithLabels("2FA", "POST").Inc();
-        
-        using (MetricsRegistry.EndpointDuration
-                   .WithLabels("2FA", "POST")
-                   .NewTimer())
+
+        string? userIpAddress = HttpContext.Request.Headers["X-Forwarded-For"].FirstOrDefault() ??
+                                HttpContext.Connection.RemoteIpAddress?.ToString();
+
+        if (userIpAddress is null)
         {
-            string? userIpAddress = HttpContext.Request.Headers["X-Forwarded-For"].FirstOrDefault() ?? HttpContext.Connection.RemoteIpAddress?.ToString();
-        
-            if (userIpAddress is null)
+            var error = new BaseResponse<string, object>
             {
-                var error = new BaseResponse<string, object>
-                {
-                    Message = "Невозможно определить ip адрес",
-                    Successfully = false,
-                    Status = 406,
-                    Type = ResponseType.IpAddressResolutionFailed,
-                    Errors = "Not Acceptable",
-                    Data = null
-                };
-                logger.LogError("Невозможно определить ip адрес");
-                return StatusCode(error.Status, error);
-            }
-            
-            var response =  await service.AddGoogleAuthenticatorAsync(code, userIpAddress);
-        
-            if (!response.Successfully)
-                return StatusCode(response.Status, response);
-        
-            return Ok(response);
+                Message = "Невозможно определить ip адрес",
+                Successfully = false,
+                Status = 406,
+                Type = ResponseType.IpAddressResolutionFailed,
+                Errors = "Not Acceptable",
+                Data = null
+            };
+            logger.LogError("Невозможно определить ip адрес");
+            return StatusCode(error.Status, error);
         }
+
+        var response = await service.AddGoogleAuthenticatorAsync(code, userIpAddress);
+
+        if (!response.Successfully)
+            return StatusCode(response.Status, response);
+
+        return Ok(response);
     }
 
     /// <summary>
@@ -85,48 +76,41 @@ public class TwoFactorController(ILogger<AuthController> logger, TwoFactorServic
     [AllowAnonymous]
     [ApiVersion("1.0")]
     [HttpPost("verify")]
-    [ProducesResponseType(typeof(BaseResponse<string, AuthTokens>),StatusCodes.Status200OK)]
-    [ProducesResponseType(typeof(BaseResponse<string, AuthTokens>),StatusCodes.Status403Forbidden)]
-    [ProducesResponseType(typeof(BaseResponse<string, AuthTokens>),StatusCodes.Status404NotFound)]
+    [ProducesResponseType(typeof(BaseResponse<string, AuthTokens>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(BaseResponse<string, AuthTokens>), StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(typeof(BaseResponse<string, AuthTokens>), StatusCodes.Status404NotFound)]
     public async Task<IActionResult> CheckCode([Required] [FromQuery] string code, [Required] [FromQuery] string key)
     {
         logger.LogInformation("Начало обработки запроса: (проверяет код)");
         if (!Request.Headers.TryGetValue("User-Agent", out var userAgent) || string.IsNullOrWhiteSpace(userAgent))
             return BadRequest("User-Agent header is missing.");
-        
-        MetricsRegistry.EndpointRequestCounter
-            .WithLabels("check-code", "POST").Inc();
-        
-        using (MetricsRegistry.EndpointDuration
-                   .WithLabels("check-code", "POST")
-                   .NewTimer())
+
+        string? userIpAddress = HttpContext.Request.Headers["X-Forwarded-For"].FirstOrDefault() ??
+                                HttpContext.Connection.RemoteIpAddress?.ToString();
+
+        if (userIpAddress is null)
         {
-            string? userIpAddress = HttpContext.Request.Headers["X-Forwarded-For"].FirstOrDefault() ?? HttpContext.Connection.RemoteIpAddress?.ToString();
-        
-            if (userIpAddress is null)
+            var error = new BaseResponse<string, object>
             {
-                var error = new BaseResponse<string, object>
-                {
-                    Message = "Невозможно определить ip адрес",
-                    Successfully = false,
-                    Status = 406,
-                    Type = ResponseType.IpAddressResolutionFailed,
-                    Errors = "Not Acceptable",
-                    Data = null
-                };
-                return StatusCode(error.Status, error);
-            }
-            
-            var response = await service.CheckGoogleAuthenticatorAsync(code, key, userIpAddress, userAgent!);
-        
-            if (!response.Successfully)
-                return StatusCode(response.Status, response);
-        
-            return Ok(response);
+                Message = "Невозможно определить ip адрес",
+                Successfully = false,
+                Status = 406,
+                Type = ResponseType.IpAddressResolutionFailed,
+                Errors = "Not Acceptable",
+                Data = null
+            };
+            return StatusCode(error.Status, error);
         }
+
+        var response = await service.CheckGoogleAuthenticatorAsync(code, key, userIpAddress, userAgent!);
+
+        if (!response.Successfully)
+            return StatusCode(response.Status, response);
+
+        return Ok(response);
     }
 
-    
+
     /// <summary>
     /// Генерирует qr-code для добавления в сервис
     /// </summary>
@@ -138,63 +122,56 @@ public class TwoFactorController(ILogger<AuthController> logger, TwoFactorServic
     [AllowAnonymous]
     [ApiVersion("1.0")]
     [HttpGet("qr-code")]
-    [ProducesResponseType(typeof(byte[]),StatusCodes.Status200OK)]
-    [ProducesResponseType(typeof(BaseResponse<string, string>),StatusCodes.Status403Forbidden)]
-    [ProducesResponseType(typeof(BaseResponse<string, string>),StatusCodes.Status404NotFound)]
+    [ProducesResponseType(typeof(byte[]), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(BaseResponse<string, string>), StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(typeof(BaseResponse<string, string>), StatusCodes.Status404NotFound)]
     public async Task<IActionResult> GetQrCode([Required] [FromQuery] string code)
     {
         logger.LogInformation("Начало обработки запроса: (генерация qr-code)");
-        MetricsRegistry.EndpointRequestCounter
-            .WithLabels("generate-qrcode", "GET").Inc();
-        
-        using (MetricsRegistry.EndpointDuration
-                   .WithLabels("generate-qrcode", "POST")
-                   .NewTimer())
+        string? userIpAddress = HttpContext.Request.Headers["X-Forwarded-For"].FirstOrDefault() ??
+                                HttpContext.Connection.RemoteIpAddress?.ToString();
+
+        if (userIpAddress is null)
         {
-            string? userIpAddress = HttpContext.Request.Headers["X-Forwarded-For"].FirstOrDefault() ?? HttpContext.Connection.RemoteIpAddress?.ToString();
-        
-            if (userIpAddress is null)
+            var error = new BaseResponse<string, object>
             {
-                var error = new BaseResponse<string, object>
-                {
-                    Message = "Невозможно определить ip адрес",
-                    Successfully = false,
-                    Status = 406,
-                    Type = ResponseType.IpAddressResolutionFailed,
-                    Errors = "Not Acceptable",
-                    Data = null
-                };
-                logger.LogError("Невозможно определить ip адрес");
-                return StatusCode(error.Status, error);
-            }
-            
-            try
+                Message = "Невозможно определить ip адрес",
+                Successfully = false,
+                Status = 406,
+                Type = ResponseType.IpAddressResolutionFailed,
+                Errors = "Not Acceptable",
+                Data = null
+            };
+            logger.LogError("Невозможно определить ip адрес");
+            return StatusCode(error.Status, error);
+        }
+
+        try
+        {
+            var response = await service.GetQrCodeGoogleAuthenticatorAsync(code, userIpAddress);
+            return File(response, "image/png");
+        }
+        catch (NullReferenceException error)
+        {
+            logger.LogError(error.Message);
+            return StatusCode(StatusCodes.Status404NotFound, new BaseResponse<string, string>
             {
-                var response = await service.GetQrCodeGoogleAuthenticatorAsync(code, userIpAddress);
-                return File(response, "image/png");
-            }
-            catch (NullReferenceException error)
+                Message = error.Message,
+                Type = ResponseType.CodeNotFount,
+                Successfully = false, Status = StatusCodes.Status404NotFound,
+                Data = null, Errors = "Not Fount"
+            });
+        }
+        catch (UnauthorizedAccessException error)
+        {
+            logger.LogError(error.Message);
+            return StatusCode(StatusCodes.Status403Forbidden, new BaseResponse<string, string>
             {
-                logger.LogError(error.Message);
-                return StatusCode(StatusCodes.Status404NotFound, new BaseResponse<string, string>
-                {
-                    Message = error.Message,
-                    Type = ResponseType.CodeNotFount,
-                    Successfully = false, Status = StatusCodes.Status404NotFound,
-                    Data = null, Errors = "Not Fount"
-                });
-            }
-            catch (UnauthorizedAccessException error)
-            {
-                logger.LogError(error.Message);
-                return StatusCode(StatusCodes.Status403Forbidden, new BaseResponse<string, string>
-                {
-                    Message = error.Message,
-                    Type = ResponseType.AccessDenied,
-                    Successfully = false, Status = StatusCodes.Status403Forbidden,
-                    Data = null, Errors = "Forbidden"
-                });
-            }
+                Message = error.Message,
+                Type = ResponseType.AccessDenied,
+                Successfully = false, Status = StatusCodes.Status403Forbidden,
+                Data = null, Errors = "Forbidden"
+            });
         }
     }
 }

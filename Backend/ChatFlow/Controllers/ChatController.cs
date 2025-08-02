@@ -1,11 +1,9 @@
 using System.ComponentModel.DataAnnotations;
 using ChatFlow.Models.Requests;
 using ChatFlow.Models.Response;
-using ChatFlow.Monitoring;
-using ChatFlow.Service;
+using ChatFlow.Service.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Prometheus;
 
 namespace ChatFlow.Controllers;
 
@@ -13,7 +11,7 @@ namespace ChatFlow.Controllers;
 [ApiVersion("1.0")]
 [Produces("application/json")]
 [Route("v{version:apiVersion}/chats")]
-public class ChatsController(ILogger<ChatsController> logger, ChatService service): ControllerBase
+public class ChatsController(ILogger<ChatsController> logger, IChatService service): ControllerBase
 {
     /// <summary>
     /// Создает личный чат между двумя пользователями
@@ -26,29 +24,21 @@ public class ChatsController(ILogger<ChatsController> logger, ChatService servic
     [Authorize]
     [ApiVersion("1.0")]
     [HttpPost("private")]
-    [ProducesResponseType(typeof(BaseResponse<string, string>),StatusCodes.Status200OK)]
-    [ProducesResponseType(typeof(BaseResponse<string, string>),StatusCodes.Status403Forbidden)]
-    [ProducesResponseType(typeof(BaseResponse<string, string>),StatusCodes.Status404NotFound)]
-    public async Task<IActionResult> CreatePrivateChat([Required][FromBody] CreatePrivateChatRequest request)
+    [ProducesResponseType(typeof(BaseResponse<string, string>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(BaseResponse<string, string>), StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(typeof(BaseResponse<string, string>), StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> CreatePrivateChat([Required] [FromBody] CreatePrivateChatRequest request)
     {
         logger.LogInformation("Начало обработки запроса: (создание личного чата)");
-        MetricsRegistry.EndpointRequestCounter
-            .WithLabels("create-private-chat", "POST").Inc();
-        
-        using (MetricsRegistry.EndpointDuration
-                   .WithLabels("create-private-chat", "POST")
-                   .NewTimer())
-        {
-            var authHeader = HttpContext.Request.Headers["Authorization"].ToString();
-            var token = authHeader.Substring("Bearer ".Length);
+        var authHeader = HttpContext.Request.Headers["Authorization"].ToString();
+        var token = authHeader.Substring("Bearer ".Length);
 
-            var response = await service.CreatePrivateChat(token, request.ParticipantId);
+        var response = await service.CreatePrivateChat(token, request.ParticipantId);
 
-            if (!response.Successfully)
-                return StatusCode(response.Status, response);
+        if (!response.Successfully)
+            return StatusCode(response.Status, response);
 
-            return Ok(response);
-        }
+        return Ok(response);
     }
 
     /// <summary>
@@ -60,28 +50,20 @@ public class ChatsController(ILogger<ChatsController> logger, ChatService servic
     [Authorize]
     [HttpGet]
     [ApiVersion("1.0")]
-    [ProducesResponseType(typeof(BaseResponse<string, Chats>),StatusCodes.Status200OK)]
-    [ProducesResponseType(typeof(BaseResponse<string, Chats>),StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(typeof(BaseResponse<string, Chats>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(BaseResponse<string, Chats>), StatusCodes.Status403Forbidden)]
     public async Task<IActionResult> GetChats()
     {
         logger.LogInformation("Начало обработки запроса: (все чаты пользователя)");
-        MetricsRegistry.EndpointRequestCounter
-            .WithLabels("get-chats", "GET").Inc();
-        
-        using (MetricsRegistry.EndpointDuration
-                   .WithLabels("get-chats", "GET")
-                   .NewTimer())
-        {
-            var authHeader = HttpContext.Request.Headers["Authorization"].ToString();
-            var token = authHeader.Substring("Bearer ".Length);
+        var authHeader = HttpContext.Request.Headers["Authorization"].ToString();
+        var token = authHeader.Substring("Bearer ".Length);
 
-            var response = await service.GetChats(token);
+        var response = await service.GetChats(token);
 
-            if (!response.Successfully)
-                return StatusCode(response.Status, response);
+        if (!response.Successfully)
+            return StatusCode(response.Status, response);
 
-            return Ok(response);
-        }
+        return Ok(response);
     }
 
     /// <summary>
@@ -89,28 +71,26 @@ public class ChatsController(ILogger<ChatsController> logger, ChatService servic
     /// </summary>
     /// <param name="chatId">Идентификатор чата</param>
     /// <returns></returns>
+    /// <response code="200">Успешно</response>
+    /// <response code="403">Пользователь не состоит в чате или токен не валиден</response>
+    /// <response code="404">Чат не найден</response>
     [Authorize]
     [HttpGet("{chatId}/info")]
     [ApiVersion("1.0")]
+    [ProducesResponseType(typeof(BaseResponse<string, ChatInfo>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(BaseResponse<string, string>), StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(typeof(BaseResponse<string, string>), StatusCodes.Status404NotFound)]
     public async Task<IActionResult> GetChatInfo([Required] [FromRoute] string chatId)
     {
         logger.LogInformation("Начало обработки запроса: (информация чата)");
-        MetricsRegistry.EndpointRequestCounter
-            .WithLabels("chat-info", "GET").Inc();
-        
-        using (MetricsRegistry.EndpointDuration
-                   .WithLabels("chat-info", "GET")
-                   .NewTimer())
-        {
-            var authHeader = HttpContext.Request.Headers["Authorization"].ToString();
-            var token = authHeader.Substring("Bearer ".Length);
+        var authHeader = HttpContext.Request.Headers["Authorization"].ToString();
+        var token = authHeader.Substring("Bearer ".Length);
 
-            var response = await service.GetChatInfo(token, chatId);
+        var response = await service.GetChatInfo(token, chatId);
 
-            if (!response.Successfully)
-                return StatusCode(response.Status, response);
+        if (!response.Successfully)
+            return StatusCode(response.Status, response);
 
-            return Ok(response);
-        }
+        return Ok(response);
     }
 }

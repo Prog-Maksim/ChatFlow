@@ -7,11 +7,12 @@ using ChatFlow.Models.Response;
 using ChatFlow.Repository;
 using ChatFlow.Repository.Interfaces;
 using ChatFlow.Scripts;
+using ChatFlow.Service.Interfaces;
 using Microsoft.AspNetCore.Identity;
 
 namespace ChatFlow.Service;
 
-public class AuthService
+public class AuthService: IAuthService
 {
     private readonly IAuthRepository _authRepository;
     private readonly IEncryptionService _encryptionService;
@@ -25,13 +26,7 @@ public class AuthService
         _passwordHasher = new PasswordHasher<Persons>();
         _searchRepository = searchRepository;
     }
-
-    /// <summary>
-    /// Регистрирует нового пользователя
-    /// </summary>
-    /// <param name="registrationUser">Данные о пользователе</param>
-    /// <param name="userIpAddress">Ip адрес пользователя</param>
-    /// <returns></returns>
+    
     public async Task<BaseResponse<string, RegistrationCode>> RegistrationUserAsync(RegistrationUser registrationUser, string userIpAddress)
     {
         if (!registrationUser.Login.IsNumberPhone())
@@ -53,6 +48,20 @@ public class AuthService
         var codeResult = new RegistrationCode { Code = code, ExpiresAt = DateTime.UtcNow.AddMinutes(AuthRepository.CodeLifetimeMinute) };
 
         return ResponseFactory.Success("Пользователь успешно создан", codeResult);
+    }
+    
+    public async Task<BaseResponse<string, RegistrationCode>> AuthorizationUserAsync(string login, string password, string userIpAddress)
+    {
+        if (await _authRepository.IsBlockedAsync(userIpAddress))
+            return ResponseFactory.TooManyRequests<RegistrationCode>();
+
+        if (login.IsNumberPhone())
+            return await AuthorizeByPhoneAsync(login, password, userIpAddress);
+
+        if (login.IsEmail())
+            return ResponseFactory.EmailNotSupported<RegistrationCode>();
+
+        return ResponseFactory.BadRequest<RegistrationCode>("Некорректный логин");
     }
     
     /// <summary>
@@ -106,27 +115,6 @@ public class AuthService
             PersonId = data.PersonId
         };
         await _searchRepository.CreatePersonAsync(user);
-    }
-
-    /// <summary>
-    ///  Авторизация пользователя
-    /// </summary>
-    /// <param name="login">Номер телефона или почта</param>
-    /// <param name="password">Пароль</param>
-    /// <param name="userIpAddress">Ip адрес пользователя</param>
-    /// <returns></returns>
-    public async Task<BaseResponse<string, RegistrationCode>> AuthorizationUserAsync(string login, string password, string userIpAddress)
-    {
-        if (await _authRepository.IsBlockedAsync(userIpAddress))
-            return ResponseFactory.TooManyRequests<RegistrationCode>();
-
-        if (login.IsNumberPhone())
-            return await AuthorizeByPhoneAsync(login, password, userIpAddress);
-
-        if (login.IsEmail())
-            return ResponseFactory.EmailNotSupported<RegistrationCode>();
-
-        return ResponseFactory.BadRequest<RegistrationCode>("Некорректный логин");
     }
     
     /// <summary>

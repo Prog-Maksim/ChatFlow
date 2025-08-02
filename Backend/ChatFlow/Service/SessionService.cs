@@ -1,11 +1,12 @@
 using ChatFlow.Models.Response;
 using ChatFlow.Repository.Interfaces;
 using ChatFlow.Scripts;
+using ChatFlow.Service.Interfaces;
 using Microsoft.AspNetCore.Mvc;
 
 namespace ChatFlow.Service;
 
-public class SessionService
+public class SessionService: ISessionService
 {
     private readonly IAuthRepository _authRepository;
     private readonly IEncryptionService _encryptionService;
@@ -22,11 +23,6 @@ public class SessionService
         _manager = manager;
     }
     
-    /// <summary>
-    /// Выдает все активные сессии
-    /// </summary>
-    /// <param name="accessToken">Access токен</param>
-    /// <returns></returns>
     public async Task<BaseResponse<string, DataSession>> GetSessions(string accessToken)
     {
         var (isValid, dataToken) = await _tokenValidator.TryValidateTokenAsync(accessToken);
@@ -39,6 +35,32 @@ public class SessionService
         
         var data = await BuildSessionDataAsync(sessions, dataToken.Id);
         return ResponseFactory.Success("Ваши активные сессии", data);
+    }
+    
+    public async Task<BaseResponse<string, List<RevokeSession>>> RevokeSession(string accessToken, string? sessionId = null)
+    {
+        var (isValid, dataToken) = await _tokenValidator.TryValidateTokenAsync(accessToken);
+        if (!isValid)
+            return ResponseFactory.JwtTokenInvalid<List<RevokeSession>>();
+
+        var sessions = _authRepository.GetSessionsAsync(dataToken!.PersonId).ToList();
+        if (sessions.Count == 0)
+            return ResponseFactory.SessionNotFound<List<RevokeSession>>();
+
+        return sessionId != null
+            ? await RevokeSingleSessionAsync(sessionId, sessions, dataToken.PersonId)
+            : await RevokeAllOtherSessionsAsync(sessions, dataToken.PersonId, dataToken.Id);
+    }
+    
+    public async Task CloseConnection(string sessionId, string personId)
+    {
+        await _manager.RemoveConnection(personId, sessionId);
+    }
+    
+    public async Task CloseConnection(List<string> sessionId, string personId)
+    {
+        foreach (var session in sessionId)
+            await _manager.RemoveConnection(personId, session);
     }
     
     /// <summary>
@@ -75,49 +97,6 @@ public class SessionService
             Sessions = sessionResults.ToList()
         };
     }
-    
-    /// <summary>
-    /// Отзывает сессии
-    /// </summary>
-    /// <param name="accessToken">Access токен</param>
-    /// <param name="sessionId">Идентификатор сессии</param>
-    /// <returns></returns>
-    public async Task<BaseResponse<string, List<RevokeSession>>> RevokeSession(string accessToken, string? sessionId = null)
-    {
-        var (isValid, dataToken) = await _tokenValidator.TryValidateTokenAsync(accessToken);
-        if (!isValid)
-            return ResponseFactory.JwtTokenInvalid<List<RevokeSession>>();
-
-        var sessions = _authRepository.GetSessionsAsync(dataToken!.PersonId).ToList();
-        if (sessions.Count == 0)
-            return ResponseFactory.SessionNotFound<List<RevokeSession>>();
-
-        return sessionId != null
-            ? await RevokeSingleSessionAsync(sessionId, sessions, dataToken.PersonId)
-            : await RevokeAllOtherSessionsAsync(sessions, dataToken.PersonId, dataToken.Id);
-    }
-    
-    /// <summary>
-    /// Блокирует подключение пользователя
-    /// </summary>
-    /// <param name="sessionId">Идентификатор сессии</param>
-    /// <param name="personId">Идентификатор пользователя</param>
-    public async Task CloseConnection(string sessionId, string personId)
-    {
-        await _manager.RemoveConnection(personId, sessionId);
-    }
-    
-    /// <summary>
-    /// Блокирует подключение пользователя
-    /// </summary>
-    /// <param name="sessionId">Идентификатор сессии</param>
-    /// <param name="personId">Идентификатор пользователя</param>
-    public async Task CloseConnection(List<string> sessionId, string personId)
-    {
-        foreach (var session in sessionId)
-            await _manager.RemoveConnection(personId, session);
-    }
-    
     
     /// <summary>
     /// Отзыв одной сессии

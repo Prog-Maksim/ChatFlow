@@ -3,9 +3,9 @@ using ChatFlow.Enums;
 using MongoDB.Bson;
 using MongoDB.Bson.Serialization.Attributes;
 
-namespace ChatFlow.Models.DB;
+namespace ChatFlow.Models.DB.Other;
 
-public class MessageData
+public class MessageData: ICloneable
 {
     [BsonId]
     [BsonRepresentation(BsonType.ObjectId)]
@@ -23,4 +23,15 @@ public class MessageData
     
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public DateTime? Updated { get; set; }
+    
+    [JsonIgnore(Condition = JsonIgnoreCondition.Always)]
+    public string IV { get; set; }
+    
+    [JsonIgnore(Condition = JsonIgnoreCondition.Always)]
+    public string HMAC { get; set; }
+    
+    public object Clone()
+    {
+        return this.MemberwiseClone();
+    }
 }

@@ -8,10 +8,10 @@ public class MessageEncryptionService: IMessageEncryptionService
     private readonly byte[] _key;
     private readonly byte[] _iv;
 
-    public MessageEncryptionService(string key, string iv)
+    public MessageEncryptionService(byte[] key, byte[] iv)
     {
-        _key = Convert.FromBase64String(key);
-        _iv = Convert.FromBase64String(iv);
+        _key = key;
+        _iv = iv;
     }
 
     public string Encrypt(string message)

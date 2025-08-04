@@ -7,9 +7,9 @@ public class HmacService: IHmacService
 {
     private readonly byte[] _hmacKey;
 
-    public HmacService(string hmacKey)
+    public HmacService(byte[] hmacKey)
     {
-        _hmacKey = Convert.FromBase64String(hmacKey);
+        _hmacKey = hmacKey;
     }
 
     public string ComputeHmac(string message)

@@ -1,7 +1,7 @@
 using System.Collections.Concurrent;
 using System.Net.WebSockets;
 using System.Text.Json;
-using ChatFlow.Models.DB;
+using ChatFlow.Models.DB.Other;
 using ChatFlow.Models.Other;
 using ChatFlow.Monitoring;
 using ChatFlow.Repository.Interfaces;

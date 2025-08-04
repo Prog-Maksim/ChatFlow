@@ -1,6 +1,6 @@
 using ChatFlow.Enums;
 using ChatFlow.Models.DB;
-using ChatFlow.Models.Other;
+using ChatFlow.Models.DB.Other;
 using ChatFlow.Repository.Interfaces;
 using MongoDB.Driver;
 
@@ -115,7 +115,9 @@ public class MessageRepository: IMessageRepository
             var update = Builders<MessageData>.Update
                 .Set(m => m.Text, updatedMessage.Text)
                 .Set(m => m.Updated, DateTime.UtcNow)
-                .Set(m => m.MessageType, updatedMessage.MessageType);
+                .Set(m => m.MessageType, updatedMessage.MessageType)
+                .Set(m => m.IV, updatedMessage.IV)
+                .Set(m => m.HMAC, updatedMessage.HMAC);
 
             var result = await _messageCollections.UpdateOneAsync(filter, update);
 

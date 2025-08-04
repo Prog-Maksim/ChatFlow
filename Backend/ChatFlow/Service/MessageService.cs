@@ -1,12 +1,12 @@
+using System.Security.Cryptography;
 using ChatFlow.Enums;
 using ChatFlow.Models.DB;
-using ChatFlow.Models.Other;
+using ChatFlow.Models.DB.Other;
 using ChatFlow.Models.Requests;
 using ChatFlow.Models.Response;
 using ChatFlow.Repository.Interfaces;
 using ChatFlow.Scripts;
 using ChatFlow.Service.Interfaces;
-using ChatUser = ChatFlow.Models.Other.ChatUser;
 
 namespace ChatFlow.Service;
 
@@ -16,13 +16,19 @@ public class MessageService: IMessageService
     private readonly IMessageRepository _messageRepository;
     private readonly IJwtTokenService _jwtTokenService;
     private readonly IWebSocketConnectionManager _manager;
+    
+    private readonly byte[] _aesKey;   // 32 байта
+    private readonly byte[] _hmacKey;  // 32 байта
 
-    public MessageService(ILogger<MessageService> logger, IMessageRepository messageRepository, IJwtTokenService jwtTokenService, IWebSocketConnectionManager manager)
+    public MessageService(IConfiguration configuration, ILogger<MessageService> logger, IMessageRepository messageRepository, IJwtTokenService jwtTokenService, IWebSocketConnectionManager manager)
     {
         _logger = logger;
         _messageRepository = messageRepository;
         _jwtTokenService = jwtTokenService;
         _manager = manager;
+        
+        _aesKey = Convert.FromBase64String(configuration["MessageEncryption:Key"]);
+        _hmacKey = Convert.FromBase64String(configuration["MessageEncryption:Hmac"]);
     }
     
     public async Task<BaseResponse<string, SendMessage>> SendMessageAsync(string accessToken, Message message, CancellationToken cancellationToken)
@@ -68,9 +74,13 @@ public class MessageService: IMessageService
                 };
         }
 
-        MessageData messageData = await CreateMessageAsync(message, dataToken.PersonId, cancellationToken);
-        _ = SendMessageUsersAsync(chat.Persons, messageData);
+        MessageData messageData = CreateMessageAsync(message, dataToken.PersonId);
         
+        var copyMessage = (MessageData)messageData.Clone();
+        await SaveMessageAsync(copyMessage, cancellationToken);
+        
+        _ = SendMessageUsersAsync(chat.Persons, messageData);
+
         return new BaseResponse<string, SendMessage>
         {
             Message = "Сообщение успешно отправлено",
@@ -109,7 +119,8 @@ public class MessageService: IMessageService
                 Successfully = false, Data = null
             };
 
-        var (messages, totalCount) = await _messageRepository.GetMessagesByChatIdAsync(chatId, limit, offset);
+        (List<MessageData> messages, long totalCount) = await _messageRepository.GetMessagesByChatIdAsync(chatId, limit, offset);
+        List<MessageData> decryptedMessages = DecryptAndVerifyMany(messages);
 
         if (messages.Count == 0)
             return new BaseResponse<string, MessagesPagination>
@@ -135,7 +146,7 @@ public class MessageService: IMessageService
                     NextOffset = nextOffset >= totalCount ? 0 : nextOffset,
                     ReturnedCount = messages.Count
                 },
-                Messages = messages
+                Messages = decryptedMessages
             }
         };
     }
@@ -180,11 +191,12 @@ public class MessageService: IMessageService
                 Errors = "Not Fount"
             };
 
+        MessageData? lastMessage = DecryptAndVerify(message);
         return new BaseResponse<string, MessageData>
         {
             Message = "Последнее сообщение чата",
             Type = ResponseType.Ok, Status = 200, Successfully = true,
-            Errors = null, Data = message
+            Errors = null, Data = lastMessage
         };
     }
     
@@ -252,7 +264,7 @@ public class MessageService: IMessageService
         return new BaseResponse<string, MessageData>
         {
             Message = "Сообщение успешно удалено",
-            Type = ResponseType.Ok, Status = 200, Successfully = true, Errors = null, Data = message
+            Type = ResponseType.Ok, Status = 200, Successfully = true, Errors = null, Data = null
         };
     }
     
@@ -304,10 +316,19 @@ public class MessageService: IMessageService
                 Successfully = false, Data = null
             };
 
-        message.Text = messageData.Text;
-        message.MessageType = MessageStatus.Updated;
-        message.Updated = DateTime.UtcNow;
-        var success = await _messageRepository.UpdateMessageAsync(message);
+        MessageData? updateMessage = DecryptAndVerify(message); // открытый текст
+        updateMessage.Text = messageData.Text;
+        updateMessage.MessageType = MessageStatus.Updated;
+        updateMessage.Updated = DateTime.UtcNow;
+        
+        (string EncryptedText, string IV, string Hmac) dataEncrypt = EncryptAndSign(updateMessage.Text);
+        
+        var messageCopy = (MessageData)updateMessage.Clone();
+        messageCopy.Text = dataEncrypt.EncryptedText;
+        messageCopy.IV = dataEncrypt.IV;
+        messageCopy.HMAC = dataEncrypt.Hmac;
+        
+        var success = await _messageRepository.UpdateMessageAsync(messageCopy);
         
         if (!success)
             return new BaseResponse<string, MessageData>
@@ -317,29 +338,75 @@ public class MessageService: IMessageService
                 Successfully = false, Data = null
             };
 
-        _ = SendMessageUsersAsync(chat.Persons, message);
+        _ = SendMessageUsersAsync(chat.Persons, updateMessage);
         return new BaseResponse<string, MessageData>
         {
             Message = "Сообщение успешно изменено",
-            Type = ResponseType.Ok, Status = 200, Successfully = true, Errors = null, Data = message
+            Type = ResponseType.Ok, Status = 200, Successfully = true, Errors = null, Data = updateMessage
         };
     }
     
+    private (string EncryptedText, string IV, string Hmac) EncryptAndSign(string plainText)
+    {
+        // Генерация IV
+        var iv = RandomNumberGenerator.GetBytes(16);
+
+        // Шифрование
+        IMessageEncryptionService encryption = new MessageEncryptionService(_aesKey, iv);
+        var encryptedText = encryption.Encrypt(plainText);
+        var ivBase64 = Convert.ToBase64String(iv);
+        
+        // Вычисляем HMAC от зашифрованного текста
+        IHmacService hmacService = new HmacService(_hmacKey);
+        var hmac = hmacService.ComputeHmac(encryptedText);
+
+        return (encryptedText, ivBase64, hmac);
+    }
+
+    private MessageData? DecryptAndVerify(MessageData messageData)
+    {
+        IHmacService hmacService = new HmacService(_hmacKey);
+        var result = hmacService.VerifyHmac(messageData.Text, messageData.HMAC);
+
+        if (!result)
+        {
+            _logger.LogWarning("Подпись hmac не совпадает для сообщения: {messageId}", messageData.Id);
+            return null;
+        }
+        
+        var IV = Convert.FromBase64String(messageData.IV);
+        IMessageEncryptionService encryption = new MessageEncryptionService(_aesKey, IV);
+        var decryptedText = encryption.Decrypt(messageData.Text);
+        messageData.Text = decryptedText;
+        return messageData;
+    }
     
-    private async Task SendMessageUsersAsync(List<Models.DB.ChatUser> users, MessageData message)
+    public List<MessageData> DecryptAndVerifyMany(List<MessageData> messages)
+    {
+        return messages
+            .Select(DecryptAndVerify)
+            .Where(m => m != null)
+            .ToList()!;
+    }
+    
+    /// <summary>
+    /// Отправляет сообщение пользователям по WebSocket
+    /// </summary>
+    /// <param name="users"></param>
+    /// <param name="message"></param>
+    private async Task SendMessageUsersAsync(List<ChatUser> users, MessageData message)
     {
         foreach (var user in users)
             await _manager.SendMessageToUserAsync(user.PersonId, message);
     }
     
     /// <summary>
-    /// Создает объект сообщения и сохраняет в БД
+    /// Создает объект сообщения
     /// </summary>
     /// <param name="message">Данные сообщения</param>
     /// <param name="ownerPersonId">Автор сообщения</param>
-    /// <param name="cancellationToken">Токен отмены</param>
     /// <returns></returns>
-    private async Task<MessageData> CreateMessageAsync(Message message, string ownerPersonId, CancellationToken cancellationToken)
+    private MessageData CreateMessageAsync(Message message, string ownerPersonId)
     {
         MessageData messageData = new MessageData
         {
@@ -350,8 +417,21 @@ public class MessageService: IMessageService
             MessageType = MessageStatus.Send,
             OwnerId = ownerPersonId
         };
-
-        await _messageRepository.SaveMessageAsync(messageData, cancellationToken);
+        
         return messageData;
+    }
+
+    /// <summary>
+    /// Шифрует и сохраняет сообщение в БД
+    /// </summary>
+    /// <param name="messageData"></param>
+    /// <param name="cancellationToken"></param>
+    private async Task SaveMessageAsync(MessageData messageData, CancellationToken cancellationToken)
+    {
+        (string EncryptedText, string IV, string Hmac) dataEncrypt = EncryptAndSign(messageData.Text);
+        messageData.Text = dataEncrypt.EncryptedText;
+        messageData.IV = dataEncrypt.IV;
+        messageData.HMAC = dataEncrypt.Hmac;
+        await _messageRepository.SaveMessageAsync(messageData, cancellationToken);
     }
 }

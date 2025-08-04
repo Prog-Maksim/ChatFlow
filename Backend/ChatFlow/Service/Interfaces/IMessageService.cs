@@ -1,4 +1,4 @@
-using ChatFlow.Models.DB;
+using ChatFlow.Models.DB.Other;
 using ChatFlow.Models.Requests;
 using ChatFlow.Models.Response;
 

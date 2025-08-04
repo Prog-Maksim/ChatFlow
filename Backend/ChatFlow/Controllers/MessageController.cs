@@ -1,5 +1,5 @@
 using System.ComponentModel.DataAnnotations;
-using ChatFlow.Models.DB;
+using ChatFlow.Models.DB.Other;
 using ChatFlow.Models.Requests;
 using ChatFlow.Models.Response;
 using ChatFlow.Service.Interfaces;
@@ -112,14 +112,14 @@ public class MessagesController(ILogger<MessagesController> logger, IMessageServ
     /// <param name="chatId">Идентификатор чата</param>
     /// <param name="messageId">Идентификатор сообщения</param>
     /// <returns></returns>
-    /// <response code="200">Успешно</response>
+    /// <response code="204">Успешно</response>
     /// <response code="400">Сообщение не было удалено</response>
     /// <response code="403">Невалидный jwt токен или пользователь не состоит в чате или нет прав на редактирование</response>
     /// <response code="404">Чат или сообщения не найдены</response>
     [Authorize]
     [ApiVersion("1.0")]
     [HttpDelete("{chatId}/messages/{messageId}")]
-    [ProducesResponseType(typeof(BaseResponse<string, MessageData>), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(typeof(BaseResponse<string, MessageData>), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(BaseResponse<string, MessageData>), StatusCodes.Status403Forbidden)]
     [ProducesResponseType(typeof(BaseResponse<string, MessageData>), StatusCodes.Status404NotFound)]

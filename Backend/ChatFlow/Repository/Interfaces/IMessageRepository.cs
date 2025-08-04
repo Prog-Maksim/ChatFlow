@@ -1,5 +1,5 @@
 using ChatFlow.Models.DB;
-using ChatFlow.Models.Other;
+using ChatFlow.Models.DB.Other;
 
 namespace ChatFlow.Repository.Interfaces;
 

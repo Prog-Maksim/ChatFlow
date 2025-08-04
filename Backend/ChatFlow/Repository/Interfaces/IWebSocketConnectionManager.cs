@@ -1,5 +1,5 @@
 using System.Net.WebSockets;
-using ChatFlow.Models.DB;
+using ChatFlow.Models.DB.Other;
 using ChatFlow.Models.Other;
 
 namespace ChatFlow.Repository.Interfaces;

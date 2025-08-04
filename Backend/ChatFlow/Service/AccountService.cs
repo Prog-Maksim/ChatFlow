@@ -1,12 +1,10 @@
 using ChatFlow.Enums;
 using ChatFlow.Models.DB;
 using ChatFlow.Models.Response;
-using ChatFlow.Repository;
 using ChatFlow.Repository.Interfaces;
 using ChatFlow.Scripts;
 using ChatFlow.Service.Interfaces;
 using Microsoft.AspNetCore.Identity;
-using Sessions = ChatFlow.Models.DB.Sessions;
 
 namespace ChatFlow.Service;
 
@@ -95,22 +93,11 @@ public class AccountService
             
         if (oldPassword == newPassword)
             return ResponseFactory.InvalidPassword<RegistrationCode>("Данный пароль уже используется");
-            
-        await UpdateUserPasswordAsync(person, newPassword);
 
-        RegistrationCode? codeResult;
-        try
-        {
-            codeResult = await GenerateRegistrationCode(person, userIpAddress);
-        }
-        catch (NullReferenceException)
-        {
-            return ResponseFactory.AccountNotActivated<RegistrationCode>();
-        }
+        RegistrationCode? codeResult = await GenerateRegistrationCode(person, userIpAddress, _passwordHasher.HashPassword(person, newPassword))!;
         
         await _sessionService.RevokeSession(accessToken);
-        
-        return ResponseFactory.Success("Остался всего один шаг", codeResult);
+        return ResponseFactory.Success("Остался всего один шаг", codeResult!);
     }
 
     /// <summary>
@@ -127,49 +114,24 @@ public class AccountService
         await _sessionService.RevokeSession(accessToken, dataToken!.SessionId);
         return ResponseFactory.Success("Пользователь успешно вышел из аккаунта", new RevokeSession { SessionId = dataToken.SessionId });
     }
-    
-    /// <summary>
-    /// Обновляет пароль пользователя
-    /// </summary>
-    /// <param name="person">Объект пользователя</param>
-    /// <param name="newPassword">Новый пароль</param>
-    private async Task UpdateUserPasswordAsync(Persons person, string newPassword)
-    {
-        person.PasswordVersion++;
-        person.PasswordHash = _passwordHasher.HashPassword(person, newPassword);
-        await RevokeAllSessions(person.PersonId);
-        await _authRepository.SaveChangesAsync();
-    }
-    
+
     /// <summary>
     /// Генерирует регистрационный код
     /// </summary>
     /// <param name="person">Объект пользователя</param>
     /// <param name="ip">IP адрес пользователя</param>
+    /// <param name="passwordHash">Хеш пароля</param>
     /// <returns></returns>
-    private async Task<RegistrationCode> GenerateRegistrationCode(Persons person, string ip)
+    private async Task<RegistrationCode?> GenerateRegistrationCode(Persons person, string ip, string passwordHash)
     {
         if (person.TotpCode is null)
-            throw new NullReferenceException("Отсутствует привязка к сервису двухфакторной аутентификации");
+            return null;
         
         var decryptedTotp = _encryptionService.Decrypt(person.TotpCode);
-        var code = await _authRepository.GenerateCodeAndSaveAsync(person, ip, decryptedTotp);
+        var code = await _authRepository.GeneratePasswordCodeAsync(person, ip, decryptedTotp, passwordHash);
         return new RegistrationCode
         {
             Code = code
         };
-    }
-        
-    /// <summary>
-    /// Удаляет все сессии пользователя
-    /// </summary>
-    /// <param name="personId">Идентификатор пользователя</param>
-    private async Task RevokeAllSessions(string personId)
-    {
-        IQueryable<Sessions> sessions = _authRepository.GetSessionsAsync(personId);
-        if (!sessions.Any()) return;
-        
-        await _authRepository.RevokeAllSessionsAsync(personId);
-        await _authRepository.AddSessionsToBanAsync(sessions.Select(s => s.SessionId), personId);
     }
 }

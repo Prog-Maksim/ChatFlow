@@ -10,11 +10,11 @@ public class SessionService: ISessionService
 {
     private readonly IAuthRepository _authRepository;
     private readonly IEncryptionService _encryptionService;
-    private readonly TokenValidator _tokenValidator;
+    private readonly ITokenValidator _tokenValidator;
     private readonly ILogger<SessionService> _logger;
     private readonly IWebSocketConnectionManager _manager;
 
-    public SessionService(IAuthRepository authRepository, IEncryptionService encryptionService, TokenValidator tokenValidator, ILogger<SessionService> logger, IWebSocketConnectionManager manager)
+    public SessionService(IAuthRepository authRepository, IEncryptionService encryptionService, ITokenValidator tokenValidator, ILogger<SessionService> logger, IWebSocketConnectionManager manager)
     {
         _authRepository = authRepository;
         _encryptionService = encryptionService;

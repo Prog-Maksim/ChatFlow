@@ -32,24 +32,34 @@ public interface IAuthRepository
     /// <param name="person">Данные пользователя</param>
     /// <returns></returns>
     public Task<bool> AddUserDataAsync(DataPersons person);
-    
 
     /// <summary>
     /// Сохраняет данные для двухфакторной аутентификации
     /// </summary>
     /// <param name="personData">Данные пользователя</param>
-    /// <param name="userIpAdress">IP адрес пользователя</param>
+    /// <param name="userIpAddress">IP адрес пользователя</param>
     /// <returns>Код для доступа к данным</returns>
-    public Task<string> GenerateCodeAndSaveAsync(Persons personData, string userIpAdress);
+    public Task<string> GenerateCodeAndSaveAsync(Persons personData, string userIpAddress);
 
     /// <summary>
     /// Сохраняет данные для двухфакторной аутентификации с кодом авторизации
     /// </summary>
     /// <param name="personData">Данные пользователя</param>
-    /// <param name="userIpAdress">IP адрес пользователя</param>
+    /// <param name="userIpAddress">IP адрес пользователя</param>
     /// <param name="totpCode">Код авторизации</param>
     /// <returns>Код для доступа к данным</returns>
-    public Task<string> GenerateCodeAndSaveAsync(Persons personData, string userIpAdress, string totpCode);
+    public Task<string> GenerateCodeAndSaveAsync(Persons personData, string userIpAddress, string totpCode);
+    
+    /// <summary>
+    /// Сохраняет данные для обновления пароля с кодом авторизации
+    /// </summary>
+    /// <param name="personData">Данные пользователя</param>
+    /// <param name="userIpAddress">IP адрес пользователя</param>
+    /// <param name="totpCode">Код авторизации</param>
+    /// <param name="newPasswordHash">Хеш пароля</param>
+    /// <returns></returns>
+    public Task<string> GeneratePasswordCodeAsync(Persons personData, string userIpAddress, string totpCode,
+        string newPasswordHash);
     
     /// <summary>
     /// Проверяет наличие кода в БД

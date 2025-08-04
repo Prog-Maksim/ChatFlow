@@ -33,4 +33,7 @@ public class TotpData
     /// Может изменяться?
     /// </summary>
     public required bool IsUpdate {get; set;}
+    
+    public bool IsUpdatePassword { get; set; }
+    public string? PasswordHash { get; set; }
 }

@@ -1,5 +1,6 @@
 using ChatFlow.Enums;
 using ChatFlow.Models.DB;
+using ChatFlow.Models.Other;
 using ChatFlow.Models.Response;
 using ChatFlow.Repository.Interfaces;
 using ChatFlow.Scripts;
@@ -66,13 +67,58 @@ public class TwoFactorService: ITwoFactorService
         if (!AuthenticatorService.CheckValidKey(key, data.TotpCode))
             return ResponseFactory.Forbidden<AuthTokens>("Код 2FA не верен", ResponseType.CodeIsNotValid);
         
+        if (data.IsUpdatePassword)
+        {
+            await UpdateUserPasswordAsync(data.PersonData.PersonId, data.PasswordHash!);
+
+            var session = CreateSession(data.PersonId, userIpAddress, userAgent);
+            await _authRepository.AddSessionAsync(session);
+            await _authRepository.SaveChangesAsync();
+            
+            var tokenResult = await GenerateToken(data, session, code);
+            return ResponseFactory.Success("Пароль успешно обновлен", tokenResult);
+        }
+        
         if (data.TotpCode != null)
             await TryAddTotpCodeAsync(data.PersonId, data.TotpCode);
 
-        var session = CreateSession(data.PersonId, userIpAddress, userAgent);
-        await _authRepository.AddSessionAsync(session);
+        var session1 = CreateSession(data.PersonId, userIpAddress, userAgent);
+        await _authRepository.AddSessionAsync(session1);
         await _authRepository.SaveChangesAsync();
 
+        var tokenResult1 = await GenerateToken(data, session1, code);
+        return ResponseFactory.Success("Вы успешно авторизовались", tokenResult1);
+    }
+    
+    /// <summary>
+    /// Обновляет пароль пользователя
+    /// </summary>
+    /// <param name="personId">Идентификатор пользователя</param>
+    /// <param name="newPassword">Новый пароль</param>
+    private async Task UpdateUserPasswordAsync(string personId, string newPassword)
+    {
+        var person = await _authRepository.GetUserByIdAsync(personId);
+        person.PasswordVersion++;
+        person.PasswordHash = newPassword;
+        await RevokeAllSessions(person.PersonId);
+        await _authRepository.SaveChangesAsync();
+    }
+
+    /// <summary>
+    /// Удаляет все сессии пользователя
+    /// </summary>
+    /// <param name="personId">Идентификатор пользователя</param>
+    private async Task RevokeAllSessions(string personId)
+    {
+        IQueryable<Sessions> sessions = _authRepository.GetSessionsAsync(personId);
+        if (!sessions.Any()) return;
+        
+        await _authRepository.RevokeAllSessionsAsync(personId);
+        await _authRepository.AddSessionsToBanAsync(sessions.Select(s => s.SessionId), personId);
+    }
+
+    private async Task<AuthTokens> GenerateToken(TotpData data, Sessions session, string code)
+    {
         var tokens = _jwtTokenService.CreateJwtToken(
             data.PersonId,
             data.PersonData.PasswordVersion,
@@ -90,7 +136,7 @@ public class TwoFactorService: ITwoFactorService
             AccessTokenExpiration = DateTime.UtcNow.AddMinutes(JwtTokenService.AccessTokenLifetimeMinute),
             RefreshTokenExpiration = DateTime.UtcNow.AddDays(JwtTokenService.RefreshTokenLifetimeDay)
         };
-        return ResponseFactory.Success("Вы успешно авторизовались", tokenResult);
+        return tokenResult;
     }
     
     public async Task<byte[]> GetQrCodeGoogleAuthenticatorAsync(string code, string userIpAddress)

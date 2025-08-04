@@ -69,7 +69,7 @@ public class AuthRepository: IAuthRepository
         return code;
     }
 
-    public async Task<string> GenerateCodeAndSaveAsync(Persons personData, string userIpAdress, string totpCode)
+    public async Task<string> GenerateCodeAndSaveAsync(Persons personData, string userIpAddress, string totpCode)
     {
         var random = new Random();
         var code = random.Next(10000000, 999999999).ToString();
@@ -78,10 +78,34 @@ public class AuthRepository: IAuthRepository
         {
             PersonId = personData.PersonId,
             PersonData = personData,
-            IpAddress = userIpAdress,
+            IpAddress = userIpAddress,
             TotpCode = totpCode,
             IsUpdate = false,
             IsRead = false
+        };
+        
+        var redisKey = $"TOTP:{code}";
+        var redisValue = JsonSerializer.Serialize(totpData);
+        
+        await _database.StringSetAsync(redisKey, redisValue);
+        return code;
+    }
+    
+    public async Task<string> GeneratePasswordCodeAsync(Persons personData, string userIpAddress, string totpCode, string newPasswordHash)
+    {
+        var random = new Random();
+        var code = random.Next(10000000, 999999999).ToString();
+
+        var totpData = new TotpData
+        {
+            PersonId = personData.PersonId,
+            PersonData = personData,
+            IpAddress = userIpAddress,
+            TotpCode = totpCode,
+            IsUpdate = false,
+            IsRead = false,
+            IsUpdatePassword = true,
+            PasswordHash = newPasswordHash
         };
         
         var redisKey = $"TOTP:{code}";

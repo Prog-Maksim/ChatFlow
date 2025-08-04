@@ -45,7 +45,7 @@ public class AuthService: IAuthService
         _ = AddUserToSearch(userData);
             
         var code = await _authRepository.GenerateCodeAndSaveAsync(user, userIpAddress);
-        var codeResult = new RegistrationCode { Code = code, ExpiresAt = DateTime.UtcNow.AddMinutes(AuthRepository.CodeLifetimeMinute) };
+        var codeResult = new RegistrationCode { Code = code };
 
         return ResponseFactory.Success("Пользователь успешно создан", codeResult);
     }
@@ -146,8 +146,7 @@ public class AuthService: IAuthService
         var code = await _authRepository.GenerateCodeAndSaveAsync(person, userIpAddress, _encryptionService.Decrypt(person.TotpCode!));
         var codeResult = new RegistrationCode
         {
-            Code = code,
-            ExpiresAt = DateTime.UtcNow.AddMinutes(AuthRepository.CodeLifetimeMinute)
+            Code = code
         };
 
         return ResponseFactory.Success("Последний шаг, подтвердите личность", codeResult);

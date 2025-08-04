@@ -156,8 +156,7 @@ public class AccountService
         var code = await _authRepository.GenerateCodeAndSaveAsync(person, ip, decryptedTotp);
         return new RegistrationCode
         {
-            Code = code,
-            ExpiresAt = DateTime.UtcNow.AddMinutes(AuthRepository.CodeLifetimeMinute)
+            Code = code
         };
     }
         

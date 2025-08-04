@@ -17,8 +17,6 @@ public class AuthRepository: IAuthRepository
     private const int MaxAttempts = 5;
     private static readonly TimeSpan AttemptPeriod = TimeSpan.FromMinutes(1);
 
-    public const int CodeLifetimeMinute = 15;
-
     public AuthRepository(ApplicationContext context, IConnectionMultiplexer connection, ILogger<AuthRepository> logger)
     {
         _context = context;
@@ -68,7 +66,6 @@ public class AuthRepository: IAuthRepository
         var redisValue = JsonSerializer.Serialize(totpData);
         
         await _database.StringSetAsync(redisKey, redisValue);
-        await _database.KeyExpireAsync(redisKey, TimeSpan.FromMinutes(CodeLifetimeMinute));
         return code;
     }
 
@@ -91,7 +88,6 @@ public class AuthRepository: IAuthRepository
         var redisValue = JsonSerializer.Serialize(totpData);
         
         await _database.StringSetAsync(redisKey, redisValue);
-        await _database.KeyExpireAsync(redisKey, TimeSpan.FromMinutes(CodeLifetimeMinute));
         return code;
     }
 

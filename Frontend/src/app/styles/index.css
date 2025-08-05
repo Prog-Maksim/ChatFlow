@@ -1,8 +1,8 @@
 @import "tailwindcss";
 
-* {
+/* {
   outline: 1px solid grey !important;
-}
+} */
 
 html, body, #root {
   height: 100vh;
@@ -15,4 +15,23 @@ body {
   display: flex;
   font-family: 'Montserrat', sans-serif;
   overflow-x: hidden;
+}
+
+
+.input_border {
+  border: none;
+  border-bottom: 1px solid #9ca3af; 
+  width: 100%;
+  padding: 0.25rem 0.5rem; 
+  color: inherit;
+  outline: none;
+}
+
+.input_border::placeholder {
+  color: #636975; 
+}
+
+.input_border:focus {
+  border-bottom-color: #878c96; 
+  outline: none;
 }

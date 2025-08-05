@@ -22,7 +22,7 @@ export function Button({
 }: ButtonProps) {
 	return (
 		<button
-			className={`inline-flex rounded-[10px] cursor-pointer w-[300px] items-center justify-center py-2.5 font-medium transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed ${variantClasses[variant]}`}
+			className={`inline-flex rounded-[10px] cursor-pointer w-[350px] items-center justify-center py-2.5 font-medium transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed ${variantClasses[variant]}`}
 			disabled={isLoading || disabled}
 			{...rest}
 		>

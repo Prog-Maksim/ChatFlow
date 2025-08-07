@@ -15,13 +15,15 @@ public class ProfileService: IProfileService
     private readonly IProfileRepository _profileRepository;
     private readonly ISearchRepository _searchRepository;
     private readonly IJwtTokenService _jwtTokenService;
+    private readonly IOtherPersonDataRepository _otherPersonDataRepository;
     
-    public ProfileService(ILogger<ProfileService> logger, IProfileRepository profileRepository, IJwtTokenService jwtTokenService, ISearchRepository searchRepository)
+    public ProfileService(ILogger<ProfileService> logger, IProfileRepository profileRepository, IJwtTokenService jwtTokenService, ISearchRepository searchRepository, IOtherPersonDataRepository otherPersonDataRepository)
     {
         _logger = logger;
         _profileRepository = profileRepository;
         _jwtTokenService = jwtTokenService;
         _searchRepository = searchRepository;
+        _otherPersonDataRepository = otherPersonDataRepository;
     }
     
     public async Task<BaseResponse<string, SummaryDataPerson>> GetSummaryProfileData(string accessToken, string? personId = null)
@@ -161,6 +163,24 @@ public class ProfileService: IProfileService
             Type = ResponseType.Ok,
             Errors = null,
             Data = data1
+        };
+    }
+
+    public async Task<BaseResponse<string, List<PublicKeyResponse>>> GetPublicKeyAsync(string personId)
+    {
+        List<PublicKeyResponse> keys = await _otherPersonDataRepository.GetActivePublicKeys(personId);
+        
+        if (keys.Count == 0)
+            return new BaseResponse<string, List<PublicKeyResponse>> { Message = "Ключи не найдены", Successfully = false, Status = 404, Type = ResponseType.KeysNotFound, Errors = "Not Found", Data = null };
+
+        return new BaseResponse<string, List<PublicKeyResponse>>
+        {
+            Message = "Ключи пользователя",
+            Successfully = true,
+            Status = 200,
+            Type = ResponseType.Ok,
+            Errors = null,
+            Data = keys
         };
     }
 }

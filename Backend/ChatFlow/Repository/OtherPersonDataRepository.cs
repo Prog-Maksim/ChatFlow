@@ -1,4 +1,5 @@
 using ChatFlow.Models.DB;
+using ChatFlow.Models.Response;
 using ChatFlow.Repository.Interfaces;
 using MongoDB.Driver;
 
@@ -72,5 +73,28 @@ public class OtherPersonDataRepository: IOtherPersonDataRepository
         {
             _logger.LogWarning($"No public key found for person '{personId}' and device '{deviceId}'.");
         }
+    }
+    
+    public async Task<List<PublicKeyResponse>> GetActivePublicKeys(string personId)
+    {
+        var filter = Builders<OtherPersonData>.Filter.Eq(e => e.PersonId, personId);
+        var personData = await _userCollections.Find(filter).FirstOrDefaultAsync();
+
+        if (personData == null || personData.PublicKeys == null)
+        {
+            _logger.LogWarning($"No public keys found for person ID '{personId}'.");
+            return new List<PublicKeyResponse>();
+        }
+
+        var activeKeys = personData.PublicKeys
+            .Where(kvp => kvp.Value.Status)
+            .Select(kvp => new PublicKeyResponse
+            {
+                DeviceId = kvp.Key,
+                PublicKey = kvp.Value.PublicKey
+            })
+            .ToList();
+
+        return activeKeys;
     }
 }

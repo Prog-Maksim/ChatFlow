@@ -63,31 +63,6 @@ public enum ResponseType
     InvalidString,
     
     /// <summary>
-    /// Код уже был создан
-    /// </summary>
-    CodeIsCreated,
-    
-    /// <summary>
-    /// Код не найден
-    /// </summary>
-    CodeNotFount,
-    
-    /// <summary>
-    /// Код не верен
-    /// </summary>
-    CodeIsNotValid,
-    
-    /// <summary>
-    /// Сервис не подключен
-    /// </summary>
-    ServiceNotConnected,
-    
-    /// <summary>
-    /// Подключаемый сервис не найден
-    /// </summary>
-    ServiceConnectedNotFound,
-    
-    /// <summary>
     /// Не удается проверить корректность jwt токена
     /// </summary>
     JwtTokenVerificationFailed,
@@ -165,5 +140,10 @@ public enum ResponseType
     /// <summary>
     /// Поиск ничего не дал
     /// </summary>
-    SearchNotFound
+    SearchNotFound,
+    
+    /// <summary>
+    /// Публичные ключи не найдены
+    /// </summary>
+    KeysNotFound
 }

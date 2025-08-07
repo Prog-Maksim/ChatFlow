@@ -10,8 +10,26 @@ namespace ChatFlow.Controllers;
 [ApiVersion("1.0")]
 [Produces("application/json")]
 [Route("v{version:apiVersion}/users")]
-public class UserController(ILogger<UserController> logger, IImageService service): ControllerBase
+public class UserController(ILogger<UserController> logger, IImageService service, IProfileService profileService): ControllerBase
 {
+    /// <summary>
+    /// Выдает публичные ключи пользователя
+    /// </summary>
+    /// <param name="personId"></param>
+    /// <returns></returns>
+    [ApiVersion("1.0")]
+    [HttpPost("{personId}/public-keys")]
+    public async Task<IActionResult> UploadAvatar(string personId)
+    {
+        logger.LogInformation("Начало обработки запроса: (выдача публичных ключей)");
+        var response = await profileService.GetPublicKeyAsync(personId);
+
+        if (!response.Successfully)
+            return StatusCode(response.Status, response);
+
+        return Ok(response);
+    }
+    
     /// <summary>
     /// Добавляет изображение профилю
     /// </summary>

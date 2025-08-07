@@ -39,4 +39,6 @@ public interface IProfileService
     /// <returns></returns>
     public Task<BaseResponse<string, List<DataImage>>> GetProfileImages(string accessToken,
         string? personId = null);
+
+    public Task<BaseResponse<string, List<PublicKeyResponse>>> GetPublicKeyAsync(string personId);
 }

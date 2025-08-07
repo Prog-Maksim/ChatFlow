@@ -41,12 +41,6 @@ public class Persons
     public int PasswordVersion { get; set; }
     
     /// <summary>
-    /// TOTP код
-    /// </summary>
-    [StringLength(100)]
-    public string? TotpCode { get; set; }
-    
-    /// <summary>
     /// Ip адрес регистрации пользователя
     /// </summary>
     [StringLength(50)]

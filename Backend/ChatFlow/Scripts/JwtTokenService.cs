@@ -21,7 +21,7 @@ public class JwtTokenService: IJwtTokenService
     }
     
     public const int AccessTokenLifetimeMinute = 5;
-    public const int RefreshTokenLifetimeDay = 30;
+    public const int RefreshTokenLifetimeDay = 365;
     
     public string GenerateJwtAccessToken(string personId, string sessionId, int id)
     {        

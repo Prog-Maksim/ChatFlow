@@ -20,15 +20,19 @@ public class AuthService: IAuthService
     private readonly IEncryptionService _encryptionService;
     private readonly PasswordHasher<Persons> _passwordHasher;
     private readonly ISearchRepository _searchRepository;
+    private readonly IJwtTokenService _jwtTokenService;
+    private readonly IOtherPersonDataRepository _otherPersonDataRepository;
 
     private const int MaxDevice = 3;
     
-    public AuthService(IAuthRepository authRepository, IEncryptionService encryptionService, ISearchRepository searchRepository)
+    public AuthService(IAuthRepository authRepository, IEncryptionService encryptionService, ISearchRepository searchRepository,  IOtherPersonDataRepository otherPersonDataRepository, IJwtTokenService jwtTokenService)
     {
         _authRepository = authRepository;
         _encryptionService = encryptionService;
         _passwordHasher = new PasswordHasher<Persons>();
         _searchRepository = searchRepository;
+        _otherPersonDataRepository = otherPersonDataRepository;
+        _jwtTokenService = jwtTokenService;
     }
     
     public async Task<BaseResponse<string, string>> RegistrationUserAsync(RegistrationUser registrationUser, string userIpAddress)
@@ -44,6 +48,7 @@ public class AuthService: IAuthService
         var user = CreateUserEntity(registrationUser, userIpAddress);
         await _authRepository.AddUserAsync(user);
         var userData = AddUserDataEntity(registrationUser, user.PersonId);
+        await _otherPersonDataRepository.InitializePersonData(user.PersonId);
         await _authRepository.AddUserDataAsync(userData);
         await _authRepository.SaveChangesAsync();
         _ = AddUserToSearch(userData);
@@ -51,18 +56,18 @@ public class AuthService: IAuthService
         return ResponseFactory.Success("Пользователь успешно создан", "Успешно");
     }
     
-    public async Task<BaseResponse<string, string>> AuthorizationUserAsync(string login, string password, string userIpAddress, string publicKey, string? refreshToken = null)
+    public async Task<BaseResponse<string, AuthTokens>> AuthorizationUserAsync(string login, string password, string userIpAddress, string publicKey, string userAgent, string? refreshToken = null)
     {
         if (await _authRepository.IsBlockedAsync(userIpAddress))
-            return ResponseFactory.TooManyRequests<string>();
+            return ResponseFactory.TooManyRequests<AuthTokens>();
 
         if (login.IsNumberPhone())
-            return await AuthorizeByPhoneAsync(login, password, userIpAddress, publicKey, refreshToken);
+            return await AuthorizeByPhoneAsync(login, password, userIpAddress, publicKey, userAgent, refreshToken);
 
         if (login.IsEmail())
-            return ResponseFactory.EmailNotSupported<string>();
+            return ResponseFactory.EmailNotSupported<AuthTokens>();
 
-        return ResponseFactory.BadRequest<string>("Некорректный логин");
+        return ResponseFactory.BadRequest<AuthTokens>("Некорректный логин");
     }
     
     /// <summary>
@@ -125,29 +130,80 @@ public class AuthService: IAuthService
     /// <param name="password">Пароль</param>
     /// <param name="userIpAddress">IP адрес</param>
     /// <param name="publicKey"></param>
+    /// <param name="userAgent"></param>
     /// <param name="refreshToken"></param>
     /// <returns></returns>
-    private async Task<BaseResponse<string, string>> AuthorizeByPhoneAsync(string phone, string password, string userIpAddress, string publicKey, string? refreshToken = null)
+    private async Task<BaseResponse<string, AuthTokens>> AuthorizeByPhoneAsync(string phone, string password, string userIpAddress, string publicKey, string userAgent, string? refreshToken = null)
     {
         var person = await _authRepository.GetUserByPhoneNumberAsync(phone);
         if (person == null)
-            return ResponseFactory.PersonNotFound<string>();
+            return ResponseFactory.PersonNotFound<AuthTokens>();
 
         if (person.AccountState == AccountState.Blocked)
-            return ResponseFactory.AccountBlocked<string>();
+            return ResponseFactory.AccountBlocked<AuthTokens>();
         
         if (await _authRepository.GetNumberSessionsAsync(person.PersonId) >= MaxDevice)
-            return ResponseFactory.Forbidden<string>("Достигнуто максимальное количество устройств", ResponseType.DeviceLimitReached);
+            return ResponseFactory.Forbidden<AuthTokens>("Достигнуто максимальное количество устройств", ResponseType.DeviceLimitReached);
 
         if (!IsPasswordValid(person, password))
         {
             await _authRepository.IncrementLoginAttemptsAsync(userIpAddress);
             Metrics.TrackFailedLogin(userIpAddress);
-            return ResponseFactory.InvalidPassword<string>("Данный пароль не верен");
+            return ResponseFactory.InvalidPassword<AuthTokens>("Данный пароль не верен");
         }
-        
 
-        return ResponseFactory.Success("Последний шаг, подтвердите личность","");
+        // Восстановить сессию
+        if (refreshToken is not null)
+        {
+            var dataToken = _jwtTokenService.GetJwtTokenData(refreshToken);
+            if (dataToken.TokenType != TokenType.RefreshToken)
+                return new BaseResponse<string, AuthTokens> 
+                    { Message = "Не удалось проверить корректность jwt токена", Type = ResponseType.JwtTokenVerificationFailed, Errors = "Forbidden", Status = 403, Successfully = false, Data = null};
+
+            Sessions? session = await _authRepository.GetSessionByIdAsync(person.PersonId, dataToken.SessionId);
+            session.IsRevoked = false;
+            session.RevokedAt = null;
+            
+            await _authRepository.SaveChangesAsync();
+            await _otherPersonDataRepository.UpdatePublicKeyStatus(person.PersonId, session.DeviceId, true);
+
+            AuthTokens tokens = GenerateToken(person.PersonId, person.PasswordVersion, session);
+            return ResponseFactory.Success("Вы успешно авторизовались", tokens);
+        }
+        // Создать новую сессию, новый идентификатор устройства
+        else
+        {
+            string deviceId = Guid.NewGuid().ToString();
+            await _otherPersonDataRepository.AddPublicKey(person.PersonId, publicKey, deviceId);
+            
+            Sessions session = CreateSession(person.PersonId, userIpAddress, deviceId, userAgent);
+            await _authRepository.AddSessionAsync(session);
+            await _authRepository.SaveChangesAsync();
+            
+            AuthTokens tokens = GenerateToken(person.PersonId, person.PasswordVersion, session);
+            
+            return ResponseFactory.Success("Вы успешно авторизовались", tokens);
+        }
+    }
+    
+    private AuthTokens GenerateToken(string personId, int passwordVersion, Sessions session)
+    {
+        var tokens = _jwtTokenService.CreateJwtToken(
+            personId,
+            passwordVersion,
+            session.SessionId,
+            session.Id
+        );
+
+        var tokenResult = new AuthTokens
+        {
+            PersonId = personId,
+            DeviceId = session.DeviceId,
+            AccessToken = tokens.AccessToken,
+            RefreshToken = tokens.RefreshToken,
+            AccessTokenExpiration = DateTime.UtcNow.AddMinutes(JwtTokenService.AccessTokenLifetimeMinute)
+        };
+        return tokenResult;
     }
 
     /// <summary>

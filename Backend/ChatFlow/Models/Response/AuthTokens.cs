@@ -10,6 +10,11 @@ public class AuthTokens
     public required string PersonId { get; set; }
     
     /// <summary>
+    /// Идентификатор устройства
+    /// </summary>
+    public required string DeviceId { get; set; }
+    
+    /// <summary>
     /// Access токен
     /// </summary>
     public required string AccessToken { get; set; }
@@ -24,10 +29,4 @@ public class AuthTokens
     /// </summary>
     [JsonPropertyName("access-expires-at")]
     public required DateTime AccessTokenExpiration { get; set; }
-    
-    /// <summary>
-    /// До которого времени токен валиден
-    /// </summary>
-    [JsonPropertyName("refresh-expires-at")]
-    public required DateTime RefreshTokenExpiration { get; set; }
 }

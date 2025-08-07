@@ -21,7 +21,8 @@ public interface IAuthService
     /// <param name="password">Пароль</param>
     /// <param name="userIpAddress">Ip адрес пользователя</param>
     /// <param name="publicKey">Публичный ключ пользователя</param>
+    /// <param name="userAgent"></param>
     /// <param name="refreshToken">Refresh токен</param>
     /// <returns></returns>
-    public Task<BaseResponse<string, string>> AuthorizationUserAsync(string login, string password, string userIpAddress, string publicKey, string? refreshToken = null);
+    public Task<BaseResponse<string, AuthTokens>> AuthorizationUserAsync(string login, string password, string userIpAddress, string publicKey, string userAgent, string? refreshToken = null);
 }

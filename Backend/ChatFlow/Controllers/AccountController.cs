@@ -53,9 +53,9 @@ public class AccountController(ILogger<AuthController> logger, AccountService se
     [Authorize]
     [ApiVersion("1.0")]
     [HttpPatch("password")]
-    [ProducesResponseType(typeof(BaseResponse<string, RegistrationCode>),StatusCodes.Status200OK)]
-    [ProducesResponseType(typeof(BaseResponse<string, RegistrationCode>),StatusCodes.Status403Forbidden)]
-    [ProducesResponseType(typeof(BaseResponse<string, RegistrationCode>),StatusCodes.Status404NotFound)]
+    [ProducesResponseType(typeof(BaseResponse<string, string>),StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(BaseResponse<string, string>),StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(typeof(BaseResponse<string, string>),StatusCodes.Status404NotFound)]
     public async Task<IActionResult> UpdatePassword([Required] [FromBody] UpdatePassword requests)
     {
         logger.LogInformation("Начало обработки запроса: (обновление пароля)");

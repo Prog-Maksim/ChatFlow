@@ -1,4 +1,5 @@
-﻿using ChatFlow.Enums;
+﻿using System.Security.Cryptography;
+using ChatFlow.Enums;
 using ChatFlow.Extensions;
 using ChatFlow.Models.DB;
 using ChatFlow.Models.Other;
@@ -68,6 +69,36 @@ public class AuthService: IAuthService
             return ResponseFactory.EmailNotSupported<AuthTokens>();
 
         return ResponseFactory.BadRequest<AuthTokens>("Некорректный логин");
+    }
+    
+    private bool IsValidRsaPublicKey(string base64Key)
+    {
+        try
+        {
+            byte[] keyBytes = Convert.FromBase64String(base64Key);
+            using var rsa = RSA.Create();
+            rsa.ImportRSAPublicKey(keyBytes, out _);
+            return true;
+        }
+        catch
+        {
+            return false;
+        }
+    }
+    
+    private bool IsPrivateKey(string base64Key)
+    {
+        try
+        {
+            byte[] keyBytes = Convert.FromBase64String(base64Key);
+            using var rsa = RSA.Create();
+            rsa.ImportRSAPrivateKey(keyBytes, out _);
+            return true;
+        }
+        catch
+        {
+            return false;
+        }
     }
     
     /// <summary>
@@ -173,6 +204,12 @@ public class AuthService: IAuthService
         // Создать новую сессию, новый идентификатор устройства
         else
         {
+            if (!IsValidRsaPublicKey(publicKey))
+                return ResponseFactory.Forbidden<AuthTokens>("Публичный ключ не является ключем RSA", ResponseType.KeyIsNotRSA);
+            
+            if(IsPrivateKey(publicKey))
+                return ResponseFactory.Forbidden<AuthTokens>("Данный ключ является приватным", ResponseType.KeyIsNotPublic);
+            
             string deviceId = Guid.NewGuid().ToString();
             await _otherPersonDataRepository.AddPublicKey(person.PersonId, publicKey, deviceId);
             

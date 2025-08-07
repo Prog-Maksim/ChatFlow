@@ -34,6 +34,12 @@ public class Sessions
     public string? Device { get; set; }
     
     /// <summary>
+    /// Идентификатор устройства
+    /// </summary>
+    [StringLength(36)]
+    public required string DeviceId { get; set; }
+    
+    /// <summary>
     /// Операционная система входа
     /// </summary>
     [StringLength(64)]

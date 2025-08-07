@@ -69,9 +69,9 @@ builder.Services.AddScoped<IProfileService, ProfileService>();
 builder.Services.AddScoped<IS3Service, S3Service>();
 builder.Services.AddScoped<ISessionService, SessionService>();
 builder.Services.AddScoped<ITokenService, TokenService>();
-builder.Services.AddScoped<ITwoFactorService, TwoFactorService>();
 builder.Services.AddScoped<WebSocketService>();
 builder.Services.AddScoped<ISearchService, SearchService>();
+builder.Services.AddScoped<IOtherPersonDataRepository, OtherPersonDataRepository>();
 
 builder.Services.AddScoped<IAuthRepository, AuthRepository>();
 builder.Services.AddScoped<ISearchRepository, SearchRepository>();

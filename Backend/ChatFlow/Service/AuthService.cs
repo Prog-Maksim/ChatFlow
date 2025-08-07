@@ -9,6 +9,8 @@ using ChatFlow.Repository.Interfaces;
 using ChatFlow.Scripts;
 using ChatFlow.Service.Interfaces;
 using Microsoft.AspNetCore.Identity;
+using UAParser;
+using Sessions = ChatFlow.Models.DB.Sessions;
 
 namespace ChatFlow.Service;
 
@@ -18,50 +20,54 @@ public class AuthService: IAuthService
     private readonly IEncryptionService _encryptionService;
     private readonly PasswordHasher<Persons> _passwordHasher;
     private readonly ISearchRepository _searchRepository;
+    private readonly IJwtTokenService _jwtTokenService;
+    private readonly IOtherPersonDataRepository _otherPersonDataRepository;
+
+    private const int MaxDevice = 3;
     
-    public AuthService(IAuthRepository authRepository, IEncryptionService encryptionService, ISearchRepository searchRepository)
+    public AuthService(IAuthRepository authRepository, IEncryptionService encryptionService, ISearchRepository searchRepository,  IOtherPersonDataRepository otherPersonDataRepository, IJwtTokenService jwtTokenService)
     {
         _authRepository = authRepository;
         _encryptionService = encryptionService;
         _passwordHasher = new PasswordHasher<Persons>();
         _searchRepository = searchRepository;
+        _otherPersonDataRepository = otherPersonDataRepository;
+        _jwtTokenService = jwtTokenService;
     }
     
-    public async Task<BaseResponse<string, RegistrationCode>> RegistrationUserAsync(RegistrationUser registrationUser, string userIpAddress)
+    public async Task<BaseResponse<string, string>> RegistrationUserAsync(RegistrationUser registrationUser, string userIpAddress)
     {
         if (!registrationUser.Login.IsNumberPhone())
-            return new BaseResponse<string, RegistrationCode> { Message = "Некорректный формат номера телефона", Successfully = false, Type = ResponseType.PhoneNumberNotValid, Status = 400, Errors = "Bad Request", Data = null };
+            return new BaseResponse<string, string> { Message = "Некорректный формат номера телефона", Successfully = false, Type = ResponseType.PhoneNumberNotValid, Status = 400, Errors = "Bad Request", Data = null };
         
         var person = await _authRepository.GetUserByPhoneNumberAsync(registrationUser.Login);
 
         if (person != null)
-            return ResponseFactory.PhoneNumberInUse<RegistrationCode>();
+            return ResponseFactory.PhoneNumberInUse<string>();
         
         var user = CreateUserEntity(registrationUser, userIpAddress);
         await _authRepository.AddUserAsync(user);
         var userData = AddUserDataEntity(registrationUser, user.PersonId);
+        await _otherPersonDataRepository.InitializePersonData(user.PersonId);
         await _authRepository.AddUserDataAsync(userData);
         await _authRepository.SaveChangesAsync();
         _ = AddUserToSearch(userData);
-            
-        var code = await _authRepository.GenerateCodeAndSaveAsync(user, userIpAddress);
-        var codeResult = new RegistrationCode { Code = code };
 
-        return ResponseFactory.Success("Пользователь успешно создан", codeResult);
+        return ResponseFactory.Success("Пользователь успешно создан", "Успешно");
     }
     
-    public async Task<BaseResponse<string, RegistrationCode>> AuthorizationUserAsync(string login, string password, string userIpAddress)
+    public async Task<BaseResponse<string, AuthTokens>> AuthorizationUserAsync(string login, string password, string userIpAddress, string publicKey, string userAgent, string? refreshToken = null)
     {
         if (await _authRepository.IsBlockedAsync(userIpAddress))
-            return ResponseFactory.TooManyRequests<RegistrationCode>();
+            return ResponseFactory.TooManyRequests<AuthTokens>();
 
         if (login.IsNumberPhone())
-            return await AuthorizeByPhoneAsync(login, password, userIpAddress);
+            return await AuthorizeByPhoneAsync(login, password, userIpAddress, publicKey, userAgent, refreshToken);
 
         if (login.IsEmail())
-            return ResponseFactory.EmailNotSupported<RegistrationCode>();
+            return ResponseFactory.EmailNotSupported<AuthTokens>();
 
-        return ResponseFactory.BadRequest<RegistrationCode>("Некорректный логин");
+        return ResponseFactory.BadRequest<AuthTokens>("Некорректный логин");
     }
     
     /// <summary>
@@ -78,7 +84,7 @@ public class AuthService: IAuthService
             NumberPhone = registrationUser.Login,
             PasswordVersion = 1,
             RegistrationIp = _encryptionService.Encrypt(userIpAddress),
-            AccountState = AccountState.Registration,
+            AccountState = AccountState.Active,
             RegistrationTime = DateTime.UtcNow
         };
         user.PasswordHash = _passwordHasher.HashPassword(user, registrationUser.Password);
@@ -116,40 +122,116 @@ public class AuthService: IAuthService
         };
         await _searchRepository.CreatePersonAsync(user);
     }
-    
+
     /// <summary>
     /// Авторизация по номеру телефона
     /// </summary>
     /// <param name="phone">Номер телефона</param>
     /// <param name="password">Пароль</param>
     /// <param name="userIpAddress">IP адрес</param>
+    /// <param name="publicKey"></param>
+    /// <param name="userAgent"></param>
+    /// <param name="refreshToken"></param>
     /// <returns></returns>
-    private async Task<BaseResponse<string, RegistrationCode>> AuthorizeByPhoneAsync(string phone, string password, string userIpAddress)
+    private async Task<BaseResponse<string, AuthTokens>> AuthorizeByPhoneAsync(string phone, string password, string userIpAddress, string publicKey, string userAgent, string? refreshToken = null)
     {
         var person = await _authRepository.GetUserByPhoneNumberAsync(phone);
         if (person == null)
-            return ResponseFactory.PersonNotFound<RegistrationCode>();
-
-        if (person.AccountState == AccountState.Registration)
-            return ResponseFactory.AccountNotActivated<RegistrationCode>();
+            return ResponseFactory.PersonNotFound<AuthTokens>();
 
         if (person.AccountState == AccountState.Blocked)
-            return ResponseFactory.AccountBlocked<RegistrationCode>();
+            return ResponseFactory.AccountBlocked<AuthTokens>();
+        
+        if (await _authRepository.GetNumberSessionsAsync(person.PersonId) >= MaxDevice)
+            return ResponseFactory.Forbidden<AuthTokens>("Достигнуто максимальное количество устройств", ResponseType.DeviceLimitReached);
 
         if (!IsPasswordValid(person, password))
         {
             await _authRepository.IncrementLoginAttemptsAsync(userIpAddress);
             Metrics.TrackFailedLogin(userIpAddress);
-            return ResponseFactory.InvalidPassword<RegistrationCode>("Данный пароль не верен");
+            return ResponseFactory.InvalidPassword<AuthTokens>("Данный пароль не верен");
         }
-        
-        var code = await _authRepository.GenerateCodeAndSaveAsync(person, userIpAddress, _encryptionService.Decrypt(person.TotpCode!));
-        var codeResult = new RegistrationCode
-        {
-            Code = code
-        };
 
-        return ResponseFactory.Success("Последний шаг, подтвердите личность", codeResult);
+        // Восстановить сессию
+        if (refreshToken is not null)
+        {
+            var dataToken = _jwtTokenService.GetJwtTokenData(refreshToken);
+            if (dataToken.TokenType != TokenType.RefreshToken)
+                return new BaseResponse<string, AuthTokens> 
+                    { Message = "Не удалось проверить корректность jwt токена", Type = ResponseType.JwtTokenVerificationFailed, Errors = "Forbidden", Status = 403, Successfully = false, Data = null};
+
+            Sessions? session = await _authRepository.GetSessionByIdAsync(person.PersonId, dataToken.SessionId);
+            session.IsRevoked = false;
+            session.RevokedAt = null;
+            
+            await _authRepository.SaveChangesAsync();
+            await _otherPersonDataRepository.UpdatePublicKeyStatus(person.PersonId, session.DeviceId, true);
+
+            AuthTokens tokens = GenerateToken(person.PersonId, person.PasswordVersion, session);
+            return ResponseFactory.Success("Вы успешно авторизовались", tokens);
+        }
+        // Создать новую сессию, новый идентификатор устройства
+        else
+        {
+            string deviceId = Guid.NewGuid().ToString();
+            await _otherPersonDataRepository.AddPublicKey(person.PersonId, publicKey, deviceId);
+            
+            Sessions session = CreateSession(person.PersonId, userIpAddress, deviceId, userAgent);
+            await _authRepository.AddSessionAsync(session);
+            await _authRepository.SaveChangesAsync();
+            
+            AuthTokens tokens = GenerateToken(person.PersonId, person.PasswordVersion, session);
+            
+            return ResponseFactory.Success("Вы успешно авторизовались", tokens);
+        }
+    }
+    
+    private AuthTokens GenerateToken(string personId, int passwordVersion, Sessions session)
+    {
+        var tokens = _jwtTokenService.CreateJwtToken(
+            personId,
+            passwordVersion,
+            session.SessionId,
+            session.Id
+        );
+
+        var tokenResult = new AuthTokens
+        {
+            PersonId = personId,
+            DeviceId = session.DeviceId,
+            AccessToken = tokens.AccessToken,
+            RefreshToken = tokens.RefreshToken,
+            AccessTokenExpiration = DateTime.UtcNow.AddMinutes(JwtTokenService.AccessTokenLifetimeMinute)
+        };
+        return tokenResult;
+    }
+
+    /// <summary>
+    /// Создает объект сессии
+    /// </summary>
+    /// <param name="personId">Идентификатор пользователя</param>
+    /// <param name="ipAddress">IP адрес</param>
+    /// <param name="deviceId">Идентификатор устройства</param>
+    /// <param name="userAgent">User агенты пользователя</param>
+    /// <returns></returns>
+    private Sessions CreateSession(string personId, string ipAddress, string deviceId, string userAgent)
+    {
+        var parser = Parser.GetDefault();
+        var clientInfo = parser.Parse(userAgent);
+    
+        return new Sessions
+        {
+            PersonId = personId,
+            SessionId = Guid.NewGuid().ToString(),
+            IpAddress = _encryptionService.Encrypt(ipAddress),
+            Device = clientInfo.Device.ToString(),
+            DeviceId = deviceId,
+            Os = clientInfo.OS.ToString(),
+            Browser = clientInfo.UA.ToString(),
+            CreatedAt = DateTime.UtcNow,
+            LastUsedAt = DateTime.UtcNow,
+            IsRevoked = false
+        };
     }
 
     /// <summary>

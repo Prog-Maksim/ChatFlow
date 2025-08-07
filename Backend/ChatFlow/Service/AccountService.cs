@@ -62,42 +62,55 @@ public class AccountService
     /// <param name="newPassword">Новый пароль</param>
     /// <param name="userIpAddress">Ip адрес пользователя</param>
     /// <returns></returns>
-    public async Task<BaseResponse<string, RegistrationCode>> UpdatePassword(string accessToken, string oldPassword, string newPassword, string userIpAddress)
+    public async Task<BaseResponse<string, string>> UpdatePassword(string accessToken, string oldPassword, string newPassword, string userIpAddress)
     {
         if (await _authRepository.IsBlockedAsync(userIpAddress))
-            return ResponseFactory.TooManyRequests<RegistrationCode>();
+            return ResponseFactory.TooManyRequests<string>();
         
         var (isValid, dataToken) = await _tokenValidator.TryValidateTokenAsync(accessToken);
         if (!isValid)
-            return ResponseFactory.JwtTokenInvalid<RegistrationCode>();
+            return ResponseFactory.JwtTokenInvalid<string>();
             
         var person = await _authRepository.GetUserByIdAsync(dataToken!.PersonId);
         if (person is null)
-            return ResponseFactory.PersonNotFound<RegistrationCode>();
+            return ResponseFactory.PersonNotFound<string>();
         
         if (person.AccountState == AccountState.Blocked)
-            return ResponseFactory.AccountBlocked<RegistrationCode>();
+            return ResponseFactory.AccountBlocked<string>();
 
         if (person.PasswordHash is null)
         {
             _logger.LogWarning("У пользователя ({personId}) отсутствует пароль", person.PersonId);
-            return ResponseFactory.InvalidPassword<RegistrationCode>("Пароль не найден");
+            return ResponseFactory.InvalidPassword<string>("Пароль не найден");
         }
         
         if (_passwordHasher.VerifyHashedPassword(person, person.PasswordHash, oldPassword) != PasswordVerificationResult.Success)
         {
             await _authRepository.IncrementLoginAttemptsAsync(userIpAddress);
             Metrics.TrackFailedLogin(userIpAddress);
-            return ResponseFactory.InvalidPassword<RegistrationCode>("Данный пароль не верен");
+            return ResponseFactory.InvalidPassword<string>("Данный пароль не верен");
         }
             
         if (oldPassword == newPassword)
-            return ResponseFactory.InvalidPassword<RegistrationCode>("Данный пароль уже используется");
+            return ResponseFactory.InvalidPassword<string>("Данный пароль уже используется");
 
-        RegistrationCode? codeResult = await GenerateRegistrationCode(person, userIpAddress, _passwordHasher.HashPassword(person, newPassword))!;
-        
+        await UpdateUserPasswordAsync(person.PersonId, newPassword);
         await _sessionService.RevokeSession(accessToken);
-        return ResponseFactory.Success("Остался всего один шаг", codeResult!);
+        
+        return ResponseFactory.Success("Вы успешно обновили пароль", "успешно");
+    }
+    
+    /// <summary>
+    /// Обновляет пароль пользователя
+    /// </summary>
+    /// <param name="personId">Идентификатор пользователя</param>
+    /// <param name="newPassword">Новый пароль</param>
+    private async Task UpdateUserPasswordAsync(string personId, string newPassword)
+    {
+        var person = await _authRepository.GetUserByIdAsync(personId);
+        person.PasswordVersion++;
+        person.PasswordHash = newPassword;
+        await _authRepository.SaveChangesAsync();
     }
 
     /// <summary>
@@ -113,25 +126,5 @@ public class AccountService
         
         await _sessionService.RevokeSession(accessToken, dataToken!.SessionId);
         return ResponseFactory.Success("Пользователь успешно вышел из аккаунта", new RevokeSession { SessionId = dataToken.SessionId });
-    }
-
-    /// <summary>
-    /// Генерирует регистрационный код
-    /// </summary>
-    /// <param name="person">Объект пользователя</param>
-    /// <param name="ip">IP адрес пользователя</param>
-    /// <param name="passwordHash">Хеш пароля</param>
-    /// <returns></returns>
-    private async Task<RegistrationCode?> GenerateRegistrationCode(Persons person, string ip, string passwordHash)
-    {
-        if (person.TotpCode is null)
-            return null;
-        
-        var decryptedTotp = _encryptionService.Decrypt(person.TotpCode);
-        var code = await _authRepository.GeneratePasswordCodeAsync(person, ip, decryptedTotp, passwordHash);
-        return new RegistrationCode
-        {
-            Code = code
-        };
     }
 }

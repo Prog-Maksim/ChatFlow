@@ -57,14 +57,14 @@ public class TokenService: ITokenService
             session.Id,
             previousRefreshToken
         );
-
+    
         return new AuthTokens
         {
             PersonId = person.PersonId,
+            DeviceId = session.DeviceId,
             AccessToken = tokens.AccessToken,
             RefreshToken = tokens.RefreshToken,
-            AccessTokenExpiration = DateTime.UtcNow.AddMinutes(JwtTokenService.AccessTokenLifetimeMinute),
-            RefreshTokenExpiration = DateTime.UtcNow.AddDays(JwtTokenService.RefreshTokenLifetimeDay)
+            AccessTokenExpiration = DateTime.UtcNow.AddMinutes(JwtTokenService.AccessTokenLifetimeMinute)
         };
     }
 }

@@ -145,5 +145,15 @@ public enum ResponseType
     /// <summary>
     /// Публичные ключи не найдены
     /// </summary>
-    KeysNotFound
+    KeysNotFound,
+    
+    /// <summary>
+    /// Ключ не является публичным
+    /// </summary>
+    KeyIsNotPublic,
+    
+    /// <summary>
+    /// Ключ не является RSA
+    /// </summary>
+    KeyIsNotRSA,
 }

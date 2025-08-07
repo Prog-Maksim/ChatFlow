@@ -11,7 +11,7 @@ public interface IAuthService
     /// <param name="registrationUser">Данные о пользователе</param>
     /// <param name="userIpAddress">Ip адрес пользователя</param>
     /// <returns></returns>
-    public Task<BaseResponse<string, RegistrationCode>> RegistrationUserAsync(RegistrationUser registrationUser,
+    public Task<BaseResponse<string, string>> RegistrationUserAsync(RegistrationUser registrationUser,
         string userIpAddress);
 
     /// <summary>
@@ -20,7 +20,8 @@ public interface IAuthService
     /// <param name="login">Номер телефона или почта</param>
     /// <param name="password">Пароль</param>
     /// <param name="userIpAddress">Ip адрес пользователя</param>
+    /// <param name="publicKey">Публичный ключ пользователя</param>
+    /// <param name="refreshToken">Refresh токен</param>
     /// <returns></returns>
-    public Task<BaseResponse<string, RegistrationCode>> AuthorizationUserAsync(string login, string password,
-        string userIpAddress);
+    public Task<BaseResponse<string, string>> AuthorizationUserAsync(string login, string password, string userIpAddress, string publicKey, string? refreshToken = null);
 }

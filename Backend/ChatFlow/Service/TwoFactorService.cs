@@ -55,7 +55,7 @@ public class TwoFactorService: ITwoFactorService
         if (data == null)
             return ResponseFactory.NotFound<AuthTokens>("Вы не подключили сервис", ResponseType.ServiceNotConnected);
 
-        if (await _authRepository.GetNumberSessionsAsync(data.PersonId) >= 10)
+        if (await _authRepository.GetNumberSessionsAsync(data.PersonId) >= 3)
             return ResponseFactory.Forbidden<AuthTokens>("Достигнуто максимальное количество устройств", ResponseType.DeviceLimitReached);
             
         if (data.IpAddress != userIpAddress)

@@ -11,9 +11,4 @@ public enum AccountState
     /// Заблокированный
     /// </summary>
     Blocked,
-    
-    /// <summary>
-    /// Регистрация
-    /// </summary>
-    Registration
 }

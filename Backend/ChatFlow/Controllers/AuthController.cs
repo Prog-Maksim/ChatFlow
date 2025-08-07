@@ -27,9 +27,9 @@ public class AuthController(ILogger<AuthController> logger, IAuthService service
     /// <response code="400">Ошибка валидации данных</response>
     /// <response code="403">Номер телефона занят</response>
     [AllowAnonymous]
-    [ApiVersion("1.0")]
+    [ApiVersion("2.0")]
     [HttpPost("registration")]
-    [ProducesResponseType(typeof(BaseResponse<string, RegistrationCode>),StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(BaseResponse<string, string>),StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(BaseResponse<string, object>),StatusCodes.Status406NotAcceptable)]
     [ProducesResponseType(typeof(ValidationProblemDetails), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(BaseResponse<object, object>),StatusCodes.Status403Forbidden)]
@@ -110,7 +110,7 @@ public class AuthController(ILogger<AuthController> logger, IAuthService service
             return StatusCode(error.Status, error);
         }
         
-        var response = await service.AuthorizationUserAsync(authUser.Login, authUser.Password, userIpAddress);
+        var response = await service.AuthorizationUserAsync(authUser.Login, authUser.Password, userIpAddress, authUser.PublicKey, authUser.RefreshToken);
         
         if (!response.Successfully)
             return StatusCode(response.Status, response);

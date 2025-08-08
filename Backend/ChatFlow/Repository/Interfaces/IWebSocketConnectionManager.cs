@@ -1,4 +1,5 @@
 using System.Net.WebSockets;
+using ChatFlow.Models.DB;
 using ChatFlow.Models.DB.Other;
 using ChatFlow.Models.Other;
 
@@ -52,8 +53,17 @@ public interface IWebSocketConnectionManager
     /// <summary>
     /// Отправляет сообщение о том что был создан чат
     /// </summary>
-    /// <param name="chatId"></param>
-    /// <param name="personId"></param>
+    /// <param name="chatId">Идентификатор чата</param>
+    /// <param name="personId">Идентификатор пользователя</param>
     /// <returns></returns>
     public Task SendMessageCreateChat(string chatId, string personId);
+
+    /// <summary>
+    /// Оповещает пользователей о миграции чата
+    /// </summary>
+    /// <param name="oldChatId">Старый идентификатор чата</param>
+    /// <param name="newChatId">Новый идентификатор чата</param>
+    /// <param name="chatData">Данные чата</param>
+    /// <returns></returns>
+    public Task SendMessageMigrationChat(string oldChatId, string newChatId, ChatDocument chatData);
 }

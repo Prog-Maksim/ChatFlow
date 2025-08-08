@@ -1,6 +1,7 @@
 using System.Collections.Concurrent;
 using System.Net.WebSockets;
 using System.Text.Json;
+using ChatFlow.Models.DB;
 using ChatFlow.Models.DB.Other;
 using ChatFlow.Models.Other;
 using ChatFlow.Monitoring;
@@ -162,6 +163,51 @@ public class WebSocketConnectionManager: IWebSocketConnectionManager
             else
             {
                 _logger.LogDebug($"Сессия {sessionId} пользователя {personId} не в состоянии Open");
+            }
+        }
+    }
+
+    public async Task SendMessageMigrationChat(string oldChatId, string newChatId, ChatDocument chatData)
+    {
+        foreach (var personData in chatData.Persons)
+        {
+            string personId = personData.PersonId;
+            
+            if (!_connections.TryGetValue(personId, out var sessions))
+            {
+                _logger.LogDebug($"Нет активных сессий для пользователя: {personId}");
+                return;
+            }
+            
+            var message = new
+            {
+                Type = "migration-chat",
+                OldChatId = oldChatId,
+                NewChatId = newChatId,
+                NewChatType = chatData.Type
+            };
+
+            var buffer = System.Text.Encoding.UTF8.GetBytes(JsonSerializer.Serialize(message));
+            var segment = new ArraySegment<byte>(buffer);
+
+            foreach (var (sessionId, socket) in sessions)
+            {
+                if (socket.State == WebSocketState.Open)
+                {
+                    try
+                    {
+                        await socket.SendAsync(segment, WebSocketMessageType.Text, true, CancellationToken.None);
+                        _logger.LogDebug($"Сообщение отправлено пользователю {personId}, сессия {sessionId}");
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogError(ex, $"Ошибка при отправке сообщения пользователю {personId}, сессия {sessionId}");
+                    }
+                }
+                else
+                {
+                    _logger.LogDebug($"Сессия {sessionId} пользователя {personId} не в состоянии Open");
+                }
             }
         }
     }

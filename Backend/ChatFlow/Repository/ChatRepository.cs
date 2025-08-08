@@ -52,7 +52,7 @@ public class ChatRepository: IChatRepository
         );
 
         var chat = await _chatCollections.Find(filter).FirstOrDefaultAsync();
-        return chat?.Id;
+        return chat?.ChatId;
     }
 
     public async Task<ChatDocument> CreatePrivateChatAsync(string personId, string otherPersonId)
@@ -96,5 +96,23 @@ public class ChatRepository: IChatRepository
         var filter = Builders<ChatDocument>.Filter.Eq(c => c.ChatId, chatId);
         var chat = await _chatCollections.Find(filter).FirstOrDefaultAsync();
         return chat;
+    }
+
+    public async Task<bool> UpdateChatDataAsync(string chatId, ChatDocument chatDocument)
+    {
+        try
+        {
+            var filter = Builders<ChatDocument>.Filter.Eq(c => c.ChatId, chatId);
+
+            // Полная замена документа
+            var result = await _chatCollections.ReplaceOneAsync(filter, chatDocument);
+
+            return result.ModifiedCount > 0;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Ошибка при обновлении чата {ChatId}", chatId);
+            return false;
+        }
     }
 }

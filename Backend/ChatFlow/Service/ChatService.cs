@@ -15,14 +15,16 @@ public class ChatService: IChatService
     private readonly IChatRepository _chatRepository;
     private readonly IProfileRepository _profileRepository;
     private readonly IWebSocketConnectionManager _manager;
+    private readonly IMessageRepository _messageRepository;
 
-    public ChatService(ILogger<ChatService> logger, IChatRepository chatRepository, IJwtTokenService jwtTokenService, IProfileRepository profileRepository, IWebSocketConnectionManager manager)
+    public ChatService(ILogger<ChatService> logger, IChatRepository chatRepository, IJwtTokenService jwtTokenService, IProfileRepository profileRepository, IWebSocketConnectionManager manager, IMessageRepository messageRepository)
     {
         _logger = logger;
         _chatRepository = chatRepository;
         _profileRepository = profileRepository;
         _jwtTokenService = jwtTokenService;
         _manager = manager;
+        _messageRepository = messageRepository;
     }
 
     public async Task<BaseResponse<string, string>> CreatePrivateChat(string accessToken, string otherPersonId)
@@ -55,7 +57,57 @@ public class ChatService: IChatService
             Data = chatData.ChatId
         };
     }
-    
+
+    public async Task<BaseResponse<string, string>> CreateSecretPrivateChat(string accessToken, string otherPersonId)
+    {
+        var dataToken = _jwtTokenService.GetJwtTokenData(accessToken);
+        if (!await _jwtTokenService.ValidateJwtAccessToken(dataToken))
+            return new BaseResponse<string, string> 
+                { Message = "Не удалось проверить корректность jwt токена", Type = ResponseType.JwtTokenVerificationFailed, Errors = "Forbidden", Status = 403, Successfully = false, Data = null};
+
+        if (!await _chatRepository.PersonExistAsync(otherPersonId))
+            return new BaseResponse<string, string> 
+                { Message = "Невозможно создать чат", Type = ResponseType.PersonNotFound, Successfully = false, Status = 404, Errors = "Not Found", Data = null };
+
+        string? chatId = await _chatRepository.GetPrivateChatIdAsync(dataToken.PersonId, otherPersonId);
+        
+        if (chatId is null)
+            return new BaseResponse<string, string>
+            {
+                Message = "Сначала нужно создать личный чат", Type = ResponseType.ChatNotFound, Successfully = true, Status = 403, Errors = "Forbidden",
+                Data = null
+            };
+        
+        ChatDocument data = (await _chatRepository.GetChat(chatId))!;
+        
+        if (data.Type == ChatType.SecretPrivate)
+            return new BaseResponse<string, string>
+            {
+                Message = "Секретный чат", Type = ResponseType.Ok, Successfully = true, Status = 200, Errors = null,
+                Data = chatId
+            };
+        
+        data.Type = ChatType.SecretPrivate;
+        
+        string oldChatId = data.ChatId;
+        string newChatId = Guid.NewGuid().ToString();
+        
+        data.ChatId = newChatId;
+        data.CreatedAt = DateTime.UtcNow;
+        
+        await _messageRepository.DeleteAllMessageAsync(oldChatId);
+        await _chatRepository.UpdateChatDataAsync(oldChatId, data);
+
+        await _manager.SendMessageMigrationChat(oldChatId, newChatId, data);
+        
+        return new BaseResponse<string, string>
+        {
+            Message = "Секретный чат", Type = ResponseType.Ok, Successfully = true, Status = 200, Errors = null,
+            Data = newChatId
+        };
+    }
+
+
     public async Task<BaseResponse<string, Chats>> GetChats(string accessToken)
     {
         var dataToken = _jwtTokenService.GetJwtTokenData(accessToken);
@@ -214,9 +266,6 @@ public class ChatService: IChatService
                     break;
                 case ChatType.Channel:
                     channelChatsResult.Add(MapTo<ChannelChat>(chat));
-                    break;
-                case ChatType.Bot:
-                    botChatsResult.Add(MapTo<Bots>(chat));
                     break;
             }
         }

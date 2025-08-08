@@ -200,7 +200,7 @@ public class AuthService: IAuthService
             await _authRepository.SaveChangesAsync();
             await _otherPersonDataRepository.UpdatePublicKeyStatus(person.PersonId, session.DeviceId, true);
 
-            AuthTokens tokens = GenerateToken(person.PersonId, person.PasswordVersion, session);
+            AuthTokens tokens = GenerateToken(person.PersonId, person.PasswordVersion, dataToken.DeviceId, session);
             return ResponseFactory.Success("Вы успешно авторизовались", tokens);
         }
         // Создать новую сессию, новый идентификатор устройства
@@ -219,18 +219,19 @@ public class AuthService: IAuthService
             await _authRepository.AddSessionAsync(session);
             await _authRepository.SaveChangesAsync();
             
-            AuthTokens tokens = GenerateToken(person.PersonId, person.PasswordVersion, session);
+            AuthTokens tokens = GenerateToken(person.PersonId, person.PasswordVersion, deviceId, session);
             
             return ResponseFactory.Success("Вы успешно авторизовались", tokens);
         }
     }
     
-    private AuthTokens GenerateToken(string personId, int passwordVersion, Sessions session)
+    private AuthTokens GenerateToken(string personId, int passwordVersion, string deviceId, Sessions session)
     {
         var tokens = _jwtTokenService.CreateJwtToken(
             personId,
             passwordVersion,
             session.SessionId,
+            deviceId,
             session.Id
         );
 

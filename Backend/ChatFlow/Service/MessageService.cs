@@ -232,14 +232,6 @@ public class MessageService: IMessageService
                 Successfully = false, Data = null
             };
         
-        if (chat.Type != ChatType.Private && chat.Type != ChatType.Bot && chat.Persons.FirstOrDefault(p => p.PersonId != dataToken.PersonId) is { Role: Roles.User })
-            return new BaseResponse<string, MessageData>
-            {
-                Message = "У вас нет прав на выполнение данного действия в чате",
-                Type = ResponseType.UserNotInChat, Errors = "Forbidden", Status = 403,
-                Successfully = false, Data = null
-            };
-        
         var message = await _messageRepository.GetMessageByIdAsync(chatId, messageId);
         
         if (message is null)
@@ -296,14 +288,6 @@ public class MessageService: IMessageService
             return new BaseResponse<string, MessageData>
             {
                 Message = "Вы не состоите в этом чате",
-                Type = ResponseType.UserNotInChat, Errors = "Forbidden", Status = 403,
-                Successfully = false, Data = null
-            };
-        
-        if (chat.Type != ChatType.Private && chat.Type != ChatType.Bot && chat.Persons.FirstOrDefault(p => p.PersonId != dataToken.PersonId) is { Role: Roles.User })
-            return new BaseResponse<string, MessageData>
-            {
-                Message = "У вас нет прав на выполнение данного действия в чате",
                 Type = ResponseType.UserNotInChat, Errors = "Forbidden", Status = 403,
                 Successfully = false, Data = null
             };

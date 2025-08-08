@@ -129,4 +129,39 @@ public class MessageRepository: IMessageRepository
             return false;
         }
     }
+
+    public async Task<bool> DeleteMessageAsync(string chatId, string messageId)
+    {
+        try
+        {
+            var filter = Builders<MessageData>.Filter.And(
+                Builders<MessageData>.Filter.Eq(m => m.ChatId, chatId),
+                Builders<MessageData>.Filter.Eq(m => m.MessageId, messageId)
+            );
+
+            var result = await _messageCollections.DeleteOneAsync(filter);
+            return result.DeletedCount > 0;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Ошибка при удалении сообщения {MessageId} в чате {ChatId}", messageId, chatId);
+            return false;
+        }
+    }
+
+    public async Task<bool> DeleteAllMessageAsync(string chatId)
+    {
+        try
+        {
+            var filter = Builders<MessageData>.Filter.Eq(m => m.ChatId, chatId);
+
+            var result = await _messageCollections.DeleteManyAsync(filter);
+            return result.DeletedCount > 0;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Ошибка при удалении всех сообщений в чате {ChatId}", chatId);
+            return false;
+        }
+    }
 }

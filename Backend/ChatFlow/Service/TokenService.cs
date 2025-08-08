@@ -54,6 +54,7 @@ public class TokenService: ITokenService
             person.PersonId,
             person.PasswordVersion,
             session.SessionId,
+            session.DeviceId,
             session.Id,
             previousRefreshToken
         );

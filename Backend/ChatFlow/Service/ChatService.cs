@@ -99,6 +99,7 @@ public class ChatService: IChatService
         await _chatRepository.UpdateChatDataAsync(oldChatId, data);
 
         await _manager.SendMessageMigrationChat(oldChatId, newChatId, data);
+        MetricsRegistry.ChatCreationCounter.WithLabels("secret").Inc();
         
         return new BaseResponse<string, string>
         {

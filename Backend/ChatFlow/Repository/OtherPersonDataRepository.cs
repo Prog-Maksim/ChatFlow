@@ -2,6 +2,7 @@ using ChatFlow.Models.DB;
 using ChatFlow.Models.Response;
 using ChatFlow.Repository.Interfaces;
 using MongoDB.Driver;
+using StackExchange.Redis;
 
 namespace ChatFlow.Repository;
 
@@ -9,13 +10,16 @@ public class OtherPersonDataRepository: IOtherPersonDataRepository
 {
     private readonly ILogger<OtherPersonDataRepository> _logger;
     private readonly IMongoCollection<OtherPersonData> _userCollections;
+    private readonly IDatabase _redis;
 
-    public OtherPersonDataRepository(IMongoClient client, ILogger<OtherPersonDataRepository> logger)
+    public OtherPersonDataRepository(IMongoClient client, ILogger<OtherPersonDataRepository> logger, IConnectionMultiplexer connectionMultiplexer)
     {
         _logger = logger;
         
         var emojiDatabase = client.GetDatabase("PersonData");
         _userCollections = emojiDatabase.GetCollection<OtherPersonData>("Data");
+
+        _redis = connectionMultiplexer.GetDatabase();
     }
 
     public async Task InitializePersonData(string personId)
@@ -58,6 +62,8 @@ public class OtherPersonDataRepository: IOtherPersonDataRepository
             update,
             new UpdateOptions { IsUpsert = true }
         );
+        
+        await _redis.KeyDeleteAsync($"public_keys:{personId}");
     }
     
     public async Task UpdatePublicKeyStatus(string personId, string deviceId, bool newStatus)

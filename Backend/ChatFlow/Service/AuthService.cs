@@ -5,6 +5,7 @@ using ChatFlow.Models.DB;
 using ChatFlow.Models.Other;
 using ChatFlow.Models.Requests;
 using ChatFlow.Models.Response;
+using ChatFlow.Monitoring;
 using ChatFlow.Repository;
 using ChatFlow.Repository.Interfaces;
 using ChatFlow.Scripts;
@@ -53,6 +54,7 @@ public class AuthService: IAuthService
         await _authRepository.AddUserDataAsync(userData);
         await _authRepository.SaveChangesAsync();
         _ = AddUserToSearch(userData);
+        MetricsRegistry.UserCreationCounter.Inc();
 
         return ResponseFactory.Success("Пользователь успешно создан", "Успешно");
     }

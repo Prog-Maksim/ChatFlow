@@ -4,6 +4,7 @@ using ChatFlow.Models.DB;
 using ChatFlow.Models.DB.Other;
 using ChatFlow.Models.Requests;
 using ChatFlow.Models.Response;
+using ChatFlow.Monitoring;
 using ChatFlow.Repository.Interfaces;
 using ChatFlow.Scripts;
 using ChatFlow.Service.Interfaces;
@@ -80,6 +81,7 @@ public class MessageService: IMessageService
         await SaveMessageAsync(copyMessage, cancellationToken);
         
         _ = SendMessageUsersAsync(chat.Persons, messageData);
+        MetricsRegistry.MessagesSentCounter.Inc();
 
         return new BaseResponse<string, SendMessage>
         {

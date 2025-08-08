@@ -35,4 +35,23 @@ public static class MetricsRegistry
                     "Longitude"
                 ]
             });
+    
+    // Создание пользователей
+    public static readonly Counter UserCreationCounter = Metrics.CreateCounter(
+        "users_created_total",
+        "Общее количество созданных пользователей");
+
+    // Создание чатов (по типам)
+    public static readonly Counter ChatCreationCounter = Metrics.CreateCounter(
+        "chats_created_total",
+        "Общее количество созданных чатов по типам",
+        new CounterConfiguration
+        {
+            LabelNames = [ "type" ]
+        });
+
+    // Отправка сообщений
+    public static readonly Counter MessagesSentCounter = Metrics.CreateCounter(
+        "messages_sent_total",
+        "Общее количество отправленных сообщений по типам");
 }

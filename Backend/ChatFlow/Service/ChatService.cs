@@ -1,6 +1,7 @@
 using ChatFlow.Enums;
 using ChatFlow.Models.DB;
 using ChatFlow.Models.Response;
+using ChatFlow.Monitoring;
 using ChatFlow.Repository.Interfaces;
 using ChatFlow.Scripts;
 using ChatFlow.Service.Interfaces;
@@ -46,6 +47,7 @@ public class ChatService: IChatService
         
         ChatDocument chatData = await _chatRepository.CreatePrivateChatAsync(dataToken.PersonId, otherPersonId);
         _ = SendMessageToCreateChatAsync(chatData.Persons, chatData.ChatId);
+        MetricsRegistry.ChatCreationCounter.WithLabels("private").Inc();
         
         return new BaseResponse<string, string>
         {

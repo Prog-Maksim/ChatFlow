@@ -175,7 +175,7 @@ public class ChatService: IChatService
             };
 
         ChatInfo info;
-        if (chat.Type == ChatType.Private)
+        if (chat.Type == ChatType.Private || chat.Type == ChatType.SecretPrivate)
         {
             var personId = chat.Persons.FirstOrDefault(p => p.PersonId != dataToken.PersonId);
             

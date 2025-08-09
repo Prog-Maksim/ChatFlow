@@ -28,6 +28,16 @@ public interface IMessageRepository
     /// <param name="offset"></param>
     /// <returns></returns>
     public Task<(List<MessageData> Messages, long TotalCount)> GetMessagesByChatIdAsync(string chatId, int limit, int offset);
+
+    /// <summary>
+    /// Выдает сообщения в чате с пагинацией
+    /// </summary>
+    /// <param name="chatId"></param>
+    /// <param name="limit"></param>
+    /// <param name="offset"></param>
+    /// <param name="deviceId">Идентификатор устройства</param>
+    public Task<(List<MessageData> Messages, long TotalCount)> GetMessagesByChatIdAsync(
+        string chatId, int limit, int offset, string deviceId);
     
     /// <summary>
     /// Возвращает последнее сообщение чата
@@ -35,6 +45,13 @@ public interface IMessageRepository
     /// <param name="chatId">Идентификатор чата</param>
     /// <returns></returns>
     public Task<MessageData?> GetLastMessageAsync(string chatId);
+
+    /// <summary>
+    /// Возвращает последнее сообщение чата
+    /// </summary>
+    /// <param name="chatId">Идентификатор чата</param>
+    /// <param name="deviceId">Идентификатор устройства</param>
+    public Task<MessageData?> GetLastMessageAsync(string chatId, string deviceId);
     
     /// <summary>
     /// Возвращает данные сообщения

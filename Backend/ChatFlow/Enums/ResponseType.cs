@@ -103,6 +103,11 @@ public enum ResponseType
     MessageNotModified,
     
     /// <summary>
+    /// У сообщения отсутствуют обязательные поля
+    /// </summary>
+    MessageRequiredFields,
+    
+    /// <summary>
     /// Файл слишком большой
     /// </summary>
     FileTooLarge,
@@ -156,4 +161,9 @@ public enum ResponseType
     /// Ключ не является RSA
     /// </summary>
     KeyIsNotRSA,
+    
+    /// <summary>
+    /// Неизвестный чат
+    /// </summary>
+    UnknownChatType
 }

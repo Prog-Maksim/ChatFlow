@@ -30,6 +30,9 @@ public class MessageData: ICloneable
     [JsonIgnore(Condition = JsonIgnoreCondition.Always)]
     public string? HMAC { get; set; }
     
+    public string? Signature { get; set; }
+    public Dictionary<string, string>? Keys { get; set; }
+    
     public object Clone()
     {
         return this.MemberwiseClone();

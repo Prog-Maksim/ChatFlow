@@ -121,4 +121,34 @@ public class ChatsController(ILogger<ChatsController> logger, IChatService servi
 
         return Ok(response);
     }
+    
+    /// <summary>
+    /// Очищает историю чата
+    /// </summary>
+    /// <param name="chatId">Идентификатор чата</param>
+    /// <returns></returns>
+    /// <response code="200">Успешно</response>
+    /// <response code="400">Не удалось очистить историю чата</response>
+    /// <response code="403">Пользователь не состоит в чате или токен не валиден</response>
+    /// <response code="404">Чат не найден</response>
+    [Authorize]
+    [ApiVersion("1.0")]
+    [HttpDelete("{chatId}/messages")]
+    [ProducesResponseType(typeof(BaseResponse<string, string>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(BaseResponse<string, string>), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(BaseResponse<string, string>), StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(typeof(BaseResponse<string, string>), StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> DeleteAllMessages(string chatId)
+    {
+        logger.LogInformation("Начало обработки запроса: (удаление истории чата)");
+        var authHeader = HttpContext.Request.Headers["Authorization"].ToString();
+        var token = authHeader.Substring("Bearer ".Length);
+        
+        var response = await service.DeleteAllMessages(token, chatId);
+
+        if (!response.Successfully)
+            return StatusCode(response.Status, response);
+
+        return Ok(response);
+    }
 }

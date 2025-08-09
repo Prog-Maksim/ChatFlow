@@ -2,6 +2,7 @@ using System.Net.WebSockets;
 using ChatFlow.Models.DB;
 using ChatFlow.Models.DB.Other;
 using ChatFlow.Models.Other;
+using ChatUser = ChatFlow.Models.DB.ChatUser;
 
 namespace ChatFlow.Repository.Interfaces;
 
@@ -66,4 +67,12 @@ public interface IWebSocketConnectionManager
     /// <param name="chatData">Данные чата</param>
     /// <returns></returns>
     public Task SendMessageMigrationChat(string oldChatId, string newChatId, ChatDocument chatData);
+
+    /// <summary>
+    /// Отправляет сообщение об очистке истории чата
+    /// </summary>
+    /// <param name="chatId">Идентификатор чата</param>
+    /// <param name="persons">Список пользователей</param>
+    /// <returns></returns>
+    public Task SendMessageDeleteHistoryChat(string chatId, List<ChatUser> persons);
 }

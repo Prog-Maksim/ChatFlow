@@ -16,8 +16,9 @@ public class ChatService: IChatService
     private readonly IProfileRepository _profileRepository;
     private readonly IWebSocketConnectionManager _manager;
     private readonly IMessageRepository _messageRepository;
+    private readonly IWebSocketConnectionManager _webSocketConnectionManager;
 
-    public ChatService(ILogger<ChatService> logger, IChatRepository chatRepository, IJwtTokenService jwtTokenService, IProfileRepository profileRepository, IWebSocketConnectionManager manager, IMessageRepository messageRepository)
+    public ChatService(ILogger<ChatService> logger, IChatRepository chatRepository, IJwtTokenService jwtTokenService, IProfileRepository profileRepository, IWebSocketConnectionManager manager, IMessageRepository messageRepository,  IWebSocketConnectionManager webSocketConnectionManager)
     {
         _logger = logger;
         _chatRepository = chatRepository;
@@ -25,6 +26,7 @@ public class ChatService: IChatService
         _jwtTokenService = jwtTokenService;
         _manager = manager;
         _messageRepository = messageRepository;
+        _webSocketConnectionManager = webSocketConnectionManager;
     }
 
     public async Task<BaseResponse<string, string>> CreatePrivateChat(string accessToken, string otherPersonId)
@@ -107,8 +109,7 @@ public class ChatService: IChatService
             Data = newChatId
         };
     }
-
-
+    
     public async Task<BaseResponse<string, Chats>> GetChats(string accessToken)
     {
         var dataToken = _jwtTokenService.GetJwtTokenData(accessToken);
@@ -220,7 +221,48 @@ public class ChatService: IChatService
             Data = info
         };
     }
-    
+
+    public async Task<BaseResponse<string, string>> DeleteAllMessages(string accessToken, string chatId)
+    {
+        var dataToken = _jwtTokenService.GetJwtTokenData(accessToken);
+        if (!await _jwtTokenService.ValidateJwtAccessToken(dataToken))
+            return CreateErrorResponse<string, string>("Не удалось проверить корректность jwt токена", ResponseType.JwtTokenVerificationFailed, 403, "Forbidden");
+        
+        ChatDocument? chat = await _messageRepository.GetChatAsync(chatId);
+        
+        if (chat is null)
+            return CreateErrorResponse<string, string>("Данный чат не найден", ResponseType.ChatNotFound, 404, "Not Found");
+
+        if (chat.Persons.All(p => p.PersonId != dataToken.PersonId))
+            return CreateErrorResponse<string, string>("Вы не состоите в этом чате", ResponseType.UserNotInChat, 403, "Forbidden");
+
+        bool success = await _messageRepository.DeleteAllMessageAsync(chatId);
+
+        if (!success)
+            return CreateErrorResponse<string, string>("История чата не удалена", ResponseType.MessageNotModified, 400, "Bad Request");
+
+        _ = _webSocketConnectionManager.SendMessageDeleteHistoryChat(chatId, chat.Persons);
+        
+        return new BaseResponse<string, string>
+        {
+            Message = "История чата успешно удалена",
+            Type = ResponseType.Ok, Status = 200, Successfully = true, Errors = null, Data = "Чат очищен"
+        };
+    }
+
+    private BaseResponse<TErrors, TData> CreateErrorResponse<TErrors, TData>(string message, ResponseType type, int status, TErrors errors)
+    {
+        return new BaseResponse<TErrors, TData>
+        {
+            Message = message,
+            Type = type,
+            Status = status,
+            Successfully = false,
+            Data = default,
+            Errors = errors
+        };
+    }
+
     
     private T MapTo<T>(ChatDocument chat) where T : BaseChat, new()
     {

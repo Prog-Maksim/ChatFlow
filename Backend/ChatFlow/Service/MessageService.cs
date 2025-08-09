@@ -335,7 +335,7 @@ public class MessageService: IMessageService
         return messageData;
     }
     
-    public List<MessageData> DecryptAndVerifyMany(List<MessageData> messages)
+    private List<MessageData> DecryptAndVerifyMany(List<MessageData> messages)
     {
         return messages
             .Select(DecryptAndVerify)

@@ -6,6 +6,7 @@ using ChatFlow.Models.DB.Other;
 using ChatFlow.Models.Other;
 using ChatFlow.Monitoring;
 using ChatFlow.Repository.Interfaces;
+using ChatUser = ChatFlow.Models.DB.ChatUser;
 
 namespace ChatFlow.Repository;
 
@@ -185,6 +186,49 @@ public class WebSocketConnectionManager: IWebSocketConnectionManager
                 OldChatId = oldChatId,
                 NewChatId = newChatId,
                 NewChatType = chatData.Type
+            };
+
+            var buffer = System.Text.Encoding.UTF8.GetBytes(JsonSerializer.Serialize(message));
+            var segment = new ArraySegment<byte>(buffer);
+
+            foreach (var (sessionId, socket) in sessions)
+            {
+                if (socket.State == WebSocketState.Open)
+                {
+                    try
+                    {
+                        await socket.SendAsync(segment, WebSocketMessageType.Text, true, CancellationToken.None);
+                        _logger.LogDebug($"Сообщение отправлено пользователю {personId}, сессия {sessionId}");
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogError(ex, $"Ошибка при отправке сообщения пользователю {personId}, сессия {sessionId}");
+                    }
+                }
+                else
+                {
+                    _logger.LogDebug($"Сессия {sessionId} пользователя {personId} не в состоянии Open");
+                }
+            }
+        }
+    }
+
+    public async Task SendMessageDeleteHistoryChat(string chatId, List<ChatUser> persons)
+    {
+        foreach (var personData in persons)
+        {
+            string personId = personData.PersonId;
+            
+            if (!_connections.TryGetValue(personId, out var sessions))
+            {
+                _logger.LogDebug($"Нет активных сессий для пользователя: {personId}");
+                return;
+            }
+            
+            var message = new
+            {
+                Type = "delete-history-chat",
+                ChatId = chatId
             };
 
             var buffer = System.Text.Encoding.UTF8.GetBytes(JsonSerializer.Serialize(message));

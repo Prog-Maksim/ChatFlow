@@ -10,4 +10,6 @@ public interface IChatService
     public Task<BaseResponse<string, Chats>> GetChats(string accessToken);
 
     public Task<BaseResponse<string, ChatInfo>> GetChatInfo(string accessToken, string chatId);
+    
+    public Task<BaseResponse<string, string>> DeleteAllMessages(string accessToken, string chatId);
 }

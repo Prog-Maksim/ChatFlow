@@ -153,8 +153,7 @@ public class MessagesController(ILogger<MessagesController> logger, IMessageServ
     [ProducesResponseType(typeof(BaseResponse<string, SendMessage>), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(BaseResponse<string, SendMessage>), StatusCodes.Status403Forbidden)]
     [ProducesResponseType(typeof(BaseResponse<string, SendMessage>), StatusCodes.Status404NotFound)]
-    public async Task<IActionResult> SendMessage([Required] [FromBody] Message message,
-        CancellationToken cancellationToken)
+    public async Task<IActionResult> SendMessage([Required] [FromBody] Message message, CancellationToken cancellationToken)
     {
         logger.LogInformation("Начало обработки запроса: (отправка сообщения)");
         try
@@ -173,5 +172,63 @@ public class MessagesController(ILogger<MessagesController> logger, IMessageServ
         {
             return StatusCode(StatusCodes.Status499ClientClosedRequest, "Client closed request");
         }
+    }
+
+    /// <summary>
+    /// Позволяет отметить сообщение как прочитанное
+    /// </summary>
+    /// <param name="chatId">Идентификатор чата</param>
+    /// <param name="messageId">Идентификатор сообщения</param>
+    /// <returns></returns>
+    /// <response code="200">Успешно</response>
+    /// <response code="403">Невалидный jwt токен, не состоишь в чате, запрещено для этого сообщения</response>
+    /// <response code="404">Чат или сообщение не найден</response>
+    [Authorize]
+    [ApiVersion("1.0")]
+    [HttpPost("{chatId}/messages/{messageId}/view")]
+    [ProducesResponseType(typeof(BaseResponse<string, SendMessage>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(BaseResponse<string, SendMessage>), StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(typeof(BaseResponse<string, SendMessage>), StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> SetMessageTheView(string chatId, string messageId)
+    {
+        logger.LogInformation("Начало обработки запроса: (прочтение сообщения)");
+        var authHeader = HttpContext.Request.Headers["Authorization"].ToString();
+        var token = authHeader.Substring("Bearer ".Length);
+
+        var response = await service.DeleteMessageAsync(token, chatId, messageId);
+
+        if (!response.Successfully)
+            return StatusCode(response.Status, response);
+
+        return NoContent();
+    }
+    
+    /// <summary>
+    /// Выдача просмотров для сообщения
+    /// </summary>
+    /// <param name="chatId">Идентификатор чата</param>
+    /// <param name="messageId">Идентификатор сообщения</param>
+    /// <returns></returns>
+    /// <response code="200">Успешно</response>
+    /// <response code="403">Невалидный jwt токен, не состоишь в чате, запрещено для этого сообщения</response>
+    /// <response code="404">Чат или сообщение не найден</response>
+    [Authorize]
+    [ApiVersion("1.0")]
+    [HttpGet("{chatId}/messages/{messageId}/view")]
+    [ProducesResponseType(typeof(BaseResponse<string, SendMessage>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(BaseResponse<string, SendMessage>), StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(typeof(BaseResponse<string, SendMessage>), StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> GetMessageTheView(string chatId, string messageId)
+    {
+        logger.LogInformation("Начало обработки запроса: (выдача просмотров для сообщения)");
+        var authHeader = HttpContext.Request.Headers["Authorization"].ToString();
+        var token = authHeader.Substring("Bearer ".Length);
+
+        var response = await service.DeleteMessageAsync(token, chatId, messageId);
+
+        if (!response.Successfully)
+            return StatusCode(response.Status, response);
+
+        return NoContent();
     }
 }

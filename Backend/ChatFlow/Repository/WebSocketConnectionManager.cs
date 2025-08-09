@@ -255,4 +255,45 @@ public class WebSocketConnectionManager: IWebSocketConnectionManager
             }
         }
     }
+
+    public async Task SendMessageViewMessage(string chatId, string messageId, ChatUser person)
+    {
+        string personId = person.PersonId;
+            
+        if (!_connections.TryGetValue(personId, out var sessions))
+        {
+            _logger.LogDebug($"Нет активных сессий для пользователя: {personId}");
+            return;
+        }
+            
+        var message = new
+        {
+            Type = "view-message",
+            ChatId = chatId,
+            MessageId = messageId
+        };
+
+        var buffer = System.Text.Encoding.UTF8.GetBytes(JsonSerializer.Serialize(message));
+        var segment = new ArraySegment<byte>(buffer);
+
+        foreach (var (sessionId, socket) in sessions)
+        {
+            if (socket.State == WebSocketState.Open)
+            {
+                try
+                {
+                    await socket.SendAsync(segment, WebSocketMessageType.Text, true, CancellationToken.None);
+                    _logger.LogDebug($"Сообщение отправлено пользователю {personId}, сессия {sessionId}");
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, $"Ошибка при отправке сообщения пользователю {personId}, сессия {sessionId}");
+                }
+            }
+            else
+            {
+                _logger.LogDebug($"Сессия {sessionId} пользователя {personId} не в состоянии Open");
+            }
+        }
+    }
 }

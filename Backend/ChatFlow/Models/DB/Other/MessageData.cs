@@ -33,6 +33,8 @@ public class MessageData: ICloneable
     public string? Signature { get; set; }
     public Dictionary<string, string>? Keys { get; set; }
     
+    public List<ReadMessage> Views {  get; set; } = new List<ReadMessage>();
+    
     public object Clone()
     {
         return this.MemberwiseClone();

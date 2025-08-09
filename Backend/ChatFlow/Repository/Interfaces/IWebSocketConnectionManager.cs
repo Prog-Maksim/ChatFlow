@@ -75,4 +75,13 @@ public interface IWebSocketConnectionManager
     /// <param name="persons">Список пользователей</param>
     /// <returns></returns>
     public Task SendMessageDeleteHistoryChat(string chatId, List<ChatUser> persons);
+
+    /// <summary>
+    /// Отправляет сообщение о прочтении сообщения
+    /// </summary>
+    /// <param name="chatId">Идентификатор чата</param>
+    /// <param name="messageId">Идентификатор сообщения</param>
+    /// <param name="person">Объект пользователя</param>
+    /// <returns></returns>
+    public Task SendMessageViewMessage(string chatId, string messageId, ChatUser person);
 }

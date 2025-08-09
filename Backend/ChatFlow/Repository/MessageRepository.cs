@@ -164,19 +164,11 @@ public class MessageRepository: IMessageRepository
     {
         try
         {
-            var filter = Builders<MessageData>.Filter.Eq(m => m.MessageId, updatedMessage.MessageId);
-
-            var update = Builders<MessageData>.Update
-                .Set(m => m.Text, updatedMessage.Text)
-                .Set(m => m.Updated, DateTime.UtcNow)
-                .Set(m => m.MessageType, updatedMessage.MessageType)
-                .Set(m => m.IV, updatedMessage.IV)
-                .Set(m => m.HMAC, updatedMessage.HMAC)
-                .Set(m => m.Signature, updatedMessage.Signature)
-                .Set(m => m.Keys,  updatedMessage.Keys);
-
-            var result = await _messageCollections.UpdateOneAsync(filter, update);
-
+            updatedMessage.Updated = DateTime.UtcNow;
+            var result = await _messageCollections.ReplaceOneAsync(
+                m => m.MessageId == updatedMessage.MessageId,
+                updatedMessage
+            );
             return result.ModifiedCount > 0;
         }
         catch (Exception ex)

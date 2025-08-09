@@ -98,6 +98,11 @@ public enum ResponseType
     MessageNotFound,
     
     /// <summary>
+    /// Ошибка установки прочтения сообщения
+    /// </summary>
+    MessageView,
+    
+    /// <summary>
     /// Сообщение не обновлено
     /// </summary>
     MessageNotModified,

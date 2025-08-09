@@ -1,5 +1,4 @@
 using System.Security.Cryptography;
-using System.Text;
 using ChatFlow.Enums;
 using ChatFlow.Models.DB;
 using ChatFlow.Models.DB.Other;
@@ -18,16 +17,18 @@ public class MessageService: IMessageService
     private readonly IMessageRepository _messageRepository;
     private readonly IJwtTokenService _jwtTokenService;
     private readonly IWebSocketConnectionManager _manager;
+    private readonly IProfileRepository _profileRepository;
     
     private readonly byte[] _aesKey;   // 32 байта
     private readonly byte[] _hmacKey;  // 32 байта
 
-    public MessageService(IConfiguration configuration, ILogger<MessageService> logger, IMessageRepository messageRepository, IJwtTokenService jwtTokenService, IWebSocketConnectionManager manager)
+    public MessageService(IConfiguration configuration, ILogger<MessageService> logger, IMessageRepository messageRepository, IJwtTokenService jwtTokenService, IWebSocketConnectionManager manager, IProfileRepository profileRepository)
     {
         _logger = logger;
         _messageRepository = messageRepository;
         _jwtTokenService = jwtTokenService;
         _manager = manager;
+        _profileRepository = profileRepository;
         
         _aesKey = Convert.FromBase64String(configuration["MessageEncryption:Key"]);
         _hmacKey = Convert.FromBase64String(configuration["MessageEncryption:Hmac"]);
@@ -299,7 +300,101 @@ public class MessageService: IMessageService
         
         return CreateErrorResponse<string, MessageData>("Неизвестный тип чата", ResponseType.UnknownChatType, 400, "Bad Request");
     }
-    
+
+    public async Task<BaseResponse<string, string>> ReadTheMessage(string accessToken, string chatId, string messageId)
+    {
+        var dataToken = _jwtTokenService.GetJwtTokenData(accessToken);
+        if (!await _jwtTokenService.ValidateJwtAccessToken(dataToken))
+            return CreateErrorResponse<string, string>("Не удалось проверить корректность jwt токена", ResponseType.JwtTokenVerificationFailed, 403, "Forbidden");
+
+        ChatDocument? chat = await _messageRepository.GetChatAsync(chatId);
+        
+        if (chat is null)
+            return CreateErrorResponse<string, string>("Данный чат не найден", ResponseType.ChatNotFound, 404, "Not Found");
+
+        if (chat.Persons.All(p => p.PersonId != dataToken.PersonId))
+            return CreateErrorResponse<string, string>("Вы не состоите в этом чате", ResponseType.UserNotInChat, 403, "Forbidden");
+        
+        var message = await _messageRepository.GetMessageByIdAsync(chatId, messageId);
+        
+        if (message is null)
+            return CreateErrorResponse<string, string>("Сообщение не найдено!", ResponseType.MessageNotFound, 404, "Not Found");
+        
+        if (message.OwnerId == dataToken.PersonId)
+            return CreateErrorResponse<string, string>("Вы не можете это сделать для своего сообщения", ResponseType.MessageView, 403, "Forbidden");
+        
+        if (message.Views.All(v => v.PersonId != dataToken.PersonId))
+        {
+            ReadMessage readMessage = new ReadMessage
+            {
+                PersonId = dataToken.PersonId,
+                TimeStamp = DateTime.UtcNow
+            };
+            message.Views.Add(readMessage);
+            await _messageRepository.UpdateMessageAsync(message);
+            await _manager.SendMessageViewMessage(chatId, messageId, chat.Persons.FirstOrDefault(p => p.PersonId == message.OwnerId)!);
+        }
+        
+        return new BaseResponse<string, string>
+        {
+            Message = "Успешно",
+            Type = ResponseType.Ok,
+            Status = 200,
+            Successfully = true,
+            Data = "Отмечено как прочтенное"
+        };
+    }
+
+    public async Task<BaseResponse<string, List<PersonReadMessage>>> GetTheReadMessage(string accessToken, string chatId, string messageId)
+    {
+        var dataToken = _jwtTokenService.GetJwtTokenData(accessToken);
+        if (!await _jwtTokenService.ValidateJwtAccessToken(dataToken))
+            return CreateErrorResponse<string, List<PersonReadMessage>>("Не удалось проверить корректность jwt токена", ResponseType.JwtTokenVerificationFailed, 403, "Forbidden");
+
+        ChatDocument? chat = await _messageRepository.GetChatAsync(chatId);
+        
+        if (chat is null)
+            return CreateErrorResponse<string, List<PersonReadMessage>>("Данный чат не найден", ResponseType.ChatNotFound, 404, "Not Found");
+
+        if (chat.Persons.All(p => p.PersonId != dataToken.PersonId))
+            return CreateErrorResponse<string, List<PersonReadMessage>>("Вы не состоите в этом чате", ResponseType.UserNotInChat, 403, "Forbidden");
+        
+        var message = await _messageRepository.GetMessageByIdAsync(chatId, messageId);
+        
+        if (message is null)
+            return CreateErrorResponse<string, List<PersonReadMessage>>("Сообщение не найдено!", ResponseType.MessageNotFound, 404, "Not Found");
+        
+        if (message.OwnerId != dataToken.PersonId)
+            return CreateErrorResponse<string, List<PersonReadMessage>>("Вы не можете это сделать для чужого сообщения", ResponseType.MessageView, 403, "Forbidden");
+
+        List<PersonReadMessage> readMessages = new List<PersonReadMessage>();
+        foreach (var personRead in message.Views)
+        {
+            var result = await _profileRepository.GetSummaryPersonDataAsync(personRead.PersonId);
+            
+            if (result is null)
+                continue;
+            
+            PersonReadMessage read = new PersonReadMessage
+            {
+                Name = result.Name,
+                Surname = result.Surname,
+                ProfileImageUrl = result.Image?.Url,
+                TimeStamp = personRead.TimeStamp,
+            };
+            readMessages.Add(read);
+        }
+        
+        return new BaseResponse<string, List<PersonReadMessage>>
+        {
+            Message = "Успешно",
+            Type = ResponseType.Ok,
+            Status = 200,
+            Successfully = true,
+            Data = readMessages
+        };
+    }
+
     private (string EncryptedText, string IV, string Hmac) EncryptAndSign(string plainText)
     {
         // Генерация IV

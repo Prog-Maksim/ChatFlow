@@ -18,7 +18,7 @@ public class UserController(ILogger<UserController> logger, IImageService servic
     /// <param name="personId"></param>
     /// <returns></returns>
     [ApiVersion("1.0")]
-    [HttpPost("{personId}/public-keys")]
+    [HttpGet("{personId}/public-keys")]
     public async Task<IActionResult> UploadAvatar(string personId)
     {
         logger.LogInformation("Начало обработки запроса: (выдача публичных ключей)");

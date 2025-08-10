@@ -24,7 +24,7 @@ public class ChatsController(ILogger<ChatsController> logger, IChatService servi
     [Authorize]
     [ApiVersion("1.0")]
     [HttpPost("private")]
-    [ProducesResponseType(typeof(BaseResponse<string, string>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(BaseResponse<string, CreateChat>), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(BaseResponse<string, string>), StatusCodes.Status403Forbidden)]
     [ProducesResponseType(typeof(BaseResponse<string, string>), StatusCodes.Status404NotFound)]
     public async Task<IActionResult> CreatePrivateChat([Required] [FromBody] CreatePrivateChatRequest request)
@@ -42,8 +42,11 @@ public class ChatsController(ILogger<ChatsController> logger, IChatService servi
     }
     
     /// <summary>
-    /// Создает защищенный чат между двумя пользователями
+    /// Создает секретный чат между двумя пользователями
     /// </summary>
+    /// <remarks>
+    /// Секретный чат создается поверх личного, заменяя его
+    /// </remarks>
     /// <param name="request">Идентификатор второго пользователя</param>
     /// <returns></returns>
     /// <response code="200">Успешно</response>
@@ -51,8 +54,8 @@ public class ChatsController(ILogger<ChatsController> logger, IChatService servi
     /// <response code="404">Невозможно создать чат</response>
     [Authorize]
     [ApiVersion("1.0")]
-    [HttpPost("private/e2ee")]
-    [ProducesResponseType(typeof(BaseResponse<string, string>), StatusCodes.Status200OK)]
+    [HttpPost("secret")]
+    [ProducesResponseType(typeof(BaseResponse<string, CreateChat>), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(BaseResponse<string, string>), StatusCodes.Status403Forbidden)]
     [ProducesResponseType(typeof(BaseResponse<string, string>), StatusCodes.Status404NotFound)]
     public async Task<IActionResult> CreateSecretPrivateChat([Required] [FromBody] CreatePrivateChatRequest request)

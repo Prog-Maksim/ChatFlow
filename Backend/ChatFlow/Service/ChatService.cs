@@ -29,52 +29,52 @@ public class ChatService: IChatService
         _webSocketConnectionManager = webSocketConnectionManager;
     }
 
-    public async Task<BaseResponse<string, string>> CreatePrivateChat(string accessToken, string otherPersonId)
+    public async Task<BaseResponse<string, CreateChat>> CreatePrivateChat(string accessToken, string otherPersonId)
     {
         var dataToken = _jwtTokenService.GetJwtTokenData(accessToken);
         if (!await _jwtTokenService.ValidateJwtAccessToken(dataToken))
-            return new BaseResponse<string, string> 
+            return new BaseResponse<string, CreateChat> 
                 { Message = "Не удалось проверить корректность jwt токена", Type = ResponseType.JwtTokenVerificationFailed, Errors = "Forbidden", Status = 403, Successfully = false, Data = null};
 
         if (!await _chatRepository.PersonExistAsync(otherPersonId))
-            return new BaseResponse<string, string> 
+            return new BaseResponse<string, CreateChat> 
                 { Message = "Невозможно создать чат", Type = ResponseType.PersonNotFound, Successfully = false, Status = 404, Errors = "Not Found", Data = null };
         
         string? chatId = await _chatRepository.GetPrivateChatIdAsync(dataToken.PersonId, otherPersonId);
 
         if (chatId is not null)
-            return new BaseResponse<string, string>
+            return new BaseResponse<string, CreateChat>
             {
                 Message = "Личный чат", Type = ResponseType.Ok, Successfully = true, Status = 200, Errors = null,
-                Data = chatId
+                Data = new CreateChat {ChatId = chatId}
             };
         
         ChatDocument chatData = await _chatRepository.CreatePrivateChatAsync(dataToken.PersonId, otherPersonId);
         _ = SendMessageToCreateChatAsync(chatData.Persons, chatData.ChatId);
         MetricsRegistry.ChatCreationCounter.WithLabels("private").Inc();
         
-        return new BaseResponse<string, string>
+        return new BaseResponse<string, CreateChat>
         {
             Message = "Создан чат", Type = ResponseType.Ok, Successfully = true, Status = 200, Errors = null,
-            Data = chatData.ChatId
+            Data = new CreateChat { ChatId = chatData.ChatId }
         };
     }
 
-    public async Task<BaseResponse<string, string>> CreateSecretPrivateChat(string accessToken, string otherPersonId)
+    public async Task<BaseResponse<string, CreateChat>> CreateSecretPrivateChat(string accessToken, string otherPersonId)
     {
         var dataToken = _jwtTokenService.GetJwtTokenData(accessToken);
         if (!await _jwtTokenService.ValidateJwtAccessToken(dataToken))
-            return new BaseResponse<string, string> 
+            return new BaseResponse<string, CreateChat> 
                 { Message = "Не удалось проверить корректность jwt токена", Type = ResponseType.JwtTokenVerificationFailed, Errors = "Forbidden", Status = 403, Successfully = false, Data = null};
 
         if (!await _chatRepository.PersonExistAsync(otherPersonId))
-            return new BaseResponse<string, string> 
+            return new BaseResponse<string, CreateChat> 
                 { Message = "Невозможно создать чат", Type = ResponseType.PersonNotFound, Successfully = false, Status = 404, Errors = "Not Found", Data = null };
 
         string? chatId = await _chatRepository.GetPrivateChatIdAsync(dataToken.PersonId, otherPersonId);
         
         if (chatId is null)
-            return new BaseResponse<string, string>
+            return new BaseResponse<string, CreateChat>
             {
                 Message = "Сначала нужно создать личный чат", Type = ResponseType.ChatNotFound, Successfully = true, Status = 403, Errors = "Forbidden",
                 Data = null
@@ -83,10 +83,10 @@ public class ChatService: IChatService
         ChatDocument data = (await _chatRepository.GetChat(chatId))!;
         
         if (data.Type == ChatType.SecretPrivate)
-            return new BaseResponse<string, string>
+            return new BaseResponse<string, CreateChat>
             {
                 Message = "Секретный чат", Type = ResponseType.Ok, Successfully = true, Status = 200, Errors = null,
-                Data = chatId
+                Data = new CreateChat { ChatId = chatId }
             };
         
         data.Type = ChatType.SecretPrivate;
@@ -103,10 +103,10 @@ public class ChatService: IChatService
         await _manager.SendMessageMigrationChat(oldChatId, newChatId, data);
         MetricsRegistry.ChatCreationCounter.WithLabels("secret").Inc();
         
-        return new BaseResponse<string, string>
+        return new BaseResponse<string, CreateChat>
         {
             Message = "Секретный чат", Type = ResponseType.Ok, Successfully = true, Status = 200, Errors = null,
-            Data = newChatId
+            Data = new CreateChat { ChatId = newChatId}
         };
     }
     

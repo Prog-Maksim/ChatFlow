@@ -36,7 +36,6 @@ public class MessageService: IMessageService
         _hmacKey = Convert.FromBase64String(configuration["MessageEncryption:Hmac"]);
     }
     
-    // TODO: Удалить пользователя из списка скрытых чатов если ему написал пользователь
     public async Task<BaseResponse<string, SendMessage>> SendMessageAsync(string accessToken, Message message, CancellationToken cancellationToken)
     {
         var dataToken = _jwtTokenService.GetJwtTokenData(accessToken);
@@ -111,7 +110,7 @@ public class MessageService: IMessageService
         switch (chat.Type)
         {
             case ChatType.Private:
-                (messages, totalCount) = await _messageRepository.GetMessagesByChatIdAsync(chatId, limit, offset);
+                (messages, totalCount) = await _messageRepository.GetMessagesByChatIdAsync(chatId, limit, offset, dataToken.PersonId);
                 if (messages.Count == 0)
                     return CreateErrorResponse<string, MessagesPagination>("Сообщения не найдены!", ResponseType.MessageNotFound, 404, "Not Found");
                 messages = DecryptAndVerifyMany(messages);
@@ -185,7 +184,7 @@ public class MessageService: IMessageService
         MessageData? message = null;
         if (chat.Type == ChatType.Private)
         {
-            message = await _messageRepository.GetLastMessageAsync(chatId);
+            message = await _messageRepository.GetLastMessageAsync(chatId, dataToken.PersonId);
 
             if (message is null)
                 return CreateErrorResponse<string, MessageData>("Сообщения не найдены!", ResponseType.MessageNotFound, 404, "Not Found");
@@ -222,7 +221,7 @@ public class MessageService: IMessageService
         if (chat.Persons.All(p => p.PersonId != dataToken.PersonId))
             return CreateErrorResponse<string, MessageData>("Вы не состоите в этом чате", ResponseType.UserNotInChat, 403, "Forbidden");
         
-        var message = await _messageRepository.GetMessageByIdAsync(chatId, messageId);
+        var message = await _messageRepository.GetMessageByIdAsync(chatId, messageId, dataToken.PersonId);
         
         if (message is null)
             return CreateErrorResponse<string, MessageData>("Сообщение не найдено!", ResponseType.MessageNotFound, 404, "Not Found");
@@ -254,7 +253,7 @@ public class MessageService: IMessageService
         if (chat.Persons.All(p => p.PersonId != dataToken.PersonId))
             return CreateErrorResponse<string, MessageData>("Вы не состоите в этом чате", ResponseType.UserNotInChat, 403, "Forbidden");
         
-        var message = await _messageRepository.GetMessageByIdAsync(chatId, messageId);
+        var message = await _messageRepository.GetMessageByIdAsync(chatId, messageId, dataToken.PersonId);
         
         if (message is null)
             return CreateErrorResponse<string, MessageData>("Сообщение не найдено!", ResponseType.MessageNotFound, 404, "Not Found");
@@ -324,7 +323,7 @@ public class MessageService: IMessageService
         if (chat.Persons.All(p => p.PersonId != dataToken.PersonId))
             return CreateErrorResponse<string, string>("Вы не состоите в этом чате", ResponseType.UserNotInChat, 403, "Forbidden");
         
-        var message = await _messageRepository.GetMessageByIdAsync(chatId, messageId);
+        var message = await _messageRepository.GetMessageByIdAsync(chatId, messageId, dataToken.PersonId);
         
         if (message is null)
             return CreateErrorResponse<string, string>("Сообщение не найдено!", ResponseType.MessageNotFound, 404, "Not Found");
@@ -368,7 +367,7 @@ public class MessageService: IMessageService
         if (chat.Persons.All(p => p.PersonId != dataToken.PersonId))
             return CreateErrorResponse<string, List<PersonReadMessage>>("Вы не состоите в этом чате", ResponseType.UserNotInChat, 403, "Forbidden");
         
-        var message = await _messageRepository.GetMessageByIdAsync(chatId, messageId);
+        var message = await _messageRepository.GetMessageByIdAsync(chatId, messageId, dataToken.PersonId);
         
         if (message is null)
             return CreateErrorResponse<string, List<PersonReadMessage>>("Сообщение не найдено!", ResponseType.MessageNotFound, 404, "Not Found");

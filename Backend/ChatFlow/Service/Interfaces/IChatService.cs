@@ -34,14 +34,15 @@ public interface IChatService
     /// <param name="chatId">Идентификатор чата</param>
     /// <returns></returns>
     public Task<BaseResponse<string, ChatInfo>> GetChatInfo(string accessToken, string chatId);
-    
+
     /// <summary>
     /// Очищает историю чата
     /// </summary>
     /// <param name="accessToken">Access токен</param>
     /// <param name="chatId">Идентификатор чата</param>
+    /// <param name="isAll">Удалить для всех</param>
     /// <returns></returns>
-    public Task<BaseResponse<string, string>> DeleteAllMessages(string accessToken, string chatId);
+    public Task<BaseResponse<string, string>> DeleteAllMessages(string accessToken, string chatId, bool isAll = false);
 
     /// <summary>
     /// Удаляет чат

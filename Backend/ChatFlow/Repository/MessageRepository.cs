@@ -34,14 +34,20 @@ public class MessageRepository: IMessageRepository
         await _messageCollections.InsertOneAsync(message,null, token);
     }
     
-    public async Task<(List<MessageData> Messages, long TotalCount)> GetMessagesByChatIdAsync(string chatId, int limit, int offset)
+    public async Task<(List<MessageData> Messages, long TotalCount)> GetMessagesByChatIdAsync(string chatId, int limit, int offset, string personId)
     {
         try
         {
+            var chat = await GetChatAsync(chatId);
+            chat!.ClearedMessagesForUsers.TryGetValue(personId, out var clearedAt);
+            
             var filter = Builders<MessageData>.Filter.And(
                 Builders<MessageData>.Filter.Eq(x => x.ChatId, chatId),
             Builders<MessageData>.Filter.Ne(x => x.MessageType, MessageStatus.Deleted)
                 );
+            
+            if (clearedAt != default)
+                filter &= Builders<MessageData>.Filter.Gt(x => x.Created, clearedAt);
 
             var totalCount = await _messageCollections.CountDocumentsAsync(filter);
 
@@ -61,16 +67,21 @@ public class MessageRepository: IMessageRepository
         }
     }
     
-    public async Task<(List<MessageData> Messages, long TotalCount)> GetMessagesByChatIdAsync(
-        string chatId, int limit, int offset, string deviceId)
+    public async Task<(List<MessageData> Messages, long TotalCount)> GetMessagesByChatIdAsync(string chatId, int limit, int offset, string deviceId, string personId)
     {
         try
         {
+            var chat = await GetChatAsync(chatId);
+            chat!.ClearedMessagesForUsers.TryGetValue(personId, out var clearedAt);
+            
             var filter = Builders<MessageData>.Filter.And(
                 Builders<MessageData>.Filter.Eq(x => x.ChatId, chatId),
                 Builders<MessageData>.Filter.Ne(x => x.MessageType, MessageStatus.Deleted),
                 Builders<MessageData>.Filter.Exists($"Keys.{deviceId}")
             );
+            
+            if (clearedAt != default)
+                filter &= Builders<MessageData>.Filter.Gt(x => x.Created, clearedAt);
 
             var totalCount = await _messageCollections.CountDocumentsAsync(filter);
 
@@ -90,14 +101,20 @@ public class MessageRepository: IMessageRepository
         }
     }
 
-    public async Task<MessageData?> GetLastMessageAsync(string chatId)
+    public async Task<MessageData?> GetLastMessageAsync(string chatId, string personId)
     {
         try
         {
+            var chat = await GetChatAsync(chatId);
+            chat!.ClearedMessagesForUsers.TryGetValue(personId, out var clearedAt);
+            
             var filter = Builders<MessageData>.Filter.And(
                 Builders<MessageData>.Filter.Eq(x => x.ChatId, chatId),
                 Builders<MessageData>.Filter.Ne(x => x.MessageType, MessageStatus.Deleted)
             );
+            
+            if (clearedAt != default)
+                filter &= Builders<MessageData>.Filter.Gt(x => x.Created, clearedAt);
             
             var messages = await _messageCollections
                 .Find(filter)
@@ -113,15 +130,21 @@ public class MessageRepository: IMessageRepository
         }
     }
 
-    public async Task<MessageData?> GetLastMessageAsync(string chatId, string deviceId)
+    public async Task<MessageData?> GetLastMessageAsync(string chatId, string deviceId, string personId)
     {
         try
         {
+            var chat = await GetChatAsync(chatId);
+            chat!.ClearedMessagesForUsers.TryGetValue(personId, out var clearedAt);
+            
             var filter = Builders<MessageData>.Filter.And(
                 Builders<MessageData>.Filter.Eq(x => x.ChatId, chatId),
                 Builders<MessageData>.Filter.Ne(x => x.MessageType, MessageStatus.Deleted),
                 Builders<MessageData>.Filter.Exists($"Keys.{deviceId}")
             );
+            
+            if (clearedAt != default)
+                filter &= Builders<MessageData>.Filter.Gt(x => x.Created, clearedAt);
 
             var message = await _messageCollections
                 .Find(filter)
@@ -137,16 +160,22 @@ public class MessageRepository: IMessageRepository
             return null;
         }
     }
-
-    public async Task<MessageData?> GetMessageByIdAsync(string chatId, string messageId)
+    
+    public async Task<MessageData?> GetMessageByIdAsync(string chatId, string messageId, string personId)
     {
         try
         {
+            var chat = await GetChatAsync(chatId);
+            chat!.ClearedMessagesForUsers.TryGetValue(personId, out var clearedAt);
+            
             var filter = Builders<MessageData>.Filter.And(
                 Builders<MessageData>.Filter.Eq(x => x.ChatId, chatId),
                 Builders<MessageData>.Filter.Eq(x => x.MessageId, messageId),
                 Builders<MessageData>.Filter.Ne(x => x.MessageType, MessageStatus.Deleted)
             );
+            
+            if (clearedAt != default)
+                filter &= Builders<MessageData>.Filter.Gt(x => x.Created, clearedAt);
             
             var message = await _messageCollections
                 .Find(filter).FirstOrDefaultAsync();

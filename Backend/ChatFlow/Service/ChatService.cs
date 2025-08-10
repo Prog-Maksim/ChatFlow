@@ -159,7 +159,6 @@ public class ChatService: IChatService
         };
     }
     
-    // TODO: Вот тут
     public async Task<BaseResponse<string, ChatInfo>> GetChatInfo(string accessToken, string chatId)
     {
         var dataToken = _jwtTokenService.GetJwtTokenData(accessToken);
@@ -179,8 +178,7 @@ public class ChatService: IChatService
                 Errors = null,
                 Data = null
             };
-
-        // TODO: возможно убрать ограничение на пользователей, сделать общедоступной
+        
         if (chat.Persons.All(p => p.PersonId != dataToken.PersonId))
             return new BaseResponse<string, ChatInfo>
             {
@@ -239,7 +237,7 @@ public class ChatService: IChatService
         };
     }
 
-    public async Task<BaseResponse<string, string>> DeleteAllMessages(string accessToken, string chatId)
+    public async Task<BaseResponse<string, string>> DeleteAllMessages(string accessToken, string chatId, bool isAll = false)
     {
         var dataToken = _jwtTokenService.GetJwtTokenData(accessToken);
         if (!await _jwtTokenService.ValidateJwtAccessToken(dataToken))
@@ -253,7 +251,14 @@ public class ChatService: IChatService
         if (chat.Persons.All(p => p.PersonId != dataToken.PersonId))
             return CreateErrorResponse<string, string>("Вы не состоите в этом чате", ResponseType.UserNotInChat, 403, "Forbidden");
 
-        bool success = await _messageRepository.DeleteAllMessageAsync(chatId);
+        bool success = false;
+        if (isAll || chat.Type == ChatType.SecretPrivate)
+            success = await _messageRepository.DeleteAllMessageAsync(chatId);
+        else
+        {
+            chat.ClearedMessagesForUsers[dataToken.PersonId] = DateTime.UtcNow;
+            await _chatRepository.UpdateChatDataAsync(chatId, chat);
+        }
 
         if (!success)
             return CreateErrorResponse<string, string>("История чата не удалена", ResponseType.MessageNotModified, 400, "Bad Request");

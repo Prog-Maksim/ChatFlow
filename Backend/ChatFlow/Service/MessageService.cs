@@ -15,6 +15,7 @@ public class MessageService: IMessageService
 {
     private readonly ILogger<MessageService> _logger;
     private readonly IMessageRepository _messageRepository;
+    private readonly IChatRepository _chatRepository;
     private readonly IJwtTokenService _jwtTokenService;
     private readonly IWebSocketConnectionManager _manager;
     private readonly IProfileRepository _profileRepository;
@@ -22,10 +23,11 @@ public class MessageService: IMessageService
     private readonly byte[] _aesKey;   // 32 байта
     private readonly byte[] _hmacKey;  // 32 байта
 
-    public MessageService(IConfiguration configuration, ILogger<MessageService> logger, IMessageRepository messageRepository, IJwtTokenService jwtTokenService, IWebSocketConnectionManager manager, IProfileRepository profileRepository)
+    public MessageService(IConfiguration configuration, ILogger<MessageService> logger, IMessageRepository messageRepository, IChatRepository chatRepository, IJwtTokenService jwtTokenService, IWebSocketConnectionManager manager, IProfileRepository profileRepository)
     {
         _logger = logger;
         _messageRepository = messageRepository;
+        _chatRepository = chatRepository;
         _jwtTokenService = jwtTokenService;
         _manager = manager;
         _profileRepository = profileRepository;
@@ -34,6 +36,7 @@ public class MessageService: IMessageService
         _hmacKey = Convert.FromBase64String(configuration["MessageEncryption:Hmac"]);
     }
     
+    // TODO: Удалить пользователя из списка скрытых чатов если ему написал пользователь
     public async Task<BaseResponse<string, SendMessage>> SendMessageAsync(string accessToken, Message message, CancellationToken cancellationToken)
     {
         var dataToken = _jwtTokenService.GetJwtTokenData(accessToken);
@@ -42,7 +45,7 @@ public class MessageService: IMessageService
         
         ChatDocument? chat = await _messageRepository.GetChatAsync(message.ChatId);
         
-        if (chat is null)
+        if (chat is null || chat.HiddenForUsers.Contains(dataToken.PersonId))
             return CreateErrorResponse<string, SendMessage>("Данный чат не найден", ResponseType.ChatNotFound, 404, "Not Found");
         
         if (chat.Persons.All(p => p.PersonId != dataToken.PersonId))
@@ -70,6 +73,12 @@ public class MessageService: IMessageService
                 
             await _messageRepository.SaveMessageAsync(messageData, cancellationToken);
         }
+
+        if (chat.Type is ChatType.Private or ChatType.SecretPrivate && chat.HiddenForUsers.Count == 0)
+        {
+            chat.HiddenForUsers.Clear();
+            _ = _chatRepository.UpdateChatDataAsync(chat.ChatId, chat);
+        }
         
         _ = SendMessageUsersAsync(chat.Persons, messageData);
         MetricsRegistry.MessagesSentCounter.Inc();
@@ -90,7 +99,7 @@ public class MessageService: IMessageService
         
         ChatDocument? chat = await _messageRepository.GetChatAsync(chatId);
         
-        if (chat is null)
+        if (chat is null || chat.HiddenForUsers.Contains(dataToken.PersonId))
             return CreateErrorResponse<string, MessagesPagination>("Данный чат не найден", ResponseType.ChatNotFound, 404, "Not Found");
 
         if (chat.Persons.All(p => p.PersonId != dataToken.PersonId))
@@ -167,7 +176,7 @@ public class MessageService: IMessageService
         
         ChatDocument? chat = await _messageRepository.GetChatAsync(chatId);
         
-        if (chat is null)
+        if (chat is null || chat.HiddenForUsers.Contains(dataToken.PersonId))
             return CreateErrorResponse<string, MessageData>("Данный чат не найден", ResponseType.ChatNotFound, 404, "Not Found");
 
         if (chat.Persons.All(p => p.PersonId != dataToken.PersonId))
@@ -207,7 +216,7 @@ public class MessageService: IMessageService
         
         ChatDocument? chat = await _messageRepository.GetChatAsync(chatId);
         
-        if (chat is null)
+        if (chat is null || chat.HiddenForUsers.Contains(dataToken.PersonId))
             return CreateErrorResponse<string, MessageData>("Данный чат не найден", ResponseType.ChatNotFound, 404, "Not Found");
 
         if (chat.Persons.All(p => p.PersonId != dataToken.PersonId))
@@ -239,7 +248,7 @@ public class MessageService: IMessageService
 
         ChatDocument? chat = await _messageRepository.GetChatAsync(chatId);
         
-        if (chat is null)
+        if (chat is null || chat.HiddenForUsers.Contains(dataToken.PersonId))
             return CreateErrorResponse<string, MessageData>("Данный чат не найден", ResponseType.ChatNotFound, 404, "Not Found");
 
         if (chat.Persons.All(p => p.PersonId != dataToken.PersonId))
@@ -309,7 +318,7 @@ public class MessageService: IMessageService
 
         ChatDocument? chat = await _messageRepository.GetChatAsync(chatId);
         
-        if (chat is null)
+        if (chat is null || chat.HiddenForUsers.Contains(dataToken.PersonId))
             return CreateErrorResponse<string, string>("Данный чат не найден", ResponseType.ChatNotFound, 404, "Not Found");
 
         if (chat.Persons.All(p => p.PersonId != dataToken.PersonId))
@@ -353,7 +362,7 @@ public class MessageService: IMessageService
 
         ChatDocument? chat = await _messageRepository.GetChatAsync(chatId);
         
-        if (chat is null)
+        if (chat is null || chat.HiddenForUsers.Contains(dataToken.PersonId))
             return CreateErrorResponse<string, List<PersonReadMessage>>("Данный чат не найден", ResponseType.ChatNotFound, 404, "Not Found");
 
         if (chat.Persons.All(p => p.PersonId != dataToken.PersonId))

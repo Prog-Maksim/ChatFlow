@@ -48,4 +48,11 @@ public interface IChatRepository
     /// <param name="chatDocument">Информация чата</param>
     /// <returns></returns>
     public Task<bool> UpdateChatDataAsync(string chatId, ChatDocument chatDocument);
+    
+    /// <summary>
+    /// Удаляет чат
+    /// </summary>
+    /// <param name="chatId">Идентификатор чата</param>
+    /// <returns></returns>
+    public Task<bool> DeleteChatAsync(string chatId);
 }

@@ -43,11 +43,20 @@ public class ChatService: IChatService
         string? chatId = await _chatRepository.GetPrivateChatIdAsync(dataToken.PersonId, otherPersonId);
 
         if (chatId is not null)
+        {
+            ChatDocument? chat = await _chatRepository.GetChat(chatId);
+            if (chat!.HiddenForUsers.Contains(dataToken.PersonId))
+            {
+                chat.HiddenForUsers.Remove(dataToken.PersonId);
+                await _chatRepository.UpdateChatDataAsync(chatId, chat);
+            }
+            
             return new BaseResponse<string, CreateChat>
             {
                 Message = "Личный чат", Type = ResponseType.Ok, Successfully = true, Status = 200, Errors = null,
-                Data = new CreateChat {ChatId = chatId}
+                Data = new CreateChat { ChatId = chatId }
             };
+        }
         
         ChatDocument chatData = await _chatRepository.CreatePrivateChatAsync(dataToken.PersonId, otherPersonId);
         _ = SendMessageToCreateChatAsync(chatData.Persons, chatData.ChatId);
@@ -81,6 +90,13 @@ public class ChatService: IChatService
             };
         
         ChatDocument data = (await _chatRepository.GetChat(chatId))!;
+        
+        if (data.HiddenForUsers.Contains(dataToken.PersonId))
+            return new BaseResponse<string, CreateChat>
+            {
+                Message = "Сначала нужно создать личный чат", Type = ResponseType.ChatNotFound, Successfully = true, Status = 403, Errors = "Forbidden",
+                Data = null
+            };
         
         if (data.Type == ChatType.SecretPrivate)
             return new BaseResponse<string, CreateChat>
@@ -143,6 +159,7 @@ public class ChatService: IChatService
         };
     }
     
+    // TODO: Вот тут
     public async Task<BaseResponse<string, ChatInfo>> GetChatInfo(string accessToken, string chatId)
     {
         var dataToken = _jwtTokenService.GetJwtTokenData(accessToken);
@@ -152,7 +169,7 @@ public class ChatService: IChatService
 
         var chat = await _chatRepository.GetChat(chatId);
         
-        if (chat is null)
+        if (chat is null || chat.HiddenForUsers.Contains(dataToken.PersonId))
             return new BaseResponse<string, ChatInfo>
             {
                 Message = "Данный чат не найден",
@@ -230,7 +247,7 @@ public class ChatService: IChatService
         
         ChatDocument? chat = await _messageRepository.GetChatAsync(chatId);
         
-        if (chat is null)
+        if (chat is null || chat.HiddenForUsers.Contains(dataToken.PersonId))
             return CreateErrorResponse<string, string>("Данный чат не найден", ResponseType.ChatNotFound, 404, "Not Found");
 
         if (chat.Persons.All(p => p.PersonId != dataToken.PersonId))
@@ -249,6 +266,42 @@ public class ChatService: IChatService
             Type = ResponseType.Ok, Status = 200, Successfully = true, Errors = null, Data = "Чат очищен"
         };
     }
+    
+    public async Task<BaseResponse<string, string>> DeleteChat(string accessToken, string chatId, bool isAll = false)
+    {
+        var dataToken = _jwtTokenService.GetJwtTokenData(accessToken);
+        if (!await _jwtTokenService.ValidateJwtAccessToken(dataToken))
+            return CreateErrorResponse<string, string>("Не удалось проверить корректность jwt токена", ResponseType.JwtTokenVerificationFailed, 403, "Forbidden");
+        
+        ChatDocument? chat = await _messageRepository.GetChatAsync(chatId);
+        
+        if (chat is null || chat.HiddenForUsers.Contains(dataToken.PersonId))
+            return CreateErrorResponse<string, string>("Данный чат не найден", ResponseType.ChatNotFound, 404, "Not Found");
+
+        if (chat.Persons.All(p => p.PersonId != dataToken.PersonId))
+            return CreateErrorResponse<string, string>("Вы не состоите в этом чате", ResponseType.UserNotInChat, 403, "Forbidden");
+
+        if (isAll || chat.Type == ChatType.SecretPrivate)
+        {
+            await _chatRepository.DeleteChatAsync(chatId);
+            _ = _messageRepository.DeleteAllMessageAsync(chatId);
+        }
+        else
+        {
+            chat.HiddenForUsers.Add(dataToken.PersonId);
+            chat.ClearedMessagesForUsers[dataToken.PersonId] = DateTime.UtcNow;
+            await _chatRepository.UpdateChatDataAsync(chatId, chat);
+        }
+
+        return new BaseResponse<string, string>
+        {
+            Message = "Чат успешно удален",
+            Type = ResponseType.Ok,
+            Successfully = true,
+            Status = 200,
+            Data = chatId
+        };
+    }
 
     private BaseResponse<TErrors, TData> CreateErrorResponse<TErrors, TData>(string message, ResponseType type, int status, TErrors errors)
     {
@@ -262,7 +315,6 @@ public class ChatService: IChatService
             Errors = errors
         };
     }
-
     
     private T MapTo<T>(ChatDocument chat) where T : BaseChat, new()
     {

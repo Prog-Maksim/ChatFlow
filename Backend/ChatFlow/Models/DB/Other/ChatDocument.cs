@@ -7,9 +7,9 @@ namespace ChatFlow.Models.DB;
 
 public class ChatDocument
 {
-    [JsonIgnore(Condition = JsonIgnoreCondition.Always)]
     [BsonId]
     [BsonRepresentation(BsonType.ObjectId)]
+    [JsonIgnore(Condition = JsonIgnoreCondition.Always)]
     public string Id { get; set; } = ObjectId.GenerateNewId().ToString();
     
     /// <summary>
@@ -52,8 +52,14 @@ public class ChatDocument
     public List<ChatUser> Persons { get; set; } = new();
 
     /// <summary>
-    /// Токен бота
+    /// Время, когда пользователь скрыл чат для себя
+    /// Value = PersonId
     /// </summary>
-    [BsonIgnoreIfNull]
-    public string? BotToken { get; set; }
+    public List<string> HiddenForUsers { get; set; } = new();
+
+    /// <summary>
+    /// Время, когда пользователь удалил все сообщения чата для себя
+    /// Key = PersonId, Value = дата удаления сообщений
+    /// </summary>
+    public Dictionary<string, DateTime> ClearedMessagesForUsers { get; set; } = new();
 }

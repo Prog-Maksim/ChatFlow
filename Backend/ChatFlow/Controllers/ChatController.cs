@@ -154,4 +154,51 @@ public class ChatsController(ILogger<ChatsController> logger, IChatService servi
 
         return Ok(response);
     }
+
+    /// <summary>
+    /// Удаляет чат только для себя
+    /// </summary>
+    /// <remarks>
+    /// Если чат секретный, то чат удалится для обоих собеседников
+    /// </remarks>
+    /// <param name="chatId">Идентификатор чата</param>
+    /// <returns></returns>
+    [Authorize]
+    [ApiVersion("1.0")]
+    [HttpDelete("{chatId}")]
+    public async Task<IActionResult> DeleteChat(string chatId)
+    {
+        logger.LogInformation("Начало обработки запроса: (удаление чата)");
+        var authHeader = HttpContext.Request.Headers["Authorization"].ToString();
+        var token = authHeader.Substring("Bearer ".Length);
+        
+        var response = await service.DeleteChat(token, chatId);
+
+        if (!response.Successfully)
+            return StatusCode(response.Status, response);
+
+        return Ok(response);
+    }
+    
+    /// <summary>
+    /// Удаляет чат для обоих собеседников
+    /// </summary>
+    /// <param name="chatId">Идентификатор чата</param>
+    /// <returns></returns>
+    [Authorize]
+    [ApiVersion("1.0")]
+    [HttpDelete("{chatId}/all")]
+    public async Task<IActionResult> DeleteChatAllPersons(string chatId)
+    {
+        logger.LogInformation("Начало обработки запроса: (удаление чата для всех)");
+        var authHeader = HttpContext.Request.Headers["Authorization"].ToString();
+        var token = authHeader.Substring("Bearer ".Length);
+        
+        var response = await service.DeleteChat(token, chatId, true);
+
+        if (!response.Successfully)
+            return StatusCode(response.Status, response);
+
+        return Ok(response);
+    }
 }

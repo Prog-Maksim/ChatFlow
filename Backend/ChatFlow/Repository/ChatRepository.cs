@@ -84,11 +84,13 @@ public class ChatRepository: IChatRepository
     public async Task<List<ChatDocument>?> GetChats(string personId)
     {
         var filter = Builders<ChatDocument>.Filter.And(
-            Builders<ChatDocument>.Filter.ElemMatch(c => c.Persons, p => p.PersonId == personId)
+            Builders<ChatDocument>.Filter.ElemMatch(c => c.Persons, p => p.PersonId == personId),
+            Builders<ChatDocument>.Filter.Not(
+                Builders<ChatDocument>.Filter.AnyEq(c => c.HiddenForUsers, personId)
+            )
         );
 
-        var chat = await _chatCollections.Find(filter).ToListAsync();
-        return chat;
+        return await _chatCollections.Find(filter).ToListAsync();
     }
 
     public async Task<ChatDocument?> GetChat(string chatId)
@@ -112,6 +114,23 @@ public class ChatRepository: IChatRepository
         catch (Exception ex)
         {
             _logger.LogError(ex, "Ошибка при обновлении чата {ChatId}", chatId);
+            return false;
+        }
+    }
+
+    public async Task<bool> DeleteChatAsync(string chatId)
+    {
+        try
+        {
+            var filter = Builders<ChatDocument>.Filter.Eq(c => c.ChatId, chatId);
+
+            var result = await _chatCollections.DeleteOneAsync(filter);
+
+            return result.DeletedCount > 0;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Ошибка при удалении чата {ChatId}", chatId);
             return false;
         }
     }

@@ -20,10 +20,10 @@ public class JwtTokenService: IJwtTokenService
         _authRepository = authRepository;
     }
     
-    public const int AccessTokenLifetimeMinute = 5;
+    public const int AccessTokenLifetimeMinute = 60;
     public const int RefreshTokenLifetimeDay = 365;
     
-    public string GenerateJwtAccessToken(string personId, string sessionId, int id)
+    public string GenerateJwtAccessToken(string personId, string sessionId, string deviceId, int id)
     {        
         var claims = new List<Claim>
         {
@@ -31,6 +31,7 @@ public class JwtTokenService: IJwtTokenService
             new ("id", id.ToString()),
             new ("token_type", TokenType.AccessToken.ToString()),
             new ("session", sessionId),
+            new ("deviceId", deviceId),
             new (JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()),
         };
 
@@ -45,7 +46,7 @@ public class JwtTokenService: IJwtTokenService
         return new JwtSecurityTokenHandler().WriteToken(jwt);
     }
     
-    public string GenerateJwtRefreshToken(string personId, int passwordVersion, string sessionId, int id)
+    public string GenerateJwtRefreshToken(string personId, int passwordVersion, string sessionId, string deviceId, int id)
     {
         var claims = new List<Claim>
         {
@@ -53,6 +54,7 @@ public class JwtTokenService: IJwtTokenService
             new ("id", id.ToString()),
             new ("token_type", TokenType.RefreshToken.ToString()),
             new ("session", sessionId),
+            new ("deviceId", deviceId),
             new ("version", passwordVersion.ToString()),
             new (JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString())
         };
@@ -68,20 +70,20 @@ public class JwtTokenService: IJwtTokenService
         return new JwtSecurityTokenHandler().WriteToken(jwt);
     }
     
-    public Tokens CreateJwtToken(string personId, int passwordVersion, string sessionId, int id)
+    public Tokens CreateJwtToken(string personId, int passwordVersion, string sessionId, string deviceId, int id)
     {
-        var accessToken = GenerateJwtAccessToken(personId, sessionId, id);
-        var refreshToken = GenerateJwtRefreshToken(personId, passwordVersion, sessionId, id);
+        var accessToken = GenerateJwtAccessToken(personId, sessionId, deviceId, id);
+        var refreshToken = GenerateJwtRefreshToken(personId, passwordVersion, sessionId, deviceId, id);
 
         return new Tokens { AccessToken = accessToken, RefreshToken = refreshToken };
     }
     
-    public Tokens CreateJwtToken(string personId, int passwordVersion, string sessionId, int id, string oldRefreshToken)
+    public Tokens CreateJwtToken(string personId, int passwordVersion, string sessionId, string deviceId, int id, string oldRefreshToken)
     {
         _ = _authRepository.AddJwtTokenToBanAsync(personId, oldRefreshToken);
         
-        var accessToken = GenerateJwtAccessToken(personId, sessionId, id);
-        var refreshToken = GenerateJwtRefreshToken(personId, passwordVersion, sessionId, id);
+        var accessToken = GenerateJwtAccessToken(personId, sessionId, deviceId, id);
+        var refreshToken = GenerateJwtRefreshToken(personId, passwordVersion, sessionId, deviceId, id);
 
         return new Tokens { AccessToken = accessToken, RefreshToken = refreshToken };
     }
@@ -99,6 +101,7 @@ public class JwtTokenService: IJwtTokenService
         var id = jwtToken.Claims.First(c => c.Type == "id").Value;
         var tokenType = jwtToken.Claims.First(c => c.Type == "token_type").Value;
         var sessionId = jwtToken.Claims.First(c => c.Type == "session").Value;
+        var deviceId = jwtToken.Claims.First(c => c.Type == "deviceId").Value;
         var tokenTypeEnum = Enum.Parse<TokenType>(tokenType);
         var versionClaim = jwtToken.Claims.FirstOrDefault(c => c.Type == "version")?.Value;
         var jti = jwtToken.Claims.First(c => c.Type == JwtRegisteredClaimNames.Jti).Value;
@@ -117,6 +120,7 @@ public class JwtTokenService: IJwtTokenService
             TokenType = tokenTypeEnum,
             PasswordVersion = version,
             SessionId = sessionId,
+            DeviceId = deviceId,
             Jti = jti,
             Id = identificator,
             Token = token

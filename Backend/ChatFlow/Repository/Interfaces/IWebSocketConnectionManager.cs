@@ -1,6 +1,8 @@
 using System.Net.WebSockets;
+using ChatFlow.Models.DB;
 using ChatFlow.Models.DB.Other;
 using ChatFlow.Models.Other;
+using ChatUser = ChatFlow.Models.DB.ChatUser;
 
 namespace ChatFlow.Repository.Interfaces;
 
@@ -52,8 +54,42 @@ public interface IWebSocketConnectionManager
     /// <summary>
     /// Отправляет сообщение о том что был создан чат
     /// </summary>
-    /// <param name="chatId"></param>
-    /// <param name="personId"></param>
+    /// <param name="chatId">Идентификатор чата</param>
+    /// <param name="personId">Идентификатор пользователя</param>
     /// <returns></returns>
     public Task SendMessageCreateChat(string chatId, string personId);
+
+    /// <summary>
+    /// Оповещает пользователей о миграции чата
+    /// </summary>
+    /// <param name="oldChatId">Старый идентификатор чата</param>
+    /// <param name="newChatId">Новый идентификатор чата</param>
+    /// <param name="chatData">Данные чата</param>
+    /// <returns></returns>
+    public Task SendMessageMigrationChat(string oldChatId, string newChatId, ChatDocument chatData);
+
+    /// <summary>
+    /// Отправляет сообщение об очистке истории чата
+    /// </summary>
+    /// <param name="chatId">Идентификатор чата</param>
+    /// <param name="persons">Список пользователей</param>
+    /// <returns></returns>
+    public Task SendMessageDeleteHistoryChat(string chatId, List<ChatUser> persons);
+
+    /// <summary>
+    /// Отправляет сообщение о прочтении сообщения
+    /// </summary>
+    /// <param name="chatId">Идентификатор чата</param>
+    /// <param name="messageId">Идентификатор сообщения</param>
+    /// <param name="person">Объект пользователя</param>
+    /// <returns></returns>
+    public Task SendMessageViewMessage(string chatId, string messageId, ChatUser person);
+    
+    /// <summary>
+    /// Отправляет сообщение о том что чат был удален
+    /// </summary>
+    /// <param name="chatId">Идентификатор чата</param>
+    /// <param name="person">Объект пользователя</param>
+    /// <returns></returns>
+    public Task SendMessageDeleteChat(string chatId, List<ChatUser> persons);
 }

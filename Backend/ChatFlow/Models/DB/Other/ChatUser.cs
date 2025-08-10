@@ -16,4 +16,9 @@ public class ChatUser
     /// </summary>
     [BsonRepresentation(BsonType.String)]
     public Roles Role { get; set; } = Roles.User;
+    
+    /// <summary>
+    /// Дата, когда пользователь присоединился к чату
+    /// </summary>
+    public DateTime JoinedAt { get; set; } = DateTime.UtcNow;
 }

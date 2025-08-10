@@ -25,10 +25,19 @@ public class MessageData: ICloneable
     public DateTime? Updated { get; set; }
     
     [JsonIgnore(Condition = JsonIgnoreCondition.Always)]
-    public string IV { get; set; }
+    public string? IV { get; set; }
     
     [JsonIgnore(Condition = JsonIgnoreCondition.Always)]
-    public string HMAC { get; set; }
+    public string? HMAC { get; set; }
+    
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? Signature { get; set; }
+    
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public Dictionary<string, string>? Keys { get; set; }
+    
+    [JsonIgnore(Condition = JsonIgnoreCondition.Always)]
+    public List<ReadMessage> Views {  get; set; } = new ();
     
     public object Clone()
     {

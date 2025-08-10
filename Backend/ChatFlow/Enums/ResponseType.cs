@@ -98,9 +98,24 @@ public enum ResponseType
     MessageNotFound,
     
     /// <summary>
+    /// Ошибка установки прочтения сообщения
+    /// </summary>
+    MessageView,
+    
+    /// <summary>
     /// Сообщение не обновлено
     /// </summary>
     MessageNotModified,
+    
+    /// <summary>
+    /// Недопустимые поля сообщения
+    /// </summary>
+    InvalidMessageFields,
+    
+    /// <summary>
+    /// Отсутствуют обязательные поля сообщения
+    /// </summary>
+    MissingRequiredFields,
     
     /// <summary>
     /// Файл слишком большой
@@ -156,4 +171,9 @@ public enum ResponseType
     /// Ключ не является RSA
     /// </summary>
     KeyIsNotRSA,
+    
+    /// <summary>
+    /// Неизвестный чат
+    /// </summary>
+    UnknownChatType
 }

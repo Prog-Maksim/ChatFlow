@@ -15,6 +15,11 @@ public class JwtTokenData
     public string SessionId { get; set; }
     
     /// <summary>
+    /// Идентификатор устройства
+    /// </summary>
+    public required string DeviceId { get; set; } 
+    
+    /// <summary>
     /// Id токена к сессии
     /// </summary>
     public int Id { get; set; }

@@ -57,8 +57,7 @@ public class SearchRepository: ISearchRepository
                                 .Query(query.TrimStart('@'))
                             )
                         )
-                        .Filter(f => f.Term(t => t.Type, ChatType.User)
-                                     || f.Term(t => t.Type, ChatType.Bot))
+                        .Filter(f => f.Term(t => t.Type, ChatType.User))
                     )
                     : q.MultiMatch(mm => mm
                             .Query(query)

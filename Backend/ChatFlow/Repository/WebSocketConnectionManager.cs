@@ -1,10 +1,13 @@
 using System.Collections.Concurrent;
 using System.Net.WebSockets;
 using System.Text.Json;
+using System.Text.Json.Serialization;
+using ChatFlow.Models.DB;
 using ChatFlow.Models.DB.Other;
 using ChatFlow.Models.Other;
 using ChatFlow.Monitoring;
 using ChatFlow.Repository.Interfaces;
+using ChatUser = ChatFlow.Models.DB.ChatUser;
 
 namespace ChatFlow.Repository;
 
@@ -12,6 +15,12 @@ public class WebSocketConnectionManager: IWebSocketConnectionManager
 {
     private readonly ILogger<WebSocketConnectionManager> _logger;
     private readonly ConcurrentDictionary<string, ConcurrentDictionary<string, WebSocket>> _connections = new();
+    
+    private static readonly JsonSerializerOptions _jsonOptions = new JsonSerializerOptions
+    {
+        PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+        Converters = { new JsonStringEnumConverter(JsonNamingPolicy.CamelCase) }
+    };
 
     public WebSocketConnectionManager(ILogger<WebSocketConnectionManager> logger)
     {
@@ -92,6 +101,7 @@ public class WebSocketConnectionManager: IWebSocketConnectionManager
             : null;
     }
     
+    
     public async Task SendMessageToUserAsync(string personId, MessageData message)
     {
         if (!_connections.TryGetValue(personId, out var sessions))
@@ -104,7 +114,7 @@ public class WebSocketConnectionManager: IWebSocketConnectionManager
         {
             Type = "message",
             Data = message
-        }));
+        }, _jsonOptions));
         var segment = new ArraySegment<byte>(buffer);
 
         foreach (var (sessionId, socket) in sessions)
@@ -142,7 +152,7 @@ public class WebSocketConnectionManager: IWebSocketConnectionManager
             ChatId = chatId
         };
 
-        var buffer = System.Text.Encoding.UTF8.GetBytes(JsonSerializer.Serialize(message));
+        var buffer = System.Text.Encoding.UTF8.GetBytes(JsonSerializer.Serialize(message, _jsonOptions));
         var segment = new ArraySegment<byte>(buffer);
 
         foreach (var (sessionId, socket) in sessions)
@@ -162,6 +172,178 @@ public class WebSocketConnectionManager: IWebSocketConnectionManager
             else
             {
                 _logger.LogDebug($"Сессия {sessionId} пользователя {personId} не в состоянии Open");
+            }
+        }
+    }
+
+    public async Task SendMessageMigrationChat(string oldChatId, string newChatId, ChatDocument chatData)
+    {
+        foreach (var personData in chatData.Persons)
+        {
+            string personId = personData.PersonId;
+            
+            if (!_connections.TryGetValue(personId, out var sessions))
+            {
+                _logger.LogDebug($"Нет активных сессий для пользователя: {personId}");
+                continue;
+            }
+            
+            var message = new
+            {
+                Type = "migration-chat",
+                OldChatId = oldChatId,
+                NewChatId = newChatId,
+                NewChatType = chatData.Type
+            };
+
+            var buffer = System.Text.Encoding.UTF8.GetBytes(JsonSerializer.Serialize(message, _jsonOptions));
+            var segment = new ArraySegment<byte>(buffer);
+
+            foreach (var (sessionId, socket) in sessions)
+            {
+                if (socket.State == WebSocketState.Open)
+                {
+                    try
+                    {
+                        await socket.SendAsync(segment, WebSocketMessageType.Text, true, CancellationToken.None);
+                        _logger.LogDebug($"Сообщение отправлено пользователю {personId}, сессия {sessionId}");
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogError(ex, $"Ошибка при отправке сообщения пользователю {personId}, сессия {sessionId}");
+                    }
+                }
+                else
+                {
+                    _logger.LogDebug($"Сессия {sessionId} пользователя {personId} не в состоянии Open");
+                }
+            }
+        }
+    }
+
+    public async Task SendMessageDeleteHistoryChat(string chatId, List<ChatUser> persons)
+    {
+        foreach (var personData in persons)
+        {
+            string personId = personData.PersonId;
+            
+            if (!_connections.TryGetValue(personId, out var sessions))
+            {
+                _logger.LogDebug($"Нет активных сессий для пользователя: {personId}");
+                continue;
+            }
+            
+            var message = new
+            {
+                Type = "delete-history-chat",
+                ChatId = chatId
+            };
+
+            var buffer = System.Text.Encoding.UTF8.GetBytes(JsonSerializer.Serialize(message, _jsonOptions));
+            var segment = new ArraySegment<byte>(buffer);
+
+            foreach (var (sessionId, socket) in sessions)
+            {
+                if (socket.State == WebSocketState.Open)
+                {
+                    try
+                    {
+                        await socket.SendAsync(segment, WebSocketMessageType.Text, true, CancellationToken.None);
+                        _logger.LogDebug($"Сообщение отправлено пользователю {personId}, сессия {sessionId}");
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogError(ex, $"Ошибка при отправке сообщения пользователю {personId}, сессия {sessionId}");
+                    }
+                }
+                else
+                {
+                    _logger.LogDebug($"Сессия {sessionId} пользователя {personId} не в состоянии Open");
+                }
+            }
+        }
+    }
+
+    public async Task SendMessageViewMessage(string chatId, string messageId, ChatUser person)
+    {
+        string personId = person.PersonId;
+            
+        if (!_connections.TryGetValue(personId, out var sessions))
+        {
+            _logger.LogDebug($"Нет активных сессий для пользователя: {personId}");
+            return;
+        }
+            
+        var message = new
+        {
+            Type = "view-message",
+            ChatId = chatId,
+            MessageId = messageId
+        };
+
+        var buffer = System.Text.Encoding.UTF8.GetBytes(JsonSerializer.Serialize(message, _jsonOptions));
+        var segment = new ArraySegment<byte>(buffer);
+
+        foreach (var (sessionId, socket) in sessions)
+        {
+            if (socket.State == WebSocketState.Open)
+            {
+                try
+                {
+                    await socket.SendAsync(segment, WebSocketMessageType.Text, true, CancellationToken.None);
+                    _logger.LogDebug($"Сообщение отправлено пользователю {personId}, сессия {sessionId}");
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, $"Ошибка при отправке сообщения пользователю {personId}, сессия {sessionId}");
+                }
+            }
+            else
+            {
+                _logger.LogDebug($"Сессия {sessionId} пользователя {personId} не в состоянии Open");
+            }
+        }
+    }
+
+    public async Task SendMessageDeleteChat(string chatId, List<ChatUser> persons)
+    {
+        foreach (var personData in persons)
+        {
+            string personId = personData.PersonId;
+            
+            if (!_connections.TryGetValue(personId, out var sessions))
+            {
+                _logger.LogDebug($"Нет активных сессий для пользователя: {personId}");
+                continue;
+            }
+            
+            var message = new
+            {
+                Type = "delete-chat",
+                ChatId = chatId
+            };
+
+            var buffer = System.Text.Encoding.UTF8.GetBytes(JsonSerializer.Serialize(message, _jsonOptions));
+            var segment = new ArraySegment<byte>(buffer);
+
+            foreach (var (sessionId, socket) in sessions)
+            {
+                if (socket.State == WebSocketState.Open)
+                {
+                    try
+                    {
+                        await socket.SendAsync(segment, WebSocketMessageType.Text, true, CancellationToken.None);
+                        _logger.LogDebug($"Сообщение отправлено пользователю {personId}, сессия {sessionId}");
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogError(ex, $"Ошибка при отправке сообщения пользователю {personId}, сессия {sessionId}");
+                    }
+                }
+                else
+                {
+                    _logger.LogDebug($"Сессия {sessionId} пользователя {personId} не в состоянии Open");
+                }
             }
         }
     }

@@ -72,16 +72,6 @@ public class SearchService: ISearchService
                 };
                 channels.Add(channel);
             }
-            else if (search.Type == ChatType.Bot)
-            {
-                Bot bot = new Bot
-                {
-                    Title = search.Title!,
-                    BotId = search.ChatId,
-                    Tag = search.Tag!
-                };
-                bots.Add(bot);
-            }
         }
 
         Search searchData = new Search

@@ -10,6 +10,9 @@ public class Chats
     public List<PrivateChat>? PrivateChats { get; set; }
     
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public List<SecretChat>? SecretChats { get; set; }
+    
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public List<GroupChat>? GroupChats { get; set; }
     
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
@@ -20,6 +23,12 @@ public class Chats
 }
 
 public class PrivateChat
+{
+    public required string ChatId { get; set; }
+    public required string TargetPersonId { get; set; }
+}
+
+public class SecretChat
 {
     public required string ChatId { get; set; }
     public required string TargetPersonId { get; set; }

@@ -1,3 +1,4 @@
+using System.Text.Json;
 using ChatFlow.Enums;
 using ChatFlow.Models.DB;
 using ChatFlow.Models.Other;
@@ -6,6 +7,7 @@ using ChatFlow.Models.Response;
 using ChatFlow.Repository.Interfaces;
 using ChatFlow.Scripts;
 using ChatFlow.Service.Interfaces;
+using StackExchange.Redis;
 
 namespace ChatFlow.Service;
 
@@ -16,14 +18,16 @@ public class ProfileService: IProfileService
     private readonly ISearchRepository _searchRepository;
     private readonly IJwtTokenService _jwtTokenService;
     private readonly IOtherPersonDataRepository _otherPersonDataRepository;
+    private readonly IDatabase _redis;
     
-    public ProfileService(ILogger<ProfileService> logger, IProfileRepository profileRepository, IJwtTokenService jwtTokenService, ISearchRepository searchRepository, IOtherPersonDataRepository otherPersonDataRepository)
+    public ProfileService(ILogger<ProfileService> logger, IProfileRepository profileRepository, IJwtTokenService jwtTokenService, ISearchRepository searchRepository, IOtherPersonDataRepository otherPersonDataRepository, IConnectionMultiplexer redis)
     {
         _logger = logger;
         _profileRepository = profileRepository;
         _jwtTokenService = jwtTokenService;
         _searchRepository = searchRepository;
         _otherPersonDataRepository = otherPersonDataRepository;
+        _redis = redis.GetDatabase();
     }
     
     public async Task<BaseResponse<string, SummaryDataPerson>> GetSummaryProfileData(string accessToken, string? personId = null)
@@ -168,11 +172,32 @@ public class ProfileService: IProfileService
 
     public async Task<BaseResponse<string, List<PublicKeyResponse>>> GetPublicKeyAsync(string personId)
     {
-        List<PublicKeyResponse> keys = await _otherPersonDataRepository.GetActivePublicKeys(personId);
+        string cacheKey = $"public_keys:{personId}";
         
-        if (keys.Count == 0)
+        var cachedData = await _redis.StringGetAsync(cacheKey);
+        if (cachedData.HasValue)
+        {
+            var keys = JsonSerializer.Deserialize<List<PublicKeyResponse>>(cachedData.ToString())!;
+            return new BaseResponse<string, List<PublicKeyResponse>>
+            {
+                Message = "Ключи пользователя",
+                Successfully = true,
+                Status = 200,
+                Type = ResponseType.Ok,
+                Errors = null,
+                Data = keys
+            };
+        }
+        
+        List<PublicKeyResponse> keysFromDb = await _otherPersonDataRepository.GetActivePublicKeys(personId);
+        
+        if (keysFromDb.Count == 0)
             return new BaseResponse<string, List<PublicKeyResponse>> { Message = "Ключи не найдены", Successfully = false, Status = 404, Type = ResponseType.KeysNotFound, Errors = "Not Found", Data = null };
 
+        var isSet = await _redis.StringSetAsync(cacheKey, JsonSerializer.Serialize(keysFromDb), TimeSpan.FromDays(1));
+        if (!isSet)
+            _logger.LogWarning("Не удалось сохранить ключи пользователя {PersonId} в Redis", personId);
+        
         return new BaseResponse<string, List<PublicKeyResponse>>
         {
             Message = "Ключи пользователя",
@@ -180,7 +205,7 @@ public class ProfileService: IProfileService
             Status = 200,
             Type = ResponseType.Ok,
             Errors = null,
-            Data = keys
+            Data = keysFromDb
         };
     }
 }

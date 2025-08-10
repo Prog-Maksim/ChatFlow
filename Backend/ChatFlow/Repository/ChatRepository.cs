@@ -44,15 +44,20 @@ public class ChatRepository: IChatRepository
 
     public async Task<string?> GetPrivateChatIdAsync(string personId, string otherPersonId)
     {
-        var filter = Builders<ChatDocument>.Filter.And(
+        var typeFilter = Builders<ChatDocument>.Filter.Or(
             Builders<ChatDocument>.Filter.Eq(c => c.Type, ChatType.Private),
+            Builders<ChatDocument>.Filter.Eq(c => c.Type, ChatType.SecretPrivate)
+        );
+
+        var filter = Builders<ChatDocument>.Filter.And(
+            typeFilter,
             Builders<ChatDocument>.Filter.Size(c => c.Persons, 2),
             Builders<ChatDocument>.Filter.ElemMatch(c => c.Persons, p => p.PersonId == personId),
             Builders<ChatDocument>.Filter.ElemMatch(c => c.Persons, p => p.PersonId == otherPersonId)
         );
 
         var chat = await _chatCollections.Find(filter).FirstOrDefaultAsync();
-        return chat?.Id;
+        return chat?.ChatId;
     }
 
     public async Task<ChatDocument> CreatePrivateChatAsync(string personId, string otherPersonId)
@@ -84,11 +89,13 @@ public class ChatRepository: IChatRepository
     public async Task<List<ChatDocument>?> GetChats(string personId)
     {
         var filter = Builders<ChatDocument>.Filter.And(
-            Builders<ChatDocument>.Filter.ElemMatch(c => c.Persons, p => p.PersonId == personId)
+            Builders<ChatDocument>.Filter.ElemMatch(c => c.Persons, p => p.PersonId == personId),
+            Builders<ChatDocument>.Filter.Not(
+                Builders<ChatDocument>.Filter.AnyEq(c => c.HiddenForUsers, personId)
+            )
         );
 
-        var chat = await _chatCollections.Find(filter).ToListAsync();
-        return chat;
+        return await _chatCollections.Find(filter).ToListAsync();
     }
 
     public async Task<ChatDocument?> GetChat(string chatId)
@@ -96,5 +103,40 @@ public class ChatRepository: IChatRepository
         var filter = Builders<ChatDocument>.Filter.Eq(c => c.ChatId, chatId);
         var chat = await _chatCollections.Find(filter).FirstOrDefaultAsync();
         return chat;
+    }
+
+    public async Task<bool> UpdateChatDataAsync(string chatId, ChatDocument chatDocument)
+    {
+        try
+        {
+            var filter = Builders<ChatDocument>.Filter.Eq(c => c.ChatId, chatId);
+
+            // Полная замена документа
+            var result = await _chatCollections.ReplaceOneAsync(filter, chatDocument);
+
+            return result.ModifiedCount > 0;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Ошибка при обновлении чата {ChatId}", chatId);
+            return false;
+        }
+    }
+
+    public async Task<bool> DeleteChatAsync(string chatId)
+    {
+        try
+        {
+            var filter = Builders<ChatDocument>.Filter.Eq(c => c.ChatId, chatId);
+
+            var result = await _chatCollections.DeleteOneAsync(filter);
+
+            return result.DeletedCount > 0;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Ошибка при удалении чата {ChatId}", chatId);
+            return false;
+        }
     }
 }

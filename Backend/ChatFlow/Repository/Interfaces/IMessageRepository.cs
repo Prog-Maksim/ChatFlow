@@ -3,7 +3,7 @@ using ChatFlow.Models.DB.Other;
 
 namespace ChatFlow.Repository.Interfaces;
 
-public interface IMessageRepository
+public interface  IMessageRepository
 {
     /// <summary>
     /// Возвращает данные чата
@@ -26,23 +26,45 @@ public interface IMessageRepository
     /// <param name="chatId"></param>
     /// <param name="limit"></param>
     /// <param name="offset"></param>
+    /// <param name="personId"></param>
     /// <returns></returns>
-    public Task<(List<MessageData> Messages, long TotalCount)> GetMessagesByChatIdAsync(string chatId, int limit, int offset);
-    
+    public Task<(List<MessageData> Messages, long TotalCount)> GetMessagesByChatIdAsync(string chatId, int limit, int offset, string personId);
+
+    /// <summary>
+    /// Выдает сообщения в чате с пагинацией
+    /// </summary>
+    /// <param name="chatId"></param>
+    /// <param name="limit"></param>
+    /// <param name="offset"></param>
+    /// <param name="deviceId">Идентификатор устройства</param>
+    /// <param name="personId"></param>
+    public Task<(List<MessageData> Messages, long TotalCount)> GetMessagesByChatIdAsync(
+        string chatId, int limit, int offset, string deviceId, string personId);
+
     /// <summary>
     /// Возвращает последнее сообщение чата
     /// </summary>
     /// <param name="chatId">Идентификатор чата</param>
+    /// <param name="personId"></param>
     /// <returns></returns>
-    public Task<MessageData?> GetLastMessageAsync(string chatId);
-    
+    public Task<MessageData?> GetLastMessageAsync(string chatId, string personId);
+
+    /// <summary>
+    /// Возвращает последнее сообщение чата
+    /// </summary>
+    /// <param name="chatId">Идентификатор чата</param>
+    /// <param name="deviceId">Идентификатор устройства</param>
+    /// <param name="personId"></param>
+    public Task<MessageData?> GetLastMessageAsync(string chatId, string deviceId, string personId);
+
     /// <summary>
     /// Возвращает данные сообщения
     /// </summary>
     /// <param name="chatId">Идентификатор чата</param>
     /// <param name="messageId">Идентификатор сообщения</param>
+    /// <param name="personId"></param>
     /// <returns></returns>
-    public Task<MessageData?> GetMessageByIdAsync(string chatId, string messageId);
+    public Task<MessageData?> GetMessageByIdAsync(string chatId, string messageId, string personId);
 
     /// <summary>
     /// Обновляет данные сообщения
@@ -50,4 +72,19 @@ public interface IMessageRepository
     /// <param name="updatedMessage">Объект обновляемого сообщения</param>
     /// <returns></returns>
     public Task<bool> UpdateMessageAsync(MessageData updatedMessage);
+
+    /// <summary>
+    /// Удаление сообщения в чате
+    /// </summary>
+    /// <param name="chatId">Идентификатор чата</param>
+    /// <param name="messageId">Идентификатор сообщения</param>
+    /// <returns></returns>
+    public Task<bool> DeleteMessageAsync(string chatId, string messageId);
+    
+    /// <summary>
+    /// Удаление всех сообщений в чате 
+    /// </summary>
+    /// <param name="chatId">Идентификатор чата</param>
+    /// <returns></returns>
+    public Task<bool> DeleteAllMessageAsync(string chatId);
 }

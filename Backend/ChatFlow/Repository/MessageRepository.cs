@@ -34,14 +34,20 @@ public class MessageRepository: IMessageRepository
         await _messageCollections.InsertOneAsync(message,null, token);
     }
     
-    public async Task<(List<MessageData> Messages, long TotalCount)> GetMessagesByChatIdAsync(string chatId, int limit, int offset)
+    public async Task<(List<MessageData> Messages, long TotalCount)> GetMessagesByChatIdAsync(string chatId, int limit, int offset, string personId)
     {
         try
         {
+            var chat = await GetChatAsync(chatId);
+            chat!.ClearedMessagesForUsers.TryGetValue(personId, out var clearedAt);
+            
             var filter = Builders<MessageData>.Filter.And(
                 Builders<MessageData>.Filter.Eq(x => x.ChatId, chatId),
             Builders<MessageData>.Filter.Ne(x => x.MessageType, MessageStatus.Deleted)
                 );
+            
+            if (clearedAt != default)
+                filter &= Builders<MessageData>.Filter.Gt(x => x.Created, clearedAt);
 
             var totalCount = await _messageCollections.CountDocumentsAsync(filter);
 
@@ -60,15 +66,55 @@ public class MessageRepository: IMessageRepository
             return (new List<MessageData>(), 0);
         }
     }
-
-    public async Task<MessageData?> GetLastMessageAsync(string chatId)
+    
+    public async Task<(List<MessageData> Messages, long TotalCount)> GetMessagesByChatIdAsync(string chatId, int limit, int offset, string deviceId, string personId)
     {
         try
         {
+            var chat = await GetChatAsync(chatId);
+            chat!.ClearedMessagesForUsers.TryGetValue(personId, out var clearedAt);
+            
+            var filter = Builders<MessageData>.Filter.And(
+                Builders<MessageData>.Filter.Eq(x => x.ChatId, chatId),
+                Builders<MessageData>.Filter.Ne(x => x.MessageType, MessageStatus.Deleted),
+                Builders<MessageData>.Filter.Exists($"Keys.{deviceId}")
+            );
+            
+            if (clearedAt != default)
+                filter &= Builders<MessageData>.Filter.Gt(x => x.Created, clearedAt);
+
+            var totalCount = await _messageCollections.CountDocumentsAsync(filter);
+
+            var messages = await _messageCollections
+                .Find(filter)
+                .SortByDescending(x => x.Created)
+                .Skip(offset)
+                .Limit(limit)
+                .ToListAsync();
+
+            return (messages, totalCount);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Ошибка при получении сообщений для чата {ChatId} и устройства {DeviceId}", chatId, deviceId);
+            return (new List<MessageData>(), 0);
+        }
+    }
+
+    public async Task<MessageData?> GetLastMessageAsync(string chatId, string personId)
+    {
+        try
+        {
+            var chat = await GetChatAsync(chatId);
+            chat!.ClearedMessagesForUsers.TryGetValue(personId, out var clearedAt);
+            
             var filter = Builders<MessageData>.Filter.And(
                 Builders<MessageData>.Filter.Eq(x => x.ChatId, chatId),
                 Builders<MessageData>.Filter.Ne(x => x.MessageType, MessageStatus.Deleted)
             );
+            
+            if (clearedAt != default)
+                filter &= Builders<MessageData>.Filter.Gt(x => x.Created, clearedAt);
             
             var messages = await _messageCollections
                 .Find(filter)
@@ -84,15 +130,52 @@ public class MessageRepository: IMessageRepository
         }
     }
 
-    public async Task<MessageData?> GetMessageByIdAsync(string chatId, string messageId)
+    public async Task<MessageData?> GetLastMessageAsync(string chatId, string deviceId, string personId)
     {
         try
         {
+            var chat = await GetChatAsync(chatId);
+            chat!.ClearedMessagesForUsers.TryGetValue(personId, out var clearedAt);
+            
+            var filter = Builders<MessageData>.Filter.And(
+                Builders<MessageData>.Filter.Eq(x => x.ChatId, chatId),
+                Builders<MessageData>.Filter.Ne(x => x.MessageType, MessageStatus.Deleted),
+                Builders<MessageData>.Filter.Exists($"Keys.{deviceId}")
+            );
+            
+            if (clearedAt != default)
+                filter &= Builders<MessageData>.Filter.Gt(x => x.Created, clearedAt);
+
+            var message = await _messageCollections
+                .Find(filter)
+                .SortByDescending(x => x.Created)
+                .Limit(1)
+                .FirstOrDefaultAsync();
+
+            return message;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Ошибка при получении последнего сообщения для чата {ChatId} и устройства {DeviceId}", chatId, deviceId);
+            return null;
+        }
+    }
+    
+    public async Task<MessageData?> GetMessageByIdAsync(string chatId, string messageId, string personId)
+    {
+        try
+        {
+            var chat = await GetChatAsync(chatId);
+            chat!.ClearedMessagesForUsers.TryGetValue(personId, out var clearedAt);
+            
             var filter = Builders<MessageData>.Filter.And(
                 Builders<MessageData>.Filter.Eq(x => x.ChatId, chatId),
                 Builders<MessageData>.Filter.Eq(x => x.MessageId, messageId),
                 Builders<MessageData>.Filter.Ne(x => x.MessageType, MessageStatus.Deleted)
             );
+            
+            if (clearedAt != default)
+                filter &= Builders<MessageData>.Filter.Gt(x => x.Created, clearedAt);
             
             var message = await _messageCollections
                 .Find(filter).FirstOrDefaultAsync();
@@ -110,22 +193,51 @@ public class MessageRepository: IMessageRepository
     {
         try
         {
-            var filter = Builders<MessageData>.Filter.Eq(m => m.MessageId, updatedMessage.MessageId);
-
-            var update = Builders<MessageData>.Update
-                .Set(m => m.Text, updatedMessage.Text)
-                .Set(m => m.Updated, DateTime.UtcNow)
-                .Set(m => m.MessageType, updatedMessage.MessageType)
-                .Set(m => m.IV, updatedMessage.IV)
-                .Set(m => m.HMAC, updatedMessage.HMAC);
-
-            var result = await _messageCollections.UpdateOneAsync(filter, update);
-
+            updatedMessage.Updated = DateTime.UtcNow;
+            var result = await _messageCollections.ReplaceOneAsync(
+                m => m.MessageId == updatedMessage.MessageId,
+                updatedMessage
+            );
             return result.ModifiedCount > 0;
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Ошибка при обновлении сообщения {MessageId}", updatedMessage.MessageId);
+            return false;
+        }
+    }
+
+    public async Task<bool> DeleteMessageAsync(string chatId, string messageId)
+    {
+        try
+        {
+            var filter = Builders<MessageData>.Filter.And(
+                Builders<MessageData>.Filter.Eq(m => m.ChatId, chatId),
+                Builders<MessageData>.Filter.Eq(m => m.MessageId, messageId)
+            );
+
+            var result = await _messageCollections.DeleteOneAsync(filter);
+            return result.DeletedCount > 0;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Ошибка при удалении сообщения {MessageId} в чате {ChatId}", messageId, chatId);
+            return false;
+        }
+    }
+
+    public async Task<bool> DeleteAllMessageAsync(string chatId)
+    {
+        try
+        {
+            var filter = Builders<MessageData>.Filter.Eq(m => m.ChatId, chatId);
+
+            var result = await _messageCollections.DeleteManyAsync(filter);
+            return result.DeletedCount > 0;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Ошибка при удалении всех сообщений в чате {ChatId}", chatId);
             return false;
         }
     }

@@ -10,9 +10,10 @@ public interface IJwtTokenService
     /// </summary>
     /// <param name="personId">Идентификатор пользователя</param>
     /// <param name="sessionId">Идентификатор сессии</param>
+    /// <param name="deviceId"></param>
     /// <param name="id">Идентификатор</param>
     /// <returns></returns>
-    public string GenerateJwtAccessToken(string personId, string sessionId, int id);
+    public string GenerateJwtAccessToken(string personId, string sessionId, string deviceId, int id);
 
     /// <summary>
     /// Создает Refresh токен
@@ -20,9 +21,10 @@ public interface IJwtTokenService
     /// <param name="personId">Идентификатор пользователя</param>
     /// <param name="passwordVersion">Версия пароля</param>
     /// <param name="sessionId">Идентификатор сессии</param>
+    /// <param name="deviceId"></param>
     /// <param name="id">Идентификатор</param>
     /// <returns></returns>
-    public string GenerateJwtRefreshToken(string personId, int passwordVersion, string sessionId, int id);
+    public string GenerateJwtRefreshToken(string personId, int passwordVersion, string sessionId, string deviceId, int id);
 
     /// <summary>
     /// Создает jwt токены для пользователя
@@ -30,9 +32,10 @@ public interface IJwtTokenService
     /// <param name="personId">Идентификатор пользователя</param>
     /// <param name="passwordVersion">Версия пароля</param>
     /// <param name="sessionId">Идентификатор сессии</param>
+    /// <param name="deviceId"></param>
     /// <param name="id">Идентификатор</param>
     /// <returns></returns>
-    public Tokens CreateJwtToken(string personId, int passwordVersion, string sessionId, int id);
+    public Tokens CreateJwtToken(string personId, int passwordVersion, string sessionId, string deviceId, int id);
 
     /// <summary>
     /// Создает jwt токены для пользователя
@@ -40,10 +43,11 @@ public interface IJwtTokenService
     /// <param name="personId">Идентификатор пользователя</param>
     /// <param name="passwordVersion">Версия пароля</param>
     /// <param name="sessionId">Идентификатор сессии</param>
+    /// <param name="deviceId"></param>
     /// <param name="id">Идентификатор</param>
     /// <param name="oldRefreshToken">Старый refresh токен</param>
     /// <returns></returns>
-    public Tokens CreateJwtToken(string personId, int passwordVersion, string sessionId, int id,
+    public Tokens CreateJwtToken(string personId, int passwordVersion, string sessionId, string deviceId, int id,
         string oldRefreshToken);
 
     /// <summary>

@@ -126,7 +126,7 @@ public class ChatsController(ILogger<ChatsController> logger, IChatService servi
     }
     
     /// <summary>
-    /// Очищает историю чата
+    /// Очищает историю чата у себя
     /// </summary>
     /// <remarks>
     /// Если чат секретный, то чат удалится для обоих собеседников
@@ -180,7 +180,7 @@ public class ChatsController(ILogger<ChatsController> logger, IChatService servi
         var authHeader = HttpContext.Request.Headers["Authorization"].ToString();
         var token = authHeader.Substring("Bearer ".Length);
         
-        var response = await service.DeleteAllMessages(token, chatId);
+        var response = await service.DeleteAllMessages(token, chatId, true);
 
         if (!response.Successfully)
             return StatusCode(response.Status, response);

@@ -251,19 +251,21 @@ public class ChatService: IChatService
         if (chat.Persons.All(p => p.PersonId != dataToken.PersonId))
             return CreateErrorResponse<string, string>("Вы не состоите в этом чате", ResponseType.UserNotInChat, 403, "Forbidden");
 
-        bool success = false;
+        bool success;
         if (isAll || chat.Type == ChatType.SecretPrivate)
+        {
             success = await _messageRepository.DeleteAllMessageAsync(chatId);
+            if (success) _ = _webSocketConnectionManager.SendMessageDeleteHistoryChat(chatId, chat.Persons);
+        }
         else
         {
             chat.ClearedMessagesForUsers[dataToken.PersonId] = DateTime.UtcNow;
             await _chatRepository.UpdateChatDataAsync(chatId, chat);
+            success = true;
         }
 
         if (!success)
             return CreateErrorResponse<string, string>("История чата не удалена", ResponseType.MessageNotModified, 400, "Bad Request");
-
-        _ = _webSocketConnectionManager.SendMessageDeleteHistoryChat(chatId, chat.Persons);
         
         return new BaseResponse<string, string>
         {
@@ -290,6 +292,7 @@ public class ChatService: IChatService
         {
             await _chatRepository.DeleteChatAsync(chatId);
             _ = _messageRepository.DeleteAllMessageAsync(chatId);
+            _ = _manager.SendMessageDeleteChat(chatId, chat.Persons);
         }
         else
         {
@@ -342,6 +345,7 @@ public class ChatService: IChatService
         Chats chatsResult = new Chats { Count = chats.Count };
         
         List<PrivateChat> privateChatsResult = new ();
+        List<SecretChat> secretChatsResult = new ();
         List<GroupChat> groupChatsResult = new ();
         List<ChannelChat> channelChatsResult = new ();
         List<Bots> botChatsResult = new ();
@@ -361,6 +365,17 @@ public class ChatService: IChatService
                         });
                     }
                     break;
+                case ChatType.SecretPrivate:
+                    var target1 = chat.Persons.FirstOrDefault(p => p.PersonId != personId);
+                    if (target1 != null)
+                    {
+                        secretChatsResult.Add(new SecretChat
+                        {
+                            ChatId = chat.ChatId,
+                            TargetPersonId = target1.PersonId
+                        });
+                    }
+                    break;
                 case ChatType.Group:
                     groupChatsResult.Add(MapTo<GroupChat>(chat));
                     break;
@@ -371,6 +386,7 @@ public class ChatService: IChatService
         }
         
         if (privateChatsResult.Count is not 0) chatsResult.PrivateChats = privateChatsResult;
+        if (secretChatsResult.Count is not 0) chatsResult.SecretChats = secretChatsResult;
         if (groupChatsResult.Count is not 0) chatsResult.GroupChats = groupChatsResult;
         if (channelChatsResult.Count is not 0) chatsResult.ChannelChats = channelChatsResult;
         if (botChatsResult.Count is not 0) chatsResult.BotChats = botChatsResult;

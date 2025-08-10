@@ -44,8 +44,13 @@ public class ChatRepository: IChatRepository
 
     public async Task<string?> GetPrivateChatIdAsync(string personId, string otherPersonId)
     {
-        var filter = Builders<ChatDocument>.Filter.And(
+        var typeFilter = Builders<ChatDocument>.Filter.Or(
             Builders<ChatDocument>.Filter.Eq(c => c.Type, ChatType.Private),
+            Builders<ChatDocument>.Filter.Eq(c => c.Type, ChatType.SecretPrivate)
+        );
+
+        var filter = Builders<ChatDocument>.Filter.And(
+            typeFilter,
             Builders<ChatDocument>.Filter.Size(c => c.Persons, 2),
             Builders<ChatDocument>.Filter.ElemMatch(c => c.Persons, p => p.PersonId == personId),
             Builders<ChatDocument>.Filter.ElemMatch(c => c.Persons, p => p.PersonId == otherPersonId)

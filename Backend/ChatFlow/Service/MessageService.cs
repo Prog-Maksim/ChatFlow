@@ -62,18 +62,22 @@ public class MessageService: IMessageService
         
         if (chat.Type == ChatType.Private)
         {
+            if (message.Keys is not null || message.Signature is not null)
+                return CreateErrorResponse<string, SendMessage>("Использование полей 'Signature' и 'Keys' запрещено для данного типа чата.", ResponseType.InvalidMessageFields, 400, "Bad Request");
+
+            
             var copyMessage = (MessageData)messageData.Clone();
             await SaveMessageAsync(copyMessage, cancellationToken);
         }
         else if (chat.Type == ChatType.SecretPrivate)
         {
             if (message.Keys is null || message.Signature is null)
-                return CreateErrorResponse<string, SendMessage>("У сообщения отсутствуют обязательные поля", ResponseType.MessageRequiredFields, 400, "Bad Request");
+                return CreateErrorResponse<string, SendMessage>("У сообщения отсутствуют обязательные поля 'Signature' или 'Keys'", ResponseType.MissingRequiredFields, 400, "Bad Request");
                 
             await _messageRepository.SaveMessageAsync(messageData, cancellationToken);
         }
 
-        if (chat.Type is ChatType.Private or ChatType.SecretPrivate && chat.HiddenForUsers.Count == 0)
+        if (chat.Type is ChatType.Private or ChatType.SecretPrivate && chat.HiddenForUsers.Count != 0)
         {
             chat.HiddenForUsers.Clear();
             _ = _chatRepository.UpdateChatDataAsync(chat.ChatId, chat);
@@ -288,7 +292,7 @@ public class MessageService: IMessageService
         if (chat.Type == ChatType.SecretPrivate)
         {
             if (messageData.Keys is null || messageData.Signature is null)
-                return CreateErrorResponse<string, MessageData>("У сообщения отсутствуют обязательные поля", ResponseType.MessageRequiredFields, 400, "Bad Request");
+                return CreateErrorResponse<string, MessageData>("У сообщения отсутствуют обязательные поля", ResponseType.MissingRequiredFields, 400, "Bad Request");
             
             message.Keys = messageData.Keys;
             message.Signature = messageData.Signature;
@@ -395,7 +399,7 @@ public class MessageService: IMessageService
         
         return new BaseResponse<string, List<PersonReadMessage>>
         {
-            Message = "Успешно",
+            Message = "Просмотры сообщения",
             Type = ResponseType.Ok,
             Status = 200,
             Successfully = true,

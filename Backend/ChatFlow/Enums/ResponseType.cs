@@ -108,9 +108,14 @@ public enum ResponseType
     MessageNotModified,
     
     /// <summary>
-    /// У сообщения отсутствуют обязательные поля
+    /// Недопустимые поля сообщения
     /// </summary>
-    MessageRequiredFields,
+    InvalidMessageFields,
+    
+    /// <summary>
+    /// Отсутствуют обязательные поля сообщения
+    /// </summary>
+    MissingRequiredFields,
     
     /// <summary>
     /// Файл слишком большой

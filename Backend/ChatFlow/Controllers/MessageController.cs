@@ -186,21 +186,21 @@ public class MessagesController(ILogger<MessagesController> logger, IMessageServ
     [Authorize]
     [ApiVersion("1.0")]
     [HttpPost("{chatId}/messages/{messageId}/view")]
-    [ProducesResponseType(typeof(BaseResponse<string, SendMessage>), StatusCodes.Status200OK)]
-    [ProducesResponseType(typeof(BaseResponse<string, SendMessage>), StatusCodes.Status403Forbidden)]
-    [ProducesResponseType(typeof(BaseResponse<string, SendMessage>), StatusCodes.Status404NotFound)]
+    [ProducesResponseType(typeof(BaseResponse<string, string>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(BaseResponse<string, string>), StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(typeof(BaseResponse<string, string>), StatusCodes.Status404NotFound)]
     public async Task<IActionResult> SetMessageTheView(string chatId, string messageId)
     {
         logger.LogInformation("Начало обработки запроса: (прочтение сообщения)");
         var authHeader = HttpContext.Request.Headers["Authorization"].ToString();
         var token = authHeader.Substring("Bearer ".Length);
 
-        var response = await service.DeleteMessageAsync(token, chatId, messageId);
+        var response = await service.ReadTheMessage(token, chatId, messageId);
 
         if (!response.Successfully)
             return StatusCode(response.Status, response);
 
-        return NoContent();
+        return Ok(response);;
     }
     
     /// <summary>
@@ -215,20 +215,20 @@ public class MessagesController(ILogger<MessagesController> logger, IMessageServ
     [Authorize]
     [ApiVersion("1.0")]
     [HttpGet("{chatId}/messages/{messageId}/view")]
-    [ProducesResponseType(typeof(BaseResponse<string, SendMessage>), StatusCodes.Status200OK)]
-    [ProducesResponseType(typeof(BaseResponse<string, SendMessage>), StatusCodes.Status403Forbidden)]
-    [ProducesResponseType(typeof(BaseResponse<string, SendMessage>), StatusCodes.Status404NotFound)]
+    [ProducesResponseType(typeof(BaseResponse<string, List<PersonReadMessage>>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(BaseResponse<string, List<PersonReadMessage>>), StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(typeof(BaseResponse<string, List<PersonReadMessage>>), StatusCodes.Status404NotFound)]
     public async Task<IActionResult> GetMessageTheView(string chatId, string messageId)
     {
         logger.LogInformation("Начало обработки запроса: (выдача просмотров для сообщения)");
         var authHeader = HttpContext.Request.Headers["Authorization"].ToString();
         var token = authHeader.Substring("Bearer ".Length);
 
-        var response = await service.DeleteMessageAsync(token, chatId, messageId);
+        var response = await service.GetTheReadMessage(token, chatId, messageId);
 
         if (!response.Successfully)
             return StatusCode(response.Status, response);
 
-        return NoContent();
+        return Ok(response);
     }
 }

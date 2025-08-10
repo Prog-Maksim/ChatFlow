@@ -84,4 +84,12 @@ public interface IWebSocketConnectionManager
     /// <param name="person">Объект пользователя</param>
     /// <returns></returns>
     public Task SendMessageViewMessage(string chatId, string messageId, ChatUser person);
+    
+    /// <summary>
+    /// Отправляет сообщение о том что чат был удален
+    /// </summary>
+    /// <param name="chatId">Идентификатор чата</param>
+    /// <param name="person">Объект пользователя</param>
+    /// <returns></returns>
+    public Task SendMessageDeleteChat(string chatId, List<ChatUser> persons);
 }

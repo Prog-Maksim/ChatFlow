@@ -135,7 +135,7 @@ public class ChatsController(ILogger<ChatsController> logger, IChatService servi
     /// <returns></returns>
     /// <response code="200">Успешно</response>
     /// <response code="400">Не удалось очистить историю чата</response>
-    /// <response code="403">Пользователь не состоит в чате или токен не валиден</response>
+    /// <response code="403">Невалидный jwt токен, пользователь не состоит в чате или токен не валиден</response>
     /// <response code="404">Чат не найден</response>
     [Authorize]
     [ApiVersion("1.0")]
@@ -159,13 +159,13 @@ public class ChatsController(ILogger<ChatsController> logger, IChatService servi
     }
     
     /// <summary>
-    /// Очищает историю чата для обоих участников
+    /// Очищает историю чата для обоих собеседников
     /// </summary>
     /// <param name="chatId">Идентификатор чата</param>
     /// <returns></returns>
     /// <response code="200">Успешно</response>
     /// <response code="400">Не удалось очистить историю чата</response>
-    /// <response code="403">Пользователь не состоит в чате или токен не валиден</response>
+    /// <response code="403">Невалидный jwt токен, пользователь не состоит в чате или токен не валиден</response>
     /// <response code="404">Чат не найден</response>
     [Authorize]
     [ApiVersion("1.0")]
@@ -196,9 +196,15 @@ public class ChatsController(ILogger<ChatsController> logger, IChatService servi
     /// </remarks>
     /// <param name="chatId">Идентификатор чата</param>
     /// <returns></returns>
+    /// <response code="200">Успешно</response>
+    /// <response code="403">Невалидный jwt токен, пользователь не состоит в чате или токен не валиден</response>
+    /// <response code="404">Чат не найден</response>
     [Authorize]
     [ApiVersion("1.0")]
     [HttpDelete("{chatId}")]
+    [ProducesResponseType(typeof(BaseResponse<string, string>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(BaseResponse<string, string>), StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(typeof(BaseResponse<string, string>), StatusCodes.Status404NotFound)]
     public async Task<IActionResult> DeleteChat(string chatId)
     {
         logger.LogInformation("Начало обработки запроса: (удаление чата)");
@@ -218,9 +224,15 @@ public class ChatsController(ILogger<ChatsController> logger, IChatService servi
     /// </summary>
     /// <param name="chatId">Идентификатор чата</param>
     /// <returns></returns>
+    /// <response code="200">Успешно</response>
+    /// <response code="403">Невалидный jwt токен, пользователь не состоит в чате или токен не валиден</response>
+    /// <response code="404">Чат не найден</response>
     [Authorize]
     [ApiVersion("1.0")]
     [HttpDelete("{chatId}/all")]
+    [ProducesResponseType(typeof(BaseResponse<string, string>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(BaseResponse<string, string>), StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(typeof(BaseResponse<string, string>), StatusCodes.Status404NotFound)]
     public async Task<IActionResult> DeleteChatAllPersons(string chatId)
     {
         logger.LogInformation("Начало обработки запроса: (удаление чата для всех)");

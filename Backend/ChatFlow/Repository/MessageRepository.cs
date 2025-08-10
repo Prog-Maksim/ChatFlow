@@ -42,8 +42,7 @@ public class MessageRepository: IMessageRepository
             chat!.ClearedMessagesForUsers.TryGetValue(personId, out var clearedAt);
             
             var filter = Builders<MessageData>.Filter.And(
-                Builders<MessageData>.Filter.Eq(x => x.ChatId, chatId),
-            Builders<MessageData>.Filter.Ne(x => x.MessageType, MessageStatus.Deleted)
+                Builders<MessageData>.Filter.Eq(x => x.ChatId, chatId)
                 );
             
             if (clearedAt != default)
@@ -76,7 +75,6 @@ public class MessageRepository: IMessageRepository
             
             var filter = Builders<MessageData>.Filter.And(
                 Builders<MessageData>.Filter.Eq(x => x.ChatId, chatId),
-                Builders<MessageData>.Filter.Ne(x => x.MessageType, MessageStatus.Deleted),
                 Builders<MessageData>.Filter.Exists($"Keys.{deviceId}")
             );
             
@@ -109,8 +107,7 @@ public class MessageRepository: IMessageRepository
             chat!.ClearedMessagesForUsers.TryGetValue(personId, out var clearedAt);
             
             var filter = Builders<MessageData>.Filter.And(
-                Builders<MessageData>.Filter.Eq(x => x.ChatId, chatId),
-                Builders<MessageData>.Filter.Ne(x => x.MessageType, MessageStatus.Deleted)
+                Builders<MessageData>.Filter.Eq(x => x.ChatId, chatId)
             );
             
             if (clearedAt != default)
@@ -139,7 +136,6 @@ public class MessageRepository: IMessageRepository
             
             var filter = Builders<MessageData>.Filter.And(
                 Builders<MessageData>.Filter.Eq(x => x.ChatId, chatId),
-                Builders<MessageData>.Filter.Ne(x => x.MessageType, MessageStatus.Deleted),
                 Builders<MessageData>.Filter.Exists($"Keys.{deviceId}")
             );
             
@@ -170,8 +166,7 @@ public class MessageRepository: IMessageRepository
             
             var filter = Builders<MessageData>.Filter.And(
                 Builders<MessageData>.Filter.Eq(x => x.ChatId, chatId),
-                Builders<MessageData>.Filter.Eq(x => x.MessageId, messageId),
-                Builders<MessageData>.Filter.Ne(x => x.MessageType, MessageStatus.Deleted)
+                Builders<MessageData>.Filter.Eq(x => x.MessageId, messageId)
             );
             
             if (clearedAt != default)

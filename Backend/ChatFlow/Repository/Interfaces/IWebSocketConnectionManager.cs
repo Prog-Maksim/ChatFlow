@@ -50,6 +50,13 @@ public interface IWebSocketConnectionManager
     /// <param name="message">Объект сообщения</param>
     /// <returns></returns>
     public Task SendMessageToUserAsync(string personId, MessageData message);
+    
+    /// <summary>
+    /// Отправляет сообщение пользователю об удалении сообщения
+    /// </summary>
+    /// <param name="message">Данные сообщения</param>
+    /// <returns></returns>
+    public Task SendMessageDeleteMessageAsync(MessageData message, List<ChatUser> persons);
 
     /// <summary>
     /// Отправляет сообщение о том что был создан чат

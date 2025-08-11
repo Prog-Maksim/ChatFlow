@@ -45,7 +45,7 @@ public interface IWebSocketConnectionManager
     /// <summary>
     /// Отправляет сообщение пользователю
     /// </summary>
-    /// <param name="personId">Идентификатор пользователя</param>
+    /// <param name="persons">Список пользователей</param>
     /// <param name="message">Объект сообщения</param>
     /// <returns></returns>
     public Task SendMessageToUserAsync(MessageData message, List<ChatUser> persons);

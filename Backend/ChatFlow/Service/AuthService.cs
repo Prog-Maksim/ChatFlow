@@ -6,7 +6,6 @@ using ChatFlow.Models.Other;
 using ChatFlow.Models.Requests;
 using ChatFlow.Models.Response;
 using ChatFlow.Monitoring;
-using ChatFlow.Repository;
 using ChatFlow.Repository.Interfaces;
 using ChatFlow.Scripts;
 using ChatFlow.Service.Interfaces;
@@ -194,6 +193,10 @@ public class AuthService: IAuthService
                     { Message = "Не удалось проверить корректность jwt токена", Type = ResponseType.JwtTokenVerificationFailed, Errors = "Forbidden", Status = 403, Successfully = false, Data = null};
 
             Sessions? session = await _authRepository.GetSessionByIdAsync(person.PersonId, dataToken.SessionId);
+            
+            if (session is null)
+                return ResponseFactory.Forbidden<AuthTokens>("Не удалось восстановить сессию", ResponseType.SessionNotFound);
+            
             session.IsRevoked = false;
             session.RevokedAt = null;
             

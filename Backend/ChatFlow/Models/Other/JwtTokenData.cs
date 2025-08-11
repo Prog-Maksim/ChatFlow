@@ -7,12 +7,12 @@ public class JwtTokenData
     /// <summary>
     /// Идентификатор пользователя
     /// </summary>
-    public string PersonId { get; set; }
+    public required string PersonId { get; set; }
     
     /// <summary>
     /// Идентификатор сессии
     /// </summary>
-    public string SessionId { get; set; }
+    public required string SessionId { get; set; }
     
     /// <summary>
     /// Идентификатор устройства
@@ -37,10 +37,10 @@ public class JwtTokenData
     /// <summary>
     /// Идентификатор токена
     /// </summary>
-    public string Jti { get; set; }
+    public required string Jti { get; set; }
     
     /// <summary>
     /// Сам токен
     /// </summary>
-    public string Token { get; set; }
+    public required string Token { get; set; }
 }

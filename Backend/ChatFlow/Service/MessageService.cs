@@ -32,8 +32,8 @@ public class MessageService: IMessageService
         _manager = manager;
         _profileRepository = profileRepository;
         
-        _aesKey = Convert.FromBase64String(configuration["MessageEncryption:Key"]);
-        _hmacKey = Convert.FromBase64String(configuration["MessageEncryption:Hmac"]);
+        _aesKey = Convert.FromBase64String(configuration["MessageEncryption:Key"]!);
+        _hmacKey = Convert.FromBase64String(configuration["MessageEncryption:Hmac"]!);
     }
     
     public async Task<BaseResponse<string, SendMessage>> SendMessageAsync(string accessToken, Message message, CancellationToken cancellationToken)
@@ -265,6 +265,10 @@ public class MessageService: IMessageService
         if (chat.Type == ChatType.Private)
         {
             MessageData? updateMessage = DecryptAndVerify(message);
+            
+            if(updateMessage is null)
+                return CreateErrorResponse<string, MessageData>("Сообщение не изменено", ResponseType.MessageNotModified, 400, "Bad Request");
+            
             updateMessage.Text = messageData.Text;
             updateMessage.MessageType = MessageStatus.Updated;
             updateMessage.Updated = DateTime.UtcNow;
@@ -427,7 +431,7 @@ public class MessageService: IMessageService
     private MessageData? DecryptAndVerify(MessageData messageData)
     {
         IHmacService hmacService = new HmacService(_hmacKey);
-        var result = hmacService.VerifyHmac(messageData.Text, messageData.HMAC);
+        var result = hmacService.VerifyHmac(messageData.Text, messageData.HMAC!);
 
         if (!result)
         {
@@ -435,8 +439,8 @@ public class MessageService: IMessageService
             return null;
         }
         
-        var IV = Convert.FromBase64String(messageData.IV);
-        IMessageEncryptionService encryption = new MessageEncryptionService(_aesKey, IV);
+        var iv = Convert.FromBase64String(messageData.IV!);
+        IMessageEncryptionService encryption = new MessageEncryptionService(_aesKey, iv);
         var decryptedText = encryption.Decrypt(messageData.Text);
         messageData.Text = decryptedText;
         return messageData;

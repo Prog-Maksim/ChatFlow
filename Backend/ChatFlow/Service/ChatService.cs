@@ -338,11 +338,16 @@ public class ChatService: IChatService
                 if (!chat.PinnedMessages.ContainsKey(person.PersonId))
                     chat.PinnedMessages[person.PersonId] = new List<PinnedMessageInfo>();
 
-                chat.PinnedMessages[person.PersonId].Add(new PinnedMessageInfo
+                var pinnedList = chat.PinnedMessages[person.PersonId];
+
+                if (pinnedList.All(p => p.MessageId != messageId))
                 {
-                    MessageId = messageId,
-                    PinnedBy = dataToken.PersonId
-                });
+                    pinnedList.Add(new PinnedMessageInfo
+                    {
+                        MessageId = messageId,
+                        PinnedBy = dataToken.PersonId
+                    });
+                }
             }
         }
         else
@@ -350,11 +355,16 @@ public class ChatService: IChatService
             if (!chat.PinnedMessages.ContainsKey(dataToken.PersonId))
                 chat.PinnedMessages[dataToken.PersonId] = new List<PinnedMessageInfo>();
 
-            chat.PinnedMessages[dataToken.PersonId].Add(new PinnedMessageInfo
+            var pinnedList = chat.PinnedMessages[dataToken.PersonId];
+
+            if (pinnedList.All(p => p.MessageId != messageId))
             {
-                MessageId = messageId,
-                PinnedBy = dataToken.PersonId
-            });
+                pinnedList.Add(new PinnedMessageInfo
+                {
+                    MessageId = messageId,
+                    PinnedBy = dataToken.PersonId
+                });
+            }
         }
         
         await _chatRepository.UpdateChatDataAsync(chatId, chat);

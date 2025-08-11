@@ -17,8 +17,12 @@ public class MessageData: ICloneable
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public string? ReplyMessageId { get; set; }
     
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public ForwardInfo? ForwardedFrom { get; set; }
     public required string ChatId { get; set; }
-    public required string Text { get; set; }
+    
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? Text { get; set; }
     public required string OwnerId { get; set; }
     
     [BsonRepresentation(BsonType.String)]

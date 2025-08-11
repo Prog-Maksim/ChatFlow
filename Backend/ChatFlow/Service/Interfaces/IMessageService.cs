@@ -10,20 +10,34 @@ public interface IMessageService
     /// Создает сообщение и отправляет в чат
     /// </summary>
     /// <param name="accessToken">Токен пользователя</param>
+    /// <param name="chatId">Идентификатор чата</param>
     /// <param name="message">Объект сообщения</param>
     /// <param name="cancellationToken">Токен отмены</param>
     /// <returns></returns>
-    public Task<BaseResponse<string, SendMessage>> SendMessageAsync(string accessToken, Message message, CancellationToken cancellationToken);
+    public Task<BaseResponse<string, SendMessage>> SendMessageAsync(string accessToken, string chatId, Message message, CancellationToken cancellationToken);
 
     /// <summary>
     /// Создает сообщение и отправляет в чат
     /// </summary>
     /// <param name="accessToken">Токен пользователя</param>
+    /// <param name="chatId">Идентификатор чата</param>
     /// <param name="replyMessageId">Идентификатор отвечаемого сообщения</param>
     /// <param name="message">Объект сообщения</param>
     /// <param name="cancellationToken">Токен отмены</param>
     /// <returns></returns>
-    public Task<BaseResponse<string, SendMessage>> SendReplyMessageAsync(string accessToken, string replyMessageId, Message message, CancellationToken cancellationToken);
+    public Task<BaseResponse<string, SendMessage>> SendReplyMessageAsync(string accessToken, string chatId, string replyMessageId, Message message, CancellationToken cancellationToken);
+    
+    /// <summary>
+    /// Пересылает сообщение из одного чата в другой
+    /// </summary>
+    /// <param name="accessToken"></param>
+    /// <param name="chatId"></param>
+    /// <param name="messageId"></param>
+    /// <param name="request"></param>
+    /// <param name="cancellationToken"></param>
+    /// <returns></returns>
+    public Task<BaseResponse<string, SendMessage>> SendForwardMessageAsync(string accessToken, string chatId, string messageId, ForwardMessageRequest request,
+        CancellationToken cancellationToken);
 
     /// <summary>
     /// Выдает все сообщения чата с пагинацией

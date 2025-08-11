@@ -11,12 +11,15 @@ namespace ChatFlow.Controllers;
 [ApiController]
 [ApiVersion("1.0")]
 [Produces("application/json")]
-[Route("v{version:apiVersion}/messages")]
+[Route("v{version:apiVersion}/chats")]
 public class MessagesController(ILogger<MessagesController> logger, IMessageService service): ControllerBase
 {
     /// <summary>
     /// Выдает все сообщения с пагинацией
     /// </summary>
+    /// <remarks>
+    /// Если для секретного чата поля Signature и Keys отсутствует, то сообщение было переслано из другого чата и его можно не расшифровывать 
+    /// </remarks>
     /// <param name="chatId">Идентификатор чата</param>
     /// <param name="limit">Кол-во сообщений в выдаче</param>
     /// <param name="offset">Отступ от начала списка</param>
@@ -48,6 +51,9 @@ public class MessagesController(ILogger<MessagesController> logger, IMessageServ
     /// <summary>
     /// Выдает последнее сообщение чата
     /// </summary>
+    /// <remarks>
+    /// Если для секретного чата поля Signature и Keys отсутствует, то сообщение было переслано из другого чата и его можно не расшифровывать 
+    /// </remarks>
     /// <param name="chatId">Идентификатор чата</param>
     /// <returns></returns>
     /// <response code="200">Успешно</response>
@@ -74,8 +80,28 @@ public class MessagesController(ILogger<MessagesController> logger, IMessageServ
     }
 
     /// <summary>
+    /// Возвращает информацию о сообщении
+    /// </summary>
+    /// <remarks>
+    /// Нужна например, чтобы узнать содержимое пересылаемого сообщения
+    /// </remarks>
+    /// <param name="chatId">Идентификатор чата</param>
+    /// <param name="messageId">Идентификатор сообщения</param>
+    /// <returns></returns>
+    [Authorize]
+    [ApiVersion("1.0")]
+    [HttpGet("{chatId}/messages/{messageId}")]
+    public async Task<IActionResult> GetMessage([Required] string chatId, [Required] string messageId)
+    {
+        return Ok();
+    }
+
+    /// <summary>
     /// Позволяет изменить сообщение
     /// </summary>
+    /// <remarks>
+    /// Пересылаемое сообщение нельзя изменить
+    /// </remarks>
     /// <param name="chatId">Идентификатор чата</param>
     /// <param name="messageId">Идентификатор сообщение</param>
     /// <param name="message">Объект обновляемого сообщения</param>
@@ -137,23 +163,24 @@ public class MessagesController(ILogger<MessagesController> logger, IMessageServ
 
         return NoContent();
     }
-
+    
     /// <summary>
     /// Позволяет отправить сообщение
     /// </summary>
+    /// <param name="chatId">Идентификатор чата в который отправить сообщение</param>
     /// <param name="message">Данные сообщения</param>
-    /// <param name="cancellationToken">Токен отмены сообщения</param>
+    /// <param name="cancellationToken">Токен отмены отправки сообщения</param>
     /// <returns></returns>
     /// <response code="200">Успешно</response>
     /// <response code="403">Невалидный jwt токен или запрещено отправлять сообщения</response>
     /// <response code="404">Чат не найден</response>
     [Authorize]
-    [HttpPost]
+    [HttpPost("{chatId}/messages/send")]
     [ApiVersion("1.0")]
     [ProducesResponseType(typeof(BaseResponse<string, SendMessage>), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(BaseResponse<string, SendMessage>), StatusCodes.Status403Forbidden)]
     [ProducesResponseType(typeof(BaseResponse<string, SendMessage>), StatusCodes.Status404NotFound)]
-    public async Task<IActionResult> SendMessage([FromBody] Message message, CancellationToken cancellationToken)
+    public async Task<IActionResult> SendMessage([Required] [FromRoute] string chatId, [FromBody] Message message, CancellationToken cancellationToken)
     {
         logger.LogInformation("Начало обработки запроса: (отправка сообщения)");
         try
@@ -161,7 +188,7 @@ public class MessagesController(ILogger<MessagesController> logger, IMessageServ
             var authHeader = HttpContext.Request.Headers["Authorization"].ToString();
             var token = authHeader.Substring("Bearer ".Length);
 
-            var response = await service.SendMessageAsync(token, message, cancellationToken);
+            var response = await service.SendMessageAsync(token, chatId, message, cancellationToken);
 
             if (!response.Successfully)
                 return StatusCode(response.Status, response);
@@ -177,20 +204,21 @@ public class MessagesController(ILogger<MessagesController> logger, IMessageServ
     /// <summary>
     /// Позволяет отправить сообщение с ответом
     /// </summary>
-    /// <param name="replyMessageId">Идентификатор отвечаемого сообщения</param>
+    /// <param name="chatId">Идентификатор чата в который отправить сообщение</param>
+    /// <param name="messageId">Идентификатор отвечаемого сообщения</param>
     /// <param name="message">Данные сообщения</param>
-    /// <param name="cancellationToken">Токен отмены сообщения</param>
+    /// <param name="cancellationToken">Токен отмены отправки сообщения</param>
     /// <returns></returns>
     /// <response code="200">Успешно</response>
     /// <response code="403">Невалидный jwt токен или запрещено отправлять сообщения</response>
     /// <response code="404">Чат или сообщение не найдено</response>
     [Authorize]
-    [HttpPost("{replyMessageId}/reply")]
     [ApiVersion("1.0")]
+    [HttpPost("{chatId}/messages/{messageId}/reply")]
     [ProducesResponseType(typeof(BaseResponse<string, SendMessage>), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(BaseResponse<string, SendMessage>), StatusCodes.Status403Forbidden)]
     [ProducesResponseType(typeof(BaseResponse<string, SendMessage>), StatusCodes.Status404NotFound)]
-    public async Task<IActionResult> SendReplyMessage([Required] [FromRoute] string replyMessageId, [FromBody] Message message, CancellationToken cancellationToken)
+    public async Task<IActionResult> SendReplyMessage([Required] [FromRoute] string chatId, [Required] [FromRoute] string messageId, [FromBody] Message message, CancellationToken cancellationToken)
     {
         logger.LogInformation("Начало обработки запроса: (отправка сообщения c ответом)");
         try
@@ -198,7 +226,7 @@ public class MessagesController(ILogger<MessagesController> logger, IMessageServ
             var authHeader = HttpContext.Request.Headers["Authorization"].ToString();
             var token = authHeader.Substring("Bearer ".Length);
 
-            var response = await service.SendReplyMessageAsync(token, replyMessageId, message, cancellationToken);
+            var response = await service.SendReplyMessageAsync(token, chatId, messageId, message, cancellationToken);
 
             if (!response.Successfully)
                 return StatusCode(response.Status, response);
@@ -211,6 +239,47 @@ public class MessagesController(ILogger<MessagesController> logger, IMessageServ
         }
     }
 
+    /// <summary>
+    /// Позволяет переслать сообщение
+    /// </summary>
+    /// <remarks>
+    /// Если передан объект message, то оно будет отправлено ответом на пересылаемое сообщение и в ответе будет объект нового сообщения, а не пересылаемого 
+    /// </remarks>
+    /// <param name="chatId">Идентификатор чата откуда переслать сообщение</param>
+    /// <param name="messageId">Идентификатор пересылаемого сообщения</param>
+    /// <param name="request">Данные для пересылки сообщения</param>
+    /// <param name="cancellationToken">Токен отмены отправки сообщения</param>
+    /// <returns></returns>
+    /// <response code="200">Успешно</response>
+    /// <response code="403">Невалидный jwt токен или запрещено отправлять сообщения</response>
+    /// <response code="404">Чат или сообщение не найдено</response>
+    [Authorize]
+    [ApiVersion("1.0")]
+    [HttpPost("{chatId}/messages/{messageId}/forward")]
+    [ProducesResponseType(typeof(BaseResponse<string, SendMessage>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(BaseResponse<string, SendMessage>), StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(typeof(BaseResponse<string, SendMessage>), StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> SendMessage1([Required] [FromRoute] string chatId, [Required] [FromRoute] string messageId, [FromBody] ForwardMessageRequest request, CancellationToken cancellationToken)
+    {
+        logger.LogInformation("Начало обработки запроса: (отправка пересылаемого сообщения)");
+        try
+        {
+            var authHeader = HttpContext.Request.Headers["Authorization"].ToString();
+            var token = authHeader.Substring("Bearer ".Length);
+
+            var response = await service.SendMessageAsync(token, chatId, new Message {Text = ""}, cancellationToken);
+
+            if (!response.Successfully)
+                return StatusCode(response.Status, response);
+
+            return Ok(response);
+        }
+        catch (OperationCanceledException)
+        {
+            return StatusCode(StatusCodes.Status499ClientClosedRequest, "Client closed request");
+        }
+    }
+    
     /// <summary>
     /// Позволяет отметить сообщение как прочитанное
     /// </summary>

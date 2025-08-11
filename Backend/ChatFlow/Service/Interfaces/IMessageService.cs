@@ -13,8 +13,17 @@ public interface IMessageService
     /// <param name="message">Объект сообщения</param>
     /// <param name="cancellationToken">Токен отмены</param>
     /// <returns></returns>
-    public Task<BaseResponse<string, SendMessage>> SendMessageAsync(string accessToken, Message message,
-        CancellationToken cancellationToken);
+    public Task<BaseResponse<string, SendMessage>> SendMessageAsync(string accessToken, Message message, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Создает сообщение и отправляет в чат
+    /// </summary>
+    /// <param name="accessToken">Токен пользователя</param>
+    /// <param name="replyMessageId">Идентификатор отвечаемого сообщения</param>
+    /// <param name="message">Объект сообщения</param>
+    /// <param name="cancellationToken">Токен отмены</param>
+    /// <returns></returns>
+    public Task<BaseResponse<string, SendMessage>> SendReplyMessageAsync(string accessToken, string replyMessageId, Message message, CancellationToken cancellationToken);
 
     /// <summary>
     /// Выдает все сообщения чата с пагинацией

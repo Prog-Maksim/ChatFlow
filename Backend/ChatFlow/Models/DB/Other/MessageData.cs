@@ -13,6 +13,10 @@ public class MessageData: ICloneable
     public string Id { get; set; } = ObjectId.GenerateNewId().ToString();
     
     public required string MessageId { get; set; }
+    
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? ReplyMessageId { get; set; }
+    
     public required string ChatId { get; set; }
     public required string Text { get; set; }
     public required string OwnerId { get; set; }

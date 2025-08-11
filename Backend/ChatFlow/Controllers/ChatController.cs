@@ -144,7 +144,7 @@ public class ChatsController(ILogger<ChatsController> logger, IChatService servi
     [ProducesResponseType(typeof(BaseResponse<string, string>), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(BaseResponse<string, string>), StatusCodes.Status403Forbidden)]
     [ProducesResponseType(typeof(BaseResponse<string, string>), StatusCodes.Status404NotFound)]
-    public async Task<IActionResult> DeleteAllMessages(string chatId)
+    public async Task<IActionResult> DeleteAllMessages([Required] [FromRoute] string chatId)
     {
         logger.LogInformation("Начало обработки запроса: (удаление истории чата)");
         var authHeader = HttpContext.Request.Headers["Authorization"].ToString();
@@ -174,7 +174,7 @@ public class ChatsController(ILogger<ChatsController> logger, IChatService servi
     [ProducesResponseType(typeof(BaseResponse<string, string>), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(BaseResponse<string, string>), StatusCodes.Status403Forbidden)]
     [ProducesResponseType(typeof(BaseResponse<string, string>), StatusCodes.Status404NotFound)]
-    public async Task<IActionResult> DeleteAllMessagesAllPersons(string chatId)
+    public async Task<IActionResult> DeleteAllMessagesAllPersons([Required] [FromRoute] string chatId)
     {
         logger.LogInformation("Начало обработки запроса: (удаление истории чата для всех)");
         var authHeader = HttpContext.Request.Headers["Authorization"].ToString();
@@ -205,7 +205,7 @@ public class ChatsController(ILogger<ChatsController> logger, IChatService servi
     [ProducesResponseType(typeof(BaseResponse<string, string>), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(BaseResponse<string, string>), StatusCodes.Status403Forbidden)]
     [ProducesResponseType(typeof(BaseResponse<string, string>), StatusCodes.Status404NotFound)]
-    public async Task<IActionResult> DeleteChat(string chatId)
+    public async Task<IActionResult> DeleteChat([Required] [FromRoute] string chatId)
     {
         logger.LogInformation("Начало обработки запроса: (удаление чата)");
         var authHeader = HttpContext.Request.Headers["Authorization"].ToString();
@@ -233,7 +233,7 @@ public class ChatsController(ILogger<ChatsController> logger, IChatService servi
     [ProducesResponseType(typeof(BaseResponse<string, string>), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(BaseResponse<string, string>), StatusCodes.Status403Forbidden)]
     [ProducesResponseType(typeof(BaseResponse<string, string>), StatusCodes.Status404NotFound)]
-    public async Task<IActionResult> DeleteChatAllPersons(string chatId)
+    public async Task<IActionResult> DeleteChatAllPersons([Required] [FromRoute] string chatId)
     {
         logger.LogInformation("Начало обработки запроса: (удаление чата для всех)");
         var authHeader = HttpContext.Request.Headers["Authorization"].ToString();
@@ -245,5 +245,75 @@ public class ChatsController(ILogger<ChatsController> logger, IChatService servi
             return StatusCode(response.Status, response);
 
         return Ok(response);
+    }
+
+    /// <summary>
+    /// Закрепляет сообщение для себя
+    /// </summary>
+    /// <param name="chatId">Идентификатор чата</param>
+    /// <param name="messageId">Идентификатор сообщения</param>
+    /// <returns></returns>
+    [Authorize]
+    [ApiVersion("1.0")]
+    [HttpPost("{chatId}/messages/{messageId}/pinned")]
+    public async Task<IActionResult> PinnedMessage([Required] [FromRoute] string chatId, [Required] [FromRoute] string messageId)
+    {
+        return Ok();
+    }
+    
+    /// <summary>
+    /// Закрепляет сообщение для всех
+    /// </summary>
+    /// <param name="chatId">Идентификатор чата</param>
+    /// <param name="messageId">Идентификатор сообщения</param>
+    /// <returns></returns>
+    [Authorize]
+    [ApiVersion("1.0")]
+    [HttpPost("{chatId}/messages/{messageId}/pinned/all")]
+    public async Task<IActionResult> PinnedMessageAll([Required] [FromRoute] string chatId, [Required] [FromRoute] string messageId)
+    {
+        return Ok();
+    }
+    
+    /// <summary>
+    /// Открепляет сообщение для себя
+    /// </summary>
+    /// <param name="chatId">Идентификатор чата</param>
+    /// <param name="messageId">Идентификатор сообщения</param>
+    /// <returns></returns>
+    [Authorize]
+    [ApiVersion("1.0")]
+    [HttpDelete("{chatId}/messages/{messageId}/pinned")]
+    public async Task<IActionResult> UnPinnedMessage([Required] [FromRoute] string chatId, [Required] [FromRoute] string messageId)
+    {
+        return Ok();
+    }
+    
+    /// <summary>
+    /// Открепляет сообщение для всех
+    /// </summary>
+    /// <param name="chatId">Идентификатор чата</param>
+    /// <param name="messageId">Идентификатор сообщения</param>
+    /// <returns></returns>
+    [Authorize]
+    [ApiVersion("1.0")]
+    [HttpDelete("{chatId}/messages/{messageId}/pinned/all")]
+    public async Task<IActionResult> UnPinnedMessageAll([Required] [FromRoute] string chatId, [Required] [FromRoute] string messageId)
+    {
+        return Ok();
+    }
+    
+    /// <summary>
+    /// Выдает закрепленные сообщения для чата
+    /// </summary>
+    /// <param name="chatId">Идентификатор чата</param>
+    /// <param name="messageId">Идентификатор сообщения</param>
+    /// <returns></returns>
+    [Authorize]
+    [ApiVersion("1.0")]
+    [HttpGet("{chatId}/messages/{messageId}/pinned")]
+    public async Task<IActionResult> GetPinnedMessage([Required] [FromRoute] string chatId, [Required] [FromRoute] string messageId)
+    {
+        return Ok();
     }
 }

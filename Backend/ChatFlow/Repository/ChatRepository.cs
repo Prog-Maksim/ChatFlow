@@ -1,5 +1,6 @@
 using ChatFlow.Enums;
 using ChatFlow.Models.DB;
+using ChatFlow.Models.DB.Other;
 using ChatFlow.Repository.Interfaces;
 using Microsoft.EntityFrameworkCore;
 using MongoDB.Driver;

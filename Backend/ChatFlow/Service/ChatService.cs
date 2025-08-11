@@ -29,7 +29,7 @@ public class ChatService: IChatService
         _messageRepository = messageRepository;
         _webSocketConnectionManager = webSocketConnectionManager;
     }
-
+    
     public async Task<BaseResponse<string, CreateChat>> CreatePrivateChat(string accessToken, string otherPersonId)
     {
         var dataToken = _jwtTokenService.GetJwtTokenData(accessToken);
@@ -477,7 +477,7 @@ public class ChatService: IChatService
             }
         };
     }
-
+    
     private BaseResponse<TErrors, TData> CreateErrorResponse<TErrors, TData>(string message, ResponseType type, int status, TErrors errors)
     {
         return new BaseResponse<TErrors, TData>

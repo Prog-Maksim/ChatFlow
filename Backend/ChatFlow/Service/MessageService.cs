@@ -134,43 +134,6 @@ public class MessageService: IMessageService
         return CreateSuccessResponse(messages, totalCount, limit, offset, nextOffset);
     }
     
-    private BaseResponse<TErrors, TData> CreateErrorResponse<TErrors, TData>(string message, ResponseType type, int status, TErrors errors)
-    {
-        return new BaseResponse<TErrors, TData>
-        {
-            Message = message,
-            Type = type,
-            Status = status,
-            Successfully = false,
-            Data = default,
-            Errors = errors
-        };
-    }
-    
-    private BaseResponse<string, MessagesPagination> CreateSuccessResponse(
-        List<MessageData> messages, long totalCount, int limit, int offset, int nextOffset)
-    {
-        return new BaseResponse<string, MessagesPagination>
-        {
-            Message = "Сообщения",
-            Type = ResponseType.Ok,
-            Status = 200,
-            Successfully = true,
-            Data = new MessagesPagination
-            {
-                Pagination = new PaginationResult
-                {
-                    TotalCount = totalCount,
-                    Limit = limit,
-                    Offset = offset,
-                    NextOffset = nextOffset >= totalCount ? 0 : nextOffset,
-                    ReturnedCount = messages.Count
-                },
-                Messages = messages
-            }
-        };
-    }
-    
     public async Task<BaseResponse<string, MessageData>> GetLastMessageAsync(string accessToken, string chatId)
     {
         var dataToken = _jwtTokenService.GetJwtTokenData(accessToken);
@@ -411,6 +374,43 @@ public class MessageService: IMessageService
         };
     }
 
+    private BaseResponse<TErrors, TData> CreateErrorResponse<TErrors, TData>(string message, ResponseType type, int status, TErrors errors)
+    {
+        return new BaseResponse<TErrors, TData>
+        {
+            Message = message,
+            Type = type,
+            Status = status,
+            Successfully = false,
+            Data = default,
+            Errors = errors
+        };
+    }
+    
+    private BaseResponse<string, MessagesPagination> CreateSuccessResponse(
+        List<MessageData> messages, long totalCount, int limit, int offset, int nextOffset)
+    {
+        return new BaseResponse<string, MessagesPagination>
+        {
+            Message = "Сообщения",
+            Type = ResponseType.Ok,
+            Status = 200,
+            Successfully = true,
+            Data = new MessagesPagination
+            {
+                Pagination = new PaginationResult
+                {
+                    TotalCount = totalCount,
+                    Limit = limit,
+                    Offset = offset,
+                    NextOffset = nextOffset >= totalCount ? 0 : nextOffset,
+                    ReturnedCount = messages.Count
+                },
+                Messages = messages
+            }
+        };
+    }
+    
     private (string EncryptedText, string IV, string Hmac) EncryptAndSign(string plainText)
     {
         // Генерация IV

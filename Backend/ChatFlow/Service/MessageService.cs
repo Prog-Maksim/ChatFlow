@@ -235,7 +235,7 @@ public class MessageService: IMessageService
         if (!success)
             return CreateErrorResponse<string, MessageData>("Сообщение не удалено", ResponseType.MessageNotModified, 400, "Bad Request");
 
-        _ = SendMessageUsersAsync(chat.Persons, message);
+        _ = _manager.SendMessageDeleteMessageAsync(message, chat.Persons);
         return new BaseResponse<string, MessageData>
         {
             Message = "Сообщение успешно удалено",

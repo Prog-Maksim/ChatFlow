@@ -189,7 +189,7 @@ public class MessagesController(ILogger<MessagesController> logger, IMessageServ
     [ProducesResponseType(typeof(BaseResponse<string, string>), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(BaseResponse<string, string>), StatusCodes.Status403Forbidden)]
     [ProducesResponseType(typeof(BaseResponse<string, string>), StatusCodes.Status404NotFound)]
-    public async Task<IActionResult> SetMessageTheView(string chatId, string messageId)
+    public async Task<IActionResult> SetMessageTheView([Required] [FromRoute] string chatId, [Required]  [FromRoute] string messageId)
     {
         logger.LogInformation("Начало обработки запроса: (прочтение сообщения)");
         var authHeader = HttpContext.Request.Headers["Authorization"].ToString();
@@ -218,7 +218,7 @@ public class MessagesController(ILogger<MessagesController> logger, IMessageServ
     [ProducesResponseType(typeof(BaseResponse<string, List<PersonReadMessage>>), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(BaseResponse<string, List<PersonReadMessage>>), StatusCodes.Status403Forbidden)]
     [ProducesResponseType(typeof(BaseResponse<string, List<PersonReadMessage>>), StatusCodes.Status404NotFound)]
-    public async Task<IActionResult> GetMessageTheView(string chatId, string messageId)
+    public async Task<IActionResult> GetMessageTheView([Required] [FromRoute] string chatId, [Required]  [FromRoute] string messageId)
     {
         logger.LogInformation("Начало обработки запроса: (выдача просмотров для сообщения)");
         var authHeader = HttpContext.Request.Headers["Authorization"].ToString();

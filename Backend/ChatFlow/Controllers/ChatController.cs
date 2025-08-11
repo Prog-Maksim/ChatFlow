@@ -258,7 +258,16 @@ public class ChatsController(ILogger<ChatsController> logger, IChatService servi
     [HttpPost("{chatId}/messages/{messageId}/pinned")]
     public async Task<IActionResult> PinnedMessage([Required] [FromRoute] string chatId, [Required] [FromRoute] string messageId)
     {
-        return Ok();
+        logger.LogInformation("Начало обработки запроса: (закрепление сообщения)");
+        var authHeader = HttpContext.Request.Headers["Authorization"].ToString();
+        var token = authHeader.Substring("Bearer ".Length);
+        
+        var response = await service.PinnedMessage(token, chatId, messageId);
+
+        if (!response.Successfully)
+            return StatusCode(response.Status, response);
+
+        return Ok(response);
     }
     
     /// <summary>
@@ -272,7 +281,16 @@ public class ChatsController(ILogger<ChatsController> logger, IChatService servi
     [HttpPost("{chatId}/messages/{messageId}/pinned/all")]
     public async Task<IActionResult> PinnedMessageAll([Required] [FromRoute] string chatId, [Required] [FromRoute] string messageId)
     {
-        return Ok();
+        logger.LogInformation("Начало обработки запроса: (закрепление сообщения для всех)");
+        var authHeader = HttpContext.Request.Headers["Authorization"].ToString();
+        var token = authHeader.Substring("Bearer ".Length);
+        
+        var response = await service.PinnedMessage(token, chatId, messageId, true);
+
+        if (!response.Successfully)
+            return StatusCode(response.Status, response);
+
+        return Ok(response);
     }
     
     /// <summary>
@@ -286,7 +304,16 @@ public class ChatsController(ILogger<ChatsController> logger, IChatService servi
     [HttpDelete("{chatId}/messages/{messageId}/pinned")]
     public async Task<IActionResult> UnPinnedMessage([Required] [FromRoute] string chatId, [Required] [FromRoute] string messageId)
     {
-        return Ok();
+        logger.LogInformation("Начало обработки запроса: (открепление сообщения)");
+        var authHeader = HttpContext.Request.Headers["Authorization"].ToString();
+        var token = authHeader.Substring("Bearer ".Length);
+        
+        var response = await service.UnPinnedMessage(token, chatId, messageId);
+
+        if (!response.Successfully)
+            return StatusCode(response.Status, response);
+
+        return Ok(response);
     }
     
     /// <summary>
@@ -300,20 +327,37 @@ public class ChatsController(ILogger<ChatsController> logger, IChatService servi
     [HttpDelete("{chatId}/messages/{messageId}/pinned/all")]
     public async Task<IActionResult> UnPinnedMessageAll([Required] [FromRoute] string chatId, [Required] [FromRoute] string messageId)
     {
-        return Ok();
+        logger.LogInformation("Начало обработки запроса: (открепление сообщения для всех)");
+        var authHeader = HttpContext.Request.Headers["Authorization"].ToString();
+        var token = authHeader.Substring("Bearer ".Length);
+        
+        var response = await service.UnPinnedMessage(token, chatId, messageId, true);
+
+        if (!response.Successfully)
+            return StatusCode(response.Status, response);
+
+        return Ok(response);
     }
     
     /// <summary>
     /// Выдает закрепленные сообщения для чата
     /// </summary>
     /// <param name="chatId">Идентификатор чата</param>
-    /// <param name="messageId">Идентификатор сообщения</param>
     /// <returns></returns>
     [Authorize]
     [ApiVersion("1.0")]
     [HttpGet("{chatId}/messages/{messageId}/pinned")]
-    public async Task<IActionResult> GetPinnedMessage([Required] [FromRoute] string chatId, [Required] [FromRoute] string messageId)
+    public async Task<IActionResult> GetPinnedMessage([Required] [FromRoute] string chatId)
     {
-        return Ok();
+        logger.LogInformation("Начало обработки запроса: (выдача закрепленных сообщений)");
+        var authHeader = HttpContext.Request.Headers["Authorization"].ToString();
+        var token = authHeader.Substring("Bearer ".Length);
+        
+        var response = await service.GetPinnedMessage(token, chatId);
+
+        if (!response.Successfully)
+            return StatusCode(response.Status, response);
+
+        return Ok(response);
     }
 }

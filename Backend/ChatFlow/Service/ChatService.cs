@@ -312,6 +312,162 @@ public class ChatService: IChatService
         };
     }
 
+    public async Task<BaseResponse<string, string>> PinnedMessage(string accessToken, string chatId, string messageId, bool isAll = false)
+    {
+        var dataToken = _jwtTokenService.GetJwtTokenData(accessToken);
+        if (!await _jwtTokenService.ValidateJwtAccessToken(dataToken))
+            return CreateErrorResponse<string, string>("Не удалось проверить корректность jwt токена", ResponseType.JwtTokenVerificationFailed, 403, "Forbidden");
+        
+        ChatDocument? chat = await _messageRepository.GetChatAsync(chatId);
+        
+        if (chat is null || chat.HiddenForUsers.Contains(dataToken.PersonId))
+            return CreateErrorResponse<string, string>("Данный чат не найден", ResponseType.ChatNotFound, 404, "Not Found");
+
+        if (chat.Persons.All(p => p.PersonId != dataToken.PersonId))
+            return CreateErrorResponse<string, string>("Вы не состоите в этом чате", ResponseType.UserNotInChat, 403, "Forbidden");
+        
+        var message = await _messageRepository.GetMessageByIdAsync(chatId, messageId, dataToken.PersonId);
+        
+        if (message is null)
+            return CreateErrorResponse<string, string>("Сообщение не найдено!", ResponseType.MessageNotFound, 404, "Not Found");
+        
+        if (isAll)
+        {
+            foreach (var person in chat.Persons)
+            {
+                if (!chat.PinnedMessages.ContainsKey(person.PersonId))
+                    chat.PinnedMessages[person.PersonId] = new List<PinnedMessageInfo>();
+
+                chat.PinnedMessages[person.PersonId].Add(new PinnedMessageInfo
+                {
+                    MessageId = messageId,
+                    PinnedBy = dataToken.PersonId
+                });
+            }
+        }
+        else
+        {
+            if (!chat.PinnedMessages.ContainsKey(dataToken.PersonId))
+                chat.PinnedMessages[dataToken.PersonId] = new List<PinnedMessageInfo>();
+
+            chat.PinnedMessages[dataToken.PersonId].Add(new PinnedMessageInfo
+            {
+                MessageId = messageId,
+                PinnedBy = dataToken.PersonId
+            });
+        }
+        
+        await _chatRepository.UpdateChatDataAsync(chatId, chat);
+        
+        return new BaseResponse<string, string>
+        {
+            Message = "Сообщение успешно закреплено",
+            Type = ResponseType.Ok,
+            Successfully = true,
+            Status = 200,
+            Data = messageId
+        };
+    }
+
+    public async Task<BaseResponse<string, string>> UnPinnedMessage(string accessToken, string chatId, string messageId, bool isAll = false)
+    {
+        var dataToken = _jwtTokenService.GetJwtTokenData(accessToken);
+        if (!await _jwtTokenService.ValidateJwtAccessToken(dataToken))
+            return CreateErrorResponse<string, string>("Не удалось проверить корректность jwt токена", ResponseType.JwtTokenVerificationFailed, 403, "Forbidden");
+        
+        ChatDocument? chat = await _messageRepository.GetChatAsync(chatId);
+        
+        if (chat is null || chat.HiddenForUsers.Contains(dataToken.PersonId))
+            return CreateErrorResponse<string, string>("Данный чат не найден", ResponseType.ChatNotFound, 404, "Not Found");
+
+        if (chat.Persons.All(p => p.PersonId != dataToken.PersonId))
+            return CreateErrorResponse<string, string>("Вы не состоите в этом чате", ResponseType.UserNotInChat, 403, "Forbidden");
+        
+        var message = await _messageRepository.GetMessageByIdAsync(chatId, messageId, dataToken.PersonId);
+        
+        if (message is null)
+            return CreateErrorResponse<string, string>("Сообщение не найдено!", ResponseType.MessageNotFound, 404, "Not Found");
+        
+        if (isAll)
+        {
+            foreach (var personId in chat.PinnedMessages.Keys.ToList())
+            {
+                var pinnedList = chat.PinnedMessages[personId];
+                pinnedList.RemoveAll(p => p.MessageId == messageId);
+
+                if (pinnedList.Count == 0)
+                    chat.PinnedMessages.Remove(personId);
+            }
+        }
+        else
+        {
+            if (chat.PinnedMessages.TryGetValue(dataToken.PersonId, out var pinnedList))
+            {
+                pinnedList.RemoveAll(p => p.MessageId == messageId);
+                
+                if (pinnedList.Count == 0)
+                    chat.PinnedMessages.Remove(dataToken.PersonId);
+            }
+        }
+        
+        await _chatRepository.UpdateChatDataAsync(chatId, chat);
+        
+        return new BaseResponse<string, string>
+        {
+            Message = "Сообщение успешно откреплено",
+            Type = ResponseType.Ok,
+            Successfully = true,
+            Status = 200,
+            Data = messageId
+        };
+    }
+
+    public async Task<BaseResponse<string, PinnedMessage>> GetPinnedMessage(string accessToken, string chatId)
+    {
+        var dataToken = _jwtTokenService.GetJwtTokenData(accessToken);
+        if (!await _jwtTokenService.ValidateJwtAccessToken(dataToken))
+            return CreateErrorResponse<string, PinnedMessage>("Не удалось проверить корректность jwt токена", ResponseType.JwtTokenVerificationFailed, 403, "Forbidden");
+        
+        ChatDocument? chat = await _messageRepository.GetChatAsync(chatId);
+        
+        if (chat is null || chat.HiddenForUsers.Contains(dataToken.PersonId))
+            return CreateErrorResponse<string, PinnedMessage>("Данный чат не найден", ResponseType.ChatNotFound, 404, "Not Found");
+
+        if (chat.Persons.All(p => p.PersonId != dataToken.PersonId))
+            return CreateErrorResponse<string, PinnedMessage>("Вы не состоите в этом чате", ResponseType.UserNotInChat, 403, "Forbidden");
+
+        if (chat.PinnedMessages.TryGetValue(dataToken.PersonId, out var pinnedList))
+        {
+            PinnedMessage message = new PinnedMessage
+            {
+                CountPinnedMessage = pinnedList.Count,
+                Messages = pinnedList.Select(p => p.MessageId).ToList(),
+            };
+            
+            return new BaseResponse<string, PinnedMessage>
+            {
+                Message = "Закрепленные сообщения",
+                Type = ResponseType.Ok,
+                Successfully = true,
+                Status = 200,
+                Data = message
+            };
+        }
+        
+        return new BaseResponse<string, PinnedMessage>
+        {
+            Message = "Закрепленные сообщения",
+            Type = ResponseType.Ok,
+            Successfully = true,
+            Status = 200,
+            Data = new PinnedMessage
+            {
+                CountPinnedMessage = 0,
+                Messages = new List<string>()
+            }
+        };
+    }
+
     private BaseResponse<TErrors, TData> CreateErrorResponse<TErrors, TData>(string message, ResponseType type, int status, TErrors errors)
     {
         return new BaseResponse<TErrors, TData>

@@ -62,4 +62,10 @@ public class ChatDocument
     /// Key = PersonId, Value = дата удаления сообщений
     /// </summary>
     public Dictionary<string, DateTime> ClearedMessagesForUsers { get; set; } = new();
+    
+    /// <summary>
+    /// Закрепленные сообщения чата
+    /// Key = PersonId, Value = список закреплённых сообщений
+    /// </summary>
+    public Dictionary<string, List<PinnedMessageInfo>> PinnedMessages  { get; set; } = new();
 }

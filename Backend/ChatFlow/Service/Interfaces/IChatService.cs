@@ -52,4 +52,32 @@ public interface IChatService
     /// <param name="isAll">Удалить для всех</param>
     /// <returns></returns>
     public Task<BaseResponse<string, string>> DeleteChat(string accessToken, string chatId, bool isAll = false);
+    
+    /// <summary>
+    /// Закрепляет сообщение в чате
+    /// </summary>
+    /// <param name="accessToken">Access токен</param>
+    /// <param name="chatId">Идентификатор чата</param>
+    /// <param name="messageId">Идентификатор сообщения</param>
+    /// <param name="isAll">Удалить для всех</param>
+    /// <returns></returns>
+    public Task<BaseResponse<string, string>> PinnedMessage(string accessToken, string chatId, string messageId, bool isAll = false);
+    
+    /// <summary>
+    /// Открепляет сообщение в чате
+    /// </summary>
+    /// <param name="accessToken">Access токен</param>
+    /// <param name="chatId">Идентификатор чата</param>
+    /// <param name="messageId">Идентификатор сообщения</param>
+    /// <param name="isAll">Удалить для всех</param>
+    /// <returns></returns>
+    public Task<BaseResponse<string, string>> UnPinnedMessage(string accessToken, string chatId, string messageId, bool isAll = false);
+    
+    /// <summary>
+    /// Выдает закрепленные сообщения в чате
+    /// </summary>
+    /// <param name="accessToken">Access токен</param>
+    /// <param name="chatId">Идентификатор чата</param>
+    /// <returns></returns>
+    public Task<BaseResponse<string, PinnedMessage>> GetPinnedMessage(string accessToken, string chatId);
 }

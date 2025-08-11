@@ -21,7 +21,7 @@ public class JsonFormatter : ITextFormatter
             
             RequestId = requestIdValue?.ToString().Trim('"'),
 
-            // Детали исключения (если есть)
+            // Детали исключения
             Exception = exception?.Message,
             ExceptionType = exception?.GetType().FullName,
             exception?.StackTrace,
@@ -42,23 +42,23 @@ public class JsonFormatter : ITextFormatter
         output.Write(JsonSerializer.Serialize(logObject, jsonOptions));
     }
 
-    // Извлекаем имя файла из стека (если есть)
+    // Извлекаем имя файла из стека
     private static string? GetFileNameFromStackTrace(Exception? exception)
     {
         if (exception == null) return null;
 
         var stackTrace = new System.Diagnostics.StackTrace(exception, true);
-        var frame = stackTrace.GetFrames()?.FirstOrDefault(f => f.GetFileName() != null);
+        var frame = stackTrace.GetFrames().FirstOrDefault(f => f.GetFileName() != null);
         return frame?.GetFileName();
     }
 
-    // Извлекаем номер строки из стека (если есть)
+    // Извлекаем номер строки из стека
     private static int? GetLineNumberFromStackTrace(Exception? exception)
     {
         if (exception == null) return null;
 
         var stackTrace = new System.Diagnostics.StackTrace(exception, true);
-        var frame = stackTrace.GetFrames()?.FirstOrDefault(f => f.GetFileLineNumber() > 0);
+        var frame = stackTrace.GetFrames().FirstOrDefault(f => f.GetFileLineNumber() > 0);
         return frame?.GetFileLineNumber();
     }
 }

@@ -153,7 +153,7 @@ public class MessagesController(ILogger<MessagesController> logger, IMessageServ
     [ProducesResponseType(typeof(BaseResponse<string, SendMessage>), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(BaseResponse<string, SendMessage>), StatusCodes.Status403Forbidden)]
     [ProducesResponseType(typeof(BaseResponse<string, SendMessage>), StatusCodes.Status404NotFound)]
-    public async Task<IActionResult> SendMessage([Required] [FromBody] Message message, CancellationToken cancellationToken)
+    public async Task<IActionResult> SendMessage([FromBody] Message message, CancellationToken cancellationToken)
     {
         logger.LogInformation("Начало обработки запроса: (отправка сообщения)");
         try
@@ -162,6 +162,43 @@ public class MessagesController(ILogger<MessagesController> logger, IMessageServ
             var token = authHeader.Substring("Bearer ".Length);
 
             var response = await service.SendMessageAsync(token, message, cancellationToken);
+
+            if (!response.Successfully)
+                return StatusCode(response.Status, response);
+
+            return Ok(response);
+        }
+        catch (OperationCanceledException)
+        {
+            return StatusCode(StatusCodes.Status499ClientClosedRequest, "Client closed request");
+        }
+    }
+
+    /// <summary>
+    /// Позволяет отправить сообщение с ответом
+    /// </summary>
+    /// <param name="replyMessageId">Идентификатор отвечаемого сообщения</param>
+    /// <param name="message">Данные сообщения</param>
+    /// <param name="cancellationToken">Токен отмены сообщения</param>
+    /// <returns></returns>
+    /// <response code="200">Успешно</response>
+    /// <response code="403">Невалидный jwt токен или запрещено отправлять сообщения</response>
+    /// <response code="404">Чат или сообщение не найдено</response>
+    [Authorize]
+    [HttpPost("{replyMessageId}/reply")]
+    [ApiVersion("1.0")]
+    [ProducesResponseType(typeof(BaseResponse<string, SendMessage>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(BaseResponse<string, SendMessage>), StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(typeof(BaseResponse<string, SendMessage>), StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> SendReplyMessage([Required] [FromRoute] string replyMessageId, [FromBody] Message message, CancellationToken cancellationToken)
+    {
+        logger.LogInformation("Начало обработки запроса: (отправка сообщения c ответом)");
+        try
+        {
+            var authHeader = HttpContext.Request.Headers["Authorization"].ToString();
+            var token = authHeader.Substring("Bearer ".Length);
+
+            var response = await service.SendReplyMessageAsync(token, replyMessageId, message, cancellationToken);
 
             if (!response.Successfully)
                 return StatusCode(response.Status, response);

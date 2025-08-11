@@ -110,7 +110,7 @@ public class AuthController(ILogger<AuthController> logger, IAuthService service
             return StatusCode(error.Status, error);
         }
         
-        var response = await service.AuthorizationUserAsync(authUser.Login, authUser.Password, userIpAddress, authUser.PublicKey, userAgent, authUser.RefreshToken);
+        var response = await service.AuthorizationUserAsync(authUser.Login, authUser.Password, userIpAddress, authUser.PublicKey, userAgent!, authUser.RefreshToken);
         
         if (!response.Successfully)
             return StatusCode(response.Status, response);

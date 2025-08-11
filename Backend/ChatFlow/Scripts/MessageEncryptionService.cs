@@ -1,5 +1,6 @@
 using System.Security.Cryptography;
 using System.Text;
+using ChatFlow.Scripts.Interfaces;
 
 namespace ChatFlow.Scripts;
 

@@ -1,17 +1,16 @@
-﻿using System.Security.Cryptography;
-using ChatFlow.Enums;
+﻿using ChatFlow.Enums;
 using ChatFlow.Extensions;
 using ChatFlow.Models.DB;
 using ChatFlow.Models.Other;
 using ChatFlow.Models.Requests;
 using ChatFlow.Models.Response;
 using ChatFlow.Monitoring;
-using ChatFlow.Repository;
 using ChatFlow.Repository.Interfaces;
 using ChatFlow.Scripts;
+using ChatFlow.Scripts.Interfaces;
 using ChatFlow.Service.Interfaces;
+using ChatFlow.Service.Other;
 using Microsoft.AspNetCore.Identity;
-using UAParser;
 using Sessions = ChatFlow.Models.DB.Sessions;
 
 namespace ChatFlow.Service;
@@ -47,13 +46,19 @@ public class AuthService: IAuthService
         if (person != null)
             return ResponseFactory.PhoneNumberInUse<string>();
         
-        var user = CreateUserEntity(registrationUser, userIpAddress);
+        var encryptedIp = _encryptionService.Encrypt(userIpAddress); 
+        var passwordHash = _passwordHasher.HashPassword(null, registrationUser.Password);
+        var user = AuthMapper.CreateUserEntity(registrationUser, encryptedIp, passwordHash);
+        
         await _authRepository.AddUserAsync(user);
-        var userData = AddUserDataEntity(registrationUser, user.PersonId);
+        var userData = AuthMapper.AddUserDataEntity(registrationUser, user.PersonId);
         await _otherPersonDataRepository.InitializePersonData(user.PersonId);
         await _authRepository.AddUserDataAsync(userData);
         await _authRepository.SaveChangesAsync();
-        _ = AddUserToSearch(userData);
+
+        UserCreated userCreated = AuthMapper.AddUserToSearch(userData);
+        _ = _searchRepository.CreatePersonAsync(userCreated);
+        
         MetricsRegistry.UserCreationCounter.Inc();
 
         return ResponseFactory.Success("Пользователь успешно создан", "Успешно");
@@ -73,89 +78,6 @@ public class AuthService: IAuthService
         return ResponseFactory.BadRequest<AuthTokens>("Некорректный логин");
     }
     
-    private bool IsValidRsaPublicKey(string base64Key)
-    {
-        try
-        {
-            byte[] keyBytes = Convert.FromBase64String(base64Key);
-            using var rsa = RSA.Create();
-            rsa.ImportRSAPublicKey(keyBytes, out _);
-            return true;
-        }
-        catch
-        {
-            return false;
-        }
-    }
-    
-    private bool IsPrivateKey(string base64Key)
-    {
-        try
-        {
-            byte[] keyBytes = Convert.FromBase64String(base64Key);
-            using var rsa = RSA.Create();
-            rsa.ImportRSAPrivateKey(keyBytes, out _);
-            return true;
-        }
-        catch
-        {
-            return false;
-        }
-    }
-    
-    /// <summary>
-    /// Создает объект пользователя
-    /// </summary>
-    /// <param name="registrationUser">Данные пользователя</param>
-    /// <param name="userIpAddress">IP адрес</param>
-    /// <returns></returns>
-    private Persons CreateUserEntity(RegistrationUser registrationUser, string userIpAddress)
-    {
-        var user = new Persons
-        {
-            PersonId = Guid.NewGuid().ToString(),
-            NumberPhone = registrationUser.Login,
-            PasswordVersion = 1,
-            RegistrationIp = _encryptionService.Encrypt(userIpAddress),
-            AccountState = AccountState.Active,
-            RegistrationTime = DateTime.UtcNow
-        };
-        user.PasswordHash = _passwordHasher.HashPassword(user, registrationUser.Password);
-        return user;
-    }
-
-    /// <summary>
-    /// Создает объект пользователя
-    /// </summary>
-    /// <param name="registrationUser">Данные пользователя</param>
-    /// <param name="userId">Идентификатор пользователя</param>
-    /// <returns></returns>
-    private DataPersons AddUserDataEntity(RegistrationUser registrationUser, string userId)
-    {
-        Random rnd = new Random();
-        
-        var user = new DataPersons
-        {
-            PersonId = userId,
-            Name = registrationUser.Name,
-            Surname = registrationUser.Surname,
-            Tag = $"@{rnd.Next(1111, 9999)}-{rnd.Next(1111, 9999)}"
-        };
-        return user;
-    }
-
-    private async Task AddUserToSearch(DataPersons data)
-    {
-        UserCreated user = new UserCreated
-        {
-            Name = data.Name,
-            Surname = data.Surname,
-            Tag = data.Tag,
-            PersonId = data.PersonId
-        };
-        await _searchRepository.CreatePersonAsync(user);
-    }
-
     /// <summary>
     /// Авторизация по номеру телефона
     /// </summary>
@@ -194,84 +116,44 @@ public class AuthService: IAuthService
                     { Message = "Не удалось проверить корректность jwt токена", Type = ResponseType.JwtTokenVerificationFailed, Errors = "Forbidden", Status = 403, Successfully = false, Data = null};
 
             Sessions? session = await _authRepository.GetSessionByIdAsync(person.PersonId, dataToken.SessionId);
+            
+            if (session is null)
+                return ResponseFactory.Forbidden<AuthTokens>("Не удалось восстановить сессию", ResponseType.SessionNotFound);
+            
             session.IsRevoked = false;
             session.RevokedAt = null;
             
             await _authRepository.SaveChangesAsync();
             await _otherPersonDataRepository.UpdatePublicKeyStatus(person.PersonId, session.DeviceId, true);
-
-            AuthTokens tokens = GenerateToken(person.PersonId, person.PasswordVersion, dataToken.DeviceId, session);
+            
+            var tokenData = _jwtTokenService.CreateJwtToken(person.PersonId, person.PasswordVersion, session.SessionId, dataToken.DeviceId, session.Id);
+            AuthTokens tokens = AuthMapper.GenerateToken(tokenData, person.PersonId, session);
+            
             return ResponseFactory.Success("Вы успешно авторизовались", tokens);
         }
         // Создать новую сессию, новый идентификатор устройства
         else
         {
-            if (!IsValidRsaPublicKey(publicKey))
+            if (!AuthValidator.IsValidRsaPublicKey(publicKey))
                 return ResponseFactory.Forbidden<AuthTokens>("Публичный ключ не является ключем RSA", ResponseType.KeyIsNotRSA);
             
-            if(IsPrivateKey(publicKey))
+            if(AuthValidator.IsPrivateKey(publicKey))
                 return ResponseFactory.Forbidden<AuthTokens>("Данный ключ является приватным", ResponseType.KeyIsNotPublic);
             
             string deviceId = Guid.NewGuid().ToString();
             await _otherPersonDataRepository.AddPublicKey(person.PersonId, publicKey, deviceId);
+
+            var encryptedIp = _encryptionService.Encrypt(userIpAddress); 
+            Sessions session = AuthMapper.CreateSession(person.PersonId, encryptedIp, deviceId, userAgent);
             
-            Sessions session = CreateSession(person.PersonId, userIpAddress, deviceId, userAgent);
             await _authRepository.AddSessionAsync(session);
             await _authRepository.SaveChangesAsync();
             
-            AuthTokens tokens = GenerateToken(person.PersonId, person.PasswordVersion, deviceId, session);
+            var tokenData = _jwtTokenService.CreateJwtToken(person.PersonId, person.PasswordVersion, session.SessionId, deviceId, session.Id);
+            AuthTokens tokens = AuthMapper.GenerateToken(tokenData, person.PersonId, session);
             
             return ResponseFactory.Success("Вы успешно авторизовались", tokens);
         }
-    }
-    
-    private AuthTokens GenerateToken(string personId, int passwordVersion, string deviceId, Sessions session)
-    {
-        var tokens = _jwtTokenService.CreateJwtToken(
-            personId,
-            passwordVersion,
-            session.SessionId,
-            deviceId,
-            session.Id
-        );
-
-        var tokenResult = new AuthTokens
-        {
-            PersonId = personId,
-            DeviceId = session.DeviceId,
-            AccessToken = tokens.AccessToken,
-            RefreshToken = tokens.RefreshToken,
-            AccessTokenExpiration = DateTime.UtcNow.AddMinutes(JwtTokenService.AccessTokenLifetimeMinute)
-        };
-        return tokenResult;
-    }
-
-    /// <summary>
-    /// Создает объект сессии
-    /// </summary>
-    /// <param name="personId">Идентификатор пользователя</param>
-    /// <param name="ipAddress">IP адрес</param>
-    /// <param name="deviceId">Идентификатор устройства</param>
-    /// <param name="userAgent">User агенты пользователя</param>
-    /// <returns></returns>
-    private Sessions CreateSession(string personId, string ipAddress, string deviceId, string userAgent)
-    {
-        var parser = Parser.GetDefault();
-        var clientInfo = parser.Parse(userAgent);
-    
-        return new Sessions
-        {
-            PersonId = personId,
-            SessionId = Guid.NewGuid().ToString(),
-            IpAddress = _encryptionService.Encrypt(ipAddress),
-            Device = clientInfo.Device.ToString(),
-            DeviceId = deviceId,
-            Os = clientInfo.OS.ToString(),
-            Browser = clientInfo.UA.ToString(),
-            CreatedAt = DateTime.UtcNow,
-            LastUsedAt = DateTime.UtcNow,
-            IsRevoked = false
-        };
     }
 
     /// <summary>

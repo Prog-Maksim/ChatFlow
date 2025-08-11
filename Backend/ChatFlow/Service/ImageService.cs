@@ -2,7 +2,7 @@ using ChatFlow.Enums;
 using ChatFlow.Models.DB;
 using ChatFlow.Models.Response;
 using ChatFlow.Repository.Interfaces;
-using ChatFlow.Scripts;
+using ChatFlow.Scripts.Interfaces;
 using ChatFlow.Service.Interfaces;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.Processing;
@@ -12,6 +12,9 @@ namespace ChatFlow.Service;
 public class ImageService: IImageService
 {
     private const long MaxFileSize = 4_194_304; // 4 МБ
+    private const int MinImageSize = 500;
+    private const int MaxImagesPerUser = 25;
+    
     private readonly ILogger<ImageService> _logger;
     private readonly IS3Service _s3Service;
     private readonly IJwtTokenService _jwtTokenService;
@@ -27,34 +30,31 @@ public class ImageService: IImageService
     
     public async Task<BaseResponse<string, string>> UploadFile(IFormFile file, string accessToken, double? top = 0, double? left = 0)
     {
-        const int minImageSize = 500;
-        const int maxImagesPerUser = 25;
-
         if (file.Length == 0)
-            return ErrorResponse("Файл не выбран или пуст", 400, ResponseType.InvalidFile, "FileMissing");
+            return CreateErrorResponse<string, string>("Файл не выбран или пуст", ResponseType.InvalidFile, 400, "FileMissing");
 
         var tokenData = _jwtTokenService.GetJwtTokenData(accessToken);
         if (!await _jwtTokenService.ValidateJwtAccessToken(tokenData))
-            return ErrorResponse("Неверный JWT токен", 403, ResponseType.JwtTokenVerificationFailed, "Forbidden");
+            return CreateErrorResponse<string, string>("Не удалось проверить корректность jwt токена", ResponseType.JwtTokenVerificationFailed, 403, "Forbidden");
 
         if (!await _profileRepository.UserExistsAsync(tokenData.PersonId))
         {
             _logger.LogWarning("Пользователь не найден: {personId}", tokenData.PersonId);
-            return ErrorResponse("Пользователь не найден", 404, ResponseType.PersonNotFound, "UserNotFound");
+            return CreateErrorResponse<string, string>("Пользователь не найден!", ResponseType.PersonNotFound, 404, "Not Found");
         }
 
-        if (await _profileRepository.GetNumImageInByIdAsync(tokenData.PersonId) >= maxImagesPerUser)
-            return ErrorResponse("Превышен лимит изображений (25)", 409, ResponseType.ImageLimitReached, "ImageLimit");
+        if (await _profileRepository.GetNumImageInByIdAsync(tokenData.PersonId) >= MaxImagesPerUser)
+            return CreateErrorResponse<string, string>("Превышен лимит изображений (25)", ResponseType.ImageLimitReached, 409, "ImageLimit");
 
         if (file.Length > MaxFileSize)
-            return ErrorResponse("Файл слишком большой", 413, ResponseType.FileTooLarge, "FileTooLarge");
+            return CreateErrorResponse<string, string>("Файл слишком большой", ResponseType.FileTooLarge, 413, "FileTooLarge");
 
         try
         {
-            Image? image = await CropImageAsync(file, minImageSize, minImageSize, (int)(left ?? 0), (int)(top ?? 0));
+            Image? image = await CropImageAsync(file, MinImageSize, MinImageSize, (int)(left ?? 0), (int)(top ?? 0));
 
             if (image == null)
-                return ErrorResponse($"Изображение должно быть не менее {minImageSize}x{minImageSize}px", 400, ResponseType.InvalidFile, "ImageTooSmall");
+                return CreateErrorResponse<string, string>($"Изображение должно быть не менее {MinImageSize}x{MinImageSize}px", ResponseType.InvalidFile, 400, "ImageTooSmall");
 
             await using var ms = new MemoryStream();
             await image.SaveAsJpegAsync(ms);
@@ -91,7 +91,7 @@ public class ImageService: IImageService
         catch (Exception ex)
         {
             _logger.LogError(ex, "Ошибка при загрузке изображения");
-            return ErrorResponse("Ошибка при обработке изображения", 500, ResponseType.ErrorUploadFile, "ErrorUploadFile");
+            return CreateErrorResponse<string, string>("Ошибка при обработке изображения", ResponseType.ErrorUploadFile, 500, "ErrorUploadFile");
         }
     }
     
@@ -99,7 +99,7 @@ public class ImageService: IImageService
     {
         var dataToken = _jwtTokenService.GetJwtTokenData(accessToken);
         if (!await _jwtTokenService.ValidateJwtAccessToken(dataToken))
-            return new BaseResponse<string, CountImage> { Message = "Не удалось проверить корректность jwt токена", Type = ResponseType.JwtTokenVerificationFailed, Errors = "Forbidden", Status = 403, Successfully = false, Data = null };
+            return CreateErrorResponse<string, CountImage>("Не удалось проверить корректность jwt токена", ResponseType.JwtTokenVerificationFailed, 403, "Forbidden");
 
         if (personId is null)
         {
@@ -118,7 +118,7 @@ public class ImageService: IImageService
         if (!await _profileRepository.UserExistsAsync(personId))
         {
             _logger.LogError("Пользователь под id: {personId} не найден!", personId);
-            return new BaseResponse<string, CountImage> { Message = "Пользователь не найден!", Successfully = false, Status = 404, Type = ResponseType.ImageLimitReached, Errors = "Not Found", Data = null };
+            return CreateErrorResponse<string, CountImage>("Пользователь не найден!", ResponseType.PersonNotFound, 404, "Not Found");
         }
         
         return new BaseResponse<string, CountImage>
@@ -136,22 +136,14 @@ public class ImageService: IImageService
     {
         var dataToken = _jwtTokenService.GetJwtTokenData(accessToken);
         if (!await _jwtTokenService.ValidateJwtAccessToken(dataToken))
-            return new BaseResponse<string, DataImage> { Message = "Не удалось проверить корректность jwt токена", Type = ResponseType.JwtTokenVerificationFailed, Errors = "Forbidden", Status = 403, Successfully = false, Data = null};
+            return CreateErrorResponse<string, DataImage>("Не удалось проверить корректность jwt токена", ResponseType.JwtTokenVerificationFailed, 403, "Forbidden");
 
         if (personId is null)
         {
             var imageId = await _profileRepository.GetPrimaryImage(dataToken.PersonId);
 
             if (imageId is null)
-                return new BaseResponse<string, DataImage>
-                {
-                    Message = "Ссылка на главное изображение не найдено",
-                    Successfully = false,
-                    Status = 404,
-                    Type = ResponseType.ImageNotFound,
-                    Errors = "Not Found",
-                    Data = null
-                };
+                return CreateErrorResponse<string, DataImage>("Ссылка на главное изображение не найдено", ResponseType.ImageNotFound, 404, "Not Found");
             
             return new BaseResponse<string, DataImage>
             {
@@ -171,21 +163,13 @@ public class ImageService: IImageService
         if (!await _profileRepository.UserExistsAsync(personId))
         {
             _logger.LogError("Пользователь под id: {personId} не найден!", personId);
-            return new BaseResponse<string, DataImage> { Message = "Пользователь не найден!", Successfully = false, Status = 404, Type = ResponseType.ImageLimitReached, Errors = "Not Found", Data = null };
+            return CreateErrorResponse<string, DataImage>("Пользователь не найден!", ResponseType.PersonNotFound, 404, "Not Found");
         }
         
         var imageId1 = await _profileRepository.GetPrimaryImage(personId);
         
         if (imageId1 is null)
-            return new BaseResponse<string, DataImage>
-            {
-                Message = "Ссылка на главное изображение не найдено",
-                Successfully = false,
-                Status = 404,
-                Type = ResponseType.ImageNotFound,
-                Errors = "Not Found",
-                Data = null
-            };
+            return CreateErrorResponse<string, DataImage>("Ссылка на главное изображение не найдено", ResponseType.ImageNotFound, 404, "Not Found");
         
         return new BaseResponse<string, DataImage>
         {
@@ -206,7 +190,7 @@ public class ImageService: IImageService
     {
         var dataToken = _jwtTokenService.GetJwtTokenData(accessToken);
         if (!await _jwtTokenService.ValidateJwtAccessToken(dataToken))
-            return new BaseResponse<string, string> { Message = "Не удалось проверить корректность jwt токена", Type = ResponseType.JwtTokenVerificationFailed, Errors = "Forbidden", Status = 403, Successfully = false, Data = null};
+            return CreateErrorResponse<string, string>("Не удалось проверить корректность jwt токена", ResponseType.JwtTokenVerificationFailed, 403, "Forbidden");
 
         await _profileRepository.ClearPrimaryImageAsync(dataToken.PersonId);
 
@@ -226,15 +210,7 @@ public class ImageService: IImageService
         }
         catch (FileNotFoundException)
         {
-            return new BaseResponse<string, string>
-            {
-                Message = "Изображение не найдено",
-                Successfully = false,
-                Status = 404,
-                Type = ResponseType.ImageNotFound,
-                Errors = "Not Found",
-                Data = null
-            };
+            return CreateErrorResponse<string, string>("Изображение не найдено", ResponseType.ImageNotFound, 404, "Not Found");
         }
     }
 
@@ -242,20 +218,12 @@ public class ImageService: IImageService
     {
         var dataToken = _jwtTokenService.GetJwtTokenData(accessToken);
         if (!await _jwtTokenService.ValidateJwtAccessToken(dataToken))
-            return new BaseResponse<string, string> { Message = "Не удалось проверить корректность jwt токена", Type = ResponseType.JwtTokenVerificationFailed, Errors = "Forbidden", Status = 403, Successfully = false, Data = null};
+            return CreateErrorResponse<string, string>("Не удалось проверить корректность jwt токена", ResponseType.JwtTokenVerificationFailed, 403, "Forbidden");
 
         var image = await _profileRepository.GetImageByIdAsync(dataToken.PersonId, imageId);
         
         if (image is null)
-            return new BaseResponse<string, string>
-            {
-                Message = "Изображение не найдено",
-                Successfully = false,
-                Status = 404,
-                Type = ResponseType.ImageNotFound,
-                Errors = "Not Found",
-                Data = null
-            };
+            return CreateErrorResponse<string, string>("Изображение не найдено", ResponseType.ImageNotFound, 404, "Not Found");
         
         bool wasPrimary = image.IsPrimary;
 
@@ -276,7 +244,6 @@ public class ImageService: IImageService
         };
     }
     
-    
     private static async Task<Image?> CropImageAsync(IFormFile file, int cropWidth, int cropHeight, int x, int y)
     {
         var image = await Image.LoadAsync(file.OpenReadStream());
@@ -294,16 +261,16 @@ public class ImageService: IImageService
         return image;
     }
     
-    private BaseResponse<string, string> ErrorResponse(string message, int status, ResponseType type, string error)
+    private BaseResponse<TErrors, TData> CreateErrorResponse<TErrors, TData>(string message, ResponseType type, int status, TErrors errors)
     {
-        return new BaseResponse<string, string>
+        return new BaseResponse<TErrors, TData>
         {
             Message = message,
-            Successfully = false,
-            Status = status,
             Type = type,
-            Errors = error,
-            Data = null
+            Status = status,
+            Successfully = false,
+            Data = default,
+            Errors = errors
         };
     }
 }

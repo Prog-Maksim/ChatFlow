@@ -1,5 +1,4 @@
 using System.Net.WebSockets;
-using ChatFlow.Models.DB;
 using ChatFlow.Models.DB.Other;
 using ChatFlow.Models.Other;
 using ChatUser = ChatFlow.Models.DB.ChatUser;
@@ -46,15 +45,16 @@ public interface IWebSocketConnectionManager
     /// <summary>
     /// Отправляет сообщение пользователю
     /// </summary>
-    /// <param name="personId">Идентификатор пользователя</param>
+    /// <param name="persons">Список пользователей</param>
     /// <param name="message">Объект сообщения</param>
     /// <returns></returns>
-    public Task SendMessageToUserAsync(string personId, MessageData message);
-    
+    public Task SendMessageToUserAsync(MessageData message, List<ChatUser> persons);
+
     /// <summary>
     /// Отправляет сообщение пользователю об удалении сообщения
     /// </summary>
     /// <param name="message">Данные сообщения</param>
+    /// <param name="persons">Список пользователей</param>
     /// <returns></returns>
     public Task SendMessageDeleteMessageAsync(MessageData message, List<ChatUser> persons);
 
@@ -96,7 +96,7 @@ public interface IWebSocketConnectionManager
     /// Отправляет сообщение о том что чат был удален
     /// </summary>
     /// <param name="chatId">Идентификатор чата</param>
-    /// <param name="person">Объект пользователя</param>
+    /// <param name="persons">Объект пользователя</param>
     /// <returns></returns>
     public Task SendMessageDeleteChat(string chatId, List<ChatUser> persons);
 }

@@ -86,7 +86,7 @@ public class OtherPersonDataRepository: IOtherPersonDataRepository
         var filter = Builders<OtherPersonData>.Filter.Eq(e => e.PersonId, personId);
         var personData = await _userCollections.Find(filter).FirstOrDefaultAsync();
 
-        if (personData == null || personData.PublicKeys == null)
+        if (personData == null)
         {
             _logger.LogWarning($"No public keys found for person ID '{personId}'.");
             return new List<PublicKeyResponse>();

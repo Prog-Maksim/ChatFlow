@@ -32,63 +32,6 @@ public interface IAuthRepository
     /// <param name="person">Данные пользователя</param>
     /// <returns></returns>
     public Task<bool> AddUserDataAsync(DataPersons person);
-
-    /// <summary>
-    /// Сохраняет данные для двухфакторной аутентификации
-    /// </summary>
-    /// <param name="personData">Данные пользователя</param>
-    /// <param name="userIpAddress">IP адрес пользователя</param>
-    /// <returns>Код для доступа к данным</returns>
-    public Task<string> GenerateCodeAndSaveAsync(Persons personData, string userIpAddress);
-
-    /// <summary>
-    /// Сохраняет данные для двухфакторной аутентификации с кодом авторизации
-    /// </summary>
-    /// <param name="personData">Данные пользователя</param>
-    /// <param name="userIpAddress">IP адрес пользователя</param>
-    /// <param name="totpCode">Код авторизации</param>
-    /// <returns>Код для доступа к данным</returns>
-    public Task<string> GenerateCodeAndSaveAsync(Persons personData, string userIpAddress, string totpCode);
-    
-    /// <summary>
-    /// Сохраняет данные для обновления пароля с кодом авторизации
-    /// </summary>
-    /// <param name="personData">Данные пользователя</param>
-    /// <param name="userIpAddress">IP адрес пользователя</param>
-    /// <param name="totpCode">Код авторизации</param>
-    /// <param name="newPasswordHash">Хеш пароля</param>
-    /// <returns></returns>
-    public Task<string> GeneratePasswordCodeAsync(Persons personData, string userIpAddress, string totpCode,
-        string newPasswordHash);
-    
-    /// <summary>
-    /// Проверяет наличие кода в БД
-    /// </summary>
-    /// <param name="code">Код с данными</param>
-    /// <returns>Результат поиска</returns>
-    public Task<bool> CheckCodeAsync(string code);
-    
-    /// <summary>
-    /// Возвращает данные по коду
-    /// </summary>
-    /// <param name="code">Код с данными</param>
-    /// <returns>Денные по коду</returns>
-    public Task<TotpData?> GetTotpDataByCodeAsync(string code);
-    
-    /// <summary>
-    /// Обновление TOTP кода в БД
-    /// </summary>
-    /// <param name="code">Код с данными</param>
-    /// <param name="totpCode">Новый TOTP код</param>
-    /// <returns>Результат обновления</returns>
-    public Task<bool> UpdateTotpDataByCodeAsync(string code, string totpCode);
-    
-    /// <summary>
-    /// Удаляет данные по коду
-    /// </summary>
-    /// <param name="code">Код с данными</param>
-    /// <returns></returns>
-    public Task DeleteTotpDataByCodeAsync(string code);
     
     /// <summary>
     /// Блокировка токена

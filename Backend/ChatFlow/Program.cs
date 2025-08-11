@@ -6,6 +6,7 @@ using ChatFlow.Models.DB;
 using ChatFlow.Repository;
 using ChatFlow.Repository.Interfaces;
 using ChatFlow.Scripts;
+using ChatFlow.Scripts.Interfaces;
 using ChatFlow.Service;
 using ChatFlow.Service.Interfaces;
 using Microsoft.AspNetCore.Authentication.JwtBearer;

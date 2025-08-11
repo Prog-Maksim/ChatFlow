@@ -7,7 +7,7 @@ public class Message
     /// <summary>
     /// Идентификатор чата
     /// </summary>
-    [JsonPropertyName("chatID")]
+    [JsonPropertyName("chatId")]
     public required string ChatId { get; set; }
     
     /// <summary>

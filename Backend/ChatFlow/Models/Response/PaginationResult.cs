@@ -1,5 +1,3 @@
-using System.Text.Json.Serialization;
-
 namespace ChatFlow.Models.Response;
 
 public class PaginationResult

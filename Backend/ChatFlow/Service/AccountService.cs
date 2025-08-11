@@ -3,6 +3,7 @@ using ChatFlow.Models.DB;
 using ChatFlow.Models.Response;
 using ChatFlow.Repository.Interfaces;
 using ChatFlow.Scripts;
+using ChatFlow.Scripts.Interfaces;
 using ChatFlow.Service.Interfaces;
 using Microsoft.AspNetCore.Identity;
 
@@ -11,16 +12,14 @@ namespace ChatFlow.Service;
 public class AccountService
 {
     private readonly IAuthRepository _authRepository;
-    private readonly IEncryptionService _encryptionService;
     private readonly ITokenValidator _tokenValidator;
     private readonly PasswordHasher<Persons> _passwordHasher;
     private readonly ISessionService _sessionService;
     private readonly ILogger<AccountService> _logger;
     
-    public AccountService(IAuthRepository authRepository, IEncryptionService encryptionService, ITokenValidator tokenValidator, ISessionService sessionService, ILogger<AccountService> logger)
+    public AccountService(IAuthRepository authRepository, ITokenValidator tokenValidator, ISessionService sessionService, ILogger<AccountService> logger)
     {
         _authRepository = authRepository;
-        _encryptionService = encryptionService;
         _tokenValidator = tokenValidator;
         _sessionService = sessionService;
         _logger = logger;
@@ -108,6 +107,10 @@ public class AccountService
     private async Task UpdateUserPasswordAsync(string personId, string newPassword)
     {
         var person = await _authRepository.GetUserByIdAsync(personId);
+        
+        if (person is null)
+            return;
+        
         person.PasswordVersion++;
         person.PasswordHash = newPassword;
         await _authRepository.SaveChangesAsync();

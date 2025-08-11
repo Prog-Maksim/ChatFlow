@@ -1,12 +1,12 @@
 using System.Security.Cryptography;
 using ChatFlow.Enums;
-using ChatFlow.Models.DB;
 using ChatFlow.Models.DB.Other;
 using ChatFlow.Models.Requests;
 using ChatFlow.Models.Response;
 using ChatFlow.Monitoring;
 using ChatFlow.Repository.Interfaces;
 using ChatFlow.Scripts;
+using ChatFlow.Scripts.Interfaces;
 using ChatFlow.Service.Interfaces;
 
 namespace ChatFlow.Service;
@@ -32,8 +32,8 @@ public class MessageService: IMessageService
         _manager = manager;
         _profileRepository = profileRepository;
         
-        _aesKey = Convert.FromBase64String(configuration["MessageEncryption:Key"]);
-        _hmacKey = Convert.FromBase64String(configuration["MessageEncryption:Hmac"]);
+        _aesKey = Convert.FromBase64String(configuration["MessageEncryption:Key"]!);
+        _hmacKey = Convert.FromBase64String(configuration["MessageEncryption:Hmac"]!);
     }
     
     public async Task<BaseResponse<string, SendMessage>> SendMessageAsync(string accessToken, Message message, CancellationToken cancellationToken)
@@ -83,7 +83,7 @@ public class MessageService: IMessageService
             _ = _chatRepository.UpdateChatDataAsync(chat.ChatId, chat);
         }
         
-        _ = SendMessageUsersAsync(chat.Persons, messageData);
+        _ = _manager.SendMessageToUserAsync(messageData, chat.Persons);
         MetricsRegistry.MessagesSentCounter.Inc();
 
         return new BaseResponse<string, SendMessage>
@@ -132,43 +132,6 @@ public class MessageService: IMessageService
 
         var nextOffset = offset + messages.Count;
         return CreateSuccessResponse(messages, totalCount, limit, offset, nextOffset);
-    }
-    
-    private BaseResponse<TErrors, TData> CreateErrorResponse<TErrors, TData>(string message, ResponseType type, int status, TErrors errors)
-    {
-        return new BaseResponse<TErrors, TData>
-        {
-            Message = message,
-            Type = type,
-            Status = status,
-            Successfully = false,
-            Data = default,
-            Errors = errors
-        };
-    }
-    
-    private BaseResponse<string, MessagesPagination> CreateSuccessResponse(
-        List<MessageData> messages, long totalCount, int limit, int offset, int nextOffset)
-    {
-        return new BaseResponse<string, MessagesPagination>
-        {
-            Message = "Сообщения",
-            Type = ResponseType.Ok,
-            Status = 200,
-            Successfully = true,
-            Data = new MessagesPagination
-            {
-                Pagination = new PaginationResult
-                {
-                    TotalCount = totalCount,
-                    Limit = limit,
-                    Offset = offset,
-                    NextOffset = nextOffset >= totalCount ? 0 : nextOffset,
-                    ReturnedCount = messages.Count
-                },
-                Messages = messages
-            }
-        };
     }
     
     public async Task<BaseResponse<string, MessageData>> GetLastMessageAsync(string accessToken, string chatId)
@@ -265,6 +228,10 @@ public class MessageService: IMessageService
         if (chat.Type == ChatType.Private)
         {
             MessageData? updateMessage = DecryptAndVerify(message);
+            
+            if(updateMessage is null)
+                return CreateErrorResponse<string, MessageData>("Сообщение не изменено", ResponseType.MessageNotModified, 400, "Bad Request");
+            
             updateMessage.Text = messageData.Text;
             updateMessage.MessageType = MessageStatus.Updated;
             updateMessage.Updated = DateTime.UtcNow;
@@ -280,8 +247,8 @@ public class MessageService: IMessageService
         
             if (!success)
                 return CreateErrorResponse<string, MessageData>("Сообщение не изменено", ResponseType.MessageNotModified, 400, "Bad Request");
-
-            _ = SendMessageUsersAsync(chat.Persons, updateMessage);
+            
+            _ = _manager.SendMessageToUserAsync(updateMessage, chat.Persons);
             return new BaseResponse<string, MessageData>
             {
                 Message = "Сообщение успешно изменено",
@@ -301,8 +268,8 @@ public class MessageService: IMessageService
         
             if (!success)
                 return CreateErrorResponse<string, MessageData>("Сообщение не изменено", ResponseType.MessageNotModified, 400, "Bad Request");
-
-            _ = SendMessageUsersAsync(chat.Persons, message);
+            
+            _ = _manager.SendMessageToUserAsync(message, chat.Persons);
             return new BaseResponse<string, MessageData>
             {
                 Message = "Сообщение успешно изменено",
@@ -407,6 +374,43 @@ public class MessageService: IMessageService
         };
     }
 
+    private BaseResponse<TErrors, TData> CreateErrorResponse<TErrors, TData>(string message, ResponseType type, int status, TErrors errors)
+    {
+        return new BaseResponse<TErrors, TData>
+        {
+            Message = message,
+            Type = type,
+            Status = status,
+            Successfully = false,
+            Data = default,
+            Errors = errors
+        };
+    }
+    
+    private BaseResponse<string, MessagesPagination> CreateSuccessResponse(
+        List<MessageData> messages, long totalCount, int limit, int offset, int nextOffset)
+    {
+        return new BaseResponse<string, MessagesPagination>
+        {
+            Message = "Сообщения",
+            Type = ResponseType.Ok,
+            Status = 200,
+            Successfully = true,
+            Data = new MessagesPagination
+            {
+                Pagination = new PaginationResult
+                {
+                    TotalCount = totalCount,
+                    Limit = limit,
+                    Offset = offset,
+                    NextOffset = nextOffset >= totalCount ? 0 : nextOffset,
+                    ReturnedCount = messages.Count
+                },
+                Messages = messages
+            }
+        };
+    }
+    
     private (string EncryptedText, string IV, string Hmac) EncryptAndSign(string plainText)
     {
         // Генерация IV
@@ -427,7 +431,7 @@ public class MessageService: IMessageService
     private MessageData? DecryptAndVerify(MessageData messageData)
     {
         IHmacService hmacService = new HmacService(_hmacKey);
-        var result = hmacService.VerifyHmac(messageData.Text, messageData.HMAC);
+        var result = hmacService.VerifyHmac(messageData.Text, messageData.HMAC!);
 
         if (!result)
         {
@@ -435,8 +439,8 @@ public class MessageService: IMessageService
             return null;
         }
         
-        var IV = Convert.FromBase64String(messageData.IV);
-        IMessageEncryptionService encryption = new MessageEncryptionService(_aesKey, IV);
+        var iv = Convert.FromBase64String(messageData.IV!);
+        IMessageEncryptionService encryption = new MessageEncryptionService(_aesKey, iv);
         var decryptedText = encryption.Decrypt(messageData.Text);
         messageData.Text = decryptedText;
         return messageData;
@@ -448,17 +452,6 @@ public class MessageService: IMessageService
             .Select(DecryptAndVerify)
             .Where(m => m != null)
             .ToList()!;
-    }
-    
-    /// <summary>
-    /// Отправляет сообщение пользователям по WebSocket
-    /// </summary>
-    /// <param name="users"></param>
-    /// <param name="message"></param>
-    private async Task SendMessageUsersAsync(List<ChatUser> users, MessageData message)
-    {
-        foreach (var user in users)
-            await _manager.SendMessageToUserAsync(user.PersonId, message);
     }
     
     /// <summary>

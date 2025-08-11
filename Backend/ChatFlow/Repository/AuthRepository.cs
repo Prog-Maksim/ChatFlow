@@ -1,6 +1,4 @@
-﻿using System.Text.Json;
-using ChatFlow.Models.DB;
-using ChatFlow.Models.Other;
+﻿using ChatFlow.Models.DB;
 using ChatFlow.Repository.Interfaces;
 using ChatFlow.Scripts;
 using Microsoft.EntityFrameworkCore;
@@ -24,7 +22,6 @@ public class AuthRepository: IAuthRepository
         _logger = logger;
     }
     
-
     public async Task<Persons?> GetUserByPhoneNumberAsync(string phoneNumber)
     {
         return await _context.Persons.FirstOrDefaultAsync(p => p.NumberPhone == phoneNumber);
@@ -46,138 +43,7 @@ public class AuthRepository: IAuthRepository
         await _context.Persons.AddAsync(person);
         return true;
     }
-
-    public async Task<string> GenerateCodeAndSaveAsync(Persons personData, string userIpAddress)
-    {
-        var random = new Random();
-        var code = random.Next(10000000, 999999999).ToString();
-
-        var totpData = new TotpData
-        {
-            PersonId = personData.PersonId,
-            PersonData = personData,
-            IpAddress = userIpAddress,
-            TotpCode = null,
-            IsUpdate = true,
-            IsRead = true
-        };
-        
-        var redisKey = $"TOTP:{code}";
-        var redisValue = JsonSerializer.Serialize(totpData);
-        
-        await _database.StringSetAsync(redisKey, redisValue);
-        return code;
-    }
-
-    public async Task<string> GenerateCodeAndSaveAsync(Persons personData, string userIpAddress, string totpCode)
-    {
-        var random = new Random();
-        var code = random.Next(10000000, 999999999).ToString();
-
-        var totpData = new TotpData
-        {
-            PersonId = personData.PersonId,
-            PersonData = personData,
-            IpAddress = userIpAddress,
-            TotpCode = totpCode,
-            IsUpdate = false,
-            IsRead = false
-        };
-        
-        var redisKey = $"TOTP:{code}";
-        var redisValue = JsonSerializer.Serialize(totpData);
-        
-        await _database.StringSetAsync(redisKey, redisValue);
-        return code;
-    }
     
-    public async Task<string> GeneratePasswordCodeAsync(Persons personData, string userIpAddress, string totpCode, string newPasswordHash)
-    {
-        var random = new Random();
-        var code = random.Next(10000000, 999999999).ToString();
-
-        var totpData = new TotpData
-        {
-            PersonId = personData.PersonId,
-            PersonData = personData,
-            IpAddress = userIpAddress,
-            TotpCode = totpCode,
-            IsUpdate = false,
-            IsRead = false,
-            IsUpdatePassword = true,
-            PasswordHash = newPasswordHash
-        };
-        
-        var redisKey = $"TOTP:{code}";
-        var redisValue = JsonSerializer.Serialize(totpData);
-        
-        await _database.StringSetAsync(redisKey, redisValue);
-        return code;
-    }
-
-    public async Task<bool> CheckCodeAsync(string code)
-    {
-        var redisKey = $"TOTP:{code}";
-        var result = await _database.KeyExistsAsync(redisKey);
-        return result;
-    }
-
-    public async Task<TotpData?> GetTotpDataByCodeAsync(string code)
-    {
-        var redisKey = $"TOTP:{code}";
-        var redisValue = await _database.StringGetAsync(redisKey);
-        
-        if (!redisValue.HasValue || redisValue.IsNullOrEmpty)
-            return null;
-        
-        var json = (string)redisValue!;
-        if (string.IsNullOrWhiteSpace(json))
-            return null;
-        
-        var data = JsonSerializer.Deserialize<TotpData>(json, new JsonSerializerOptions
-        {
-            PropertyNameCaseInsensitive = true
-        });
-        return data;
-    }
-
-    public async Task<bool> UpdateTotpDataByCodeAsync(string code, string totpCode)
-    {
-        var redisKey = $"TOTP:{code}";
-        var redisValue = await _database.StringGetAsync(redisKey);
-        
-        if (!redisValue.HasValue || redisValue.IsNullOrEmpty)
-            return false;
-        
-        var json = (string)redisValue!;
-        if (string.IsNullOrWhiteSpace(json))
-            return false;
-        
-        var data = JsonSerializer.Deserialize<TotpData>(json, new JsonSerializerOptions
-        {
-            PropertyNameCaseInsensitive = true
-        });
-
-        if (data is null)
-        {
-            _logger.LogWarning("Не удалось преобразовать структуру из Redis. Структура: {obj}", json);
-            return false;
-        }
-        
-        data.TotpCode = totpCode;
-        
-        var updatedRedisValue = JsonSerializer.Serialize(data);
-        await _database.StringSetAsync(redisKey, updatedRedisValue);
-
-        return true;
-    }
-    
-    public async Task DeleteTotpDataByCodeAsync(string code)
-    {
-        var redisKey = $"TOTP:{code}";
-        await _database.KeyDeleteAsync(redisKey);
-    }
-
     public async Task AddJwtTokenToBanAsync(string personId, string token)
     {
         var tag = $"ban:{personId}";
@@ -221,8 +87,7 @@ public class AuthRepository: IAuthRepository
         await _database.SetAddAsync(tag, redisValues);
         await _database.KeyExpireAsync(tag, TimeSpan.FromDays(JwtTokenService.RefreshTokenLifetimeDay));
     }
-
-
+    
     public async Task<bool> IsBannedTokenAsync(string personId, string token, string sessionId)
     {
         var tag = $"ban:{personId}";

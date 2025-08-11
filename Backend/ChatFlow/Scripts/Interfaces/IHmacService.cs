@@ -1,4 +1,4 @@
-namespace ChatFlow.Scripts;
+namespace ChatFlow.Scripts.Interfaces;
 
 public interface IHmacService
 {

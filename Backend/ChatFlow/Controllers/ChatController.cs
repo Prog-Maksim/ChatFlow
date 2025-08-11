@@ -225,7 +225,7 @@ public class ChatsController(ILogger<ChatsController> logger, IChatService servi
     /// <param name="chatId">Идентификатор чата</param>
     /// <returns></returns>
     /// <response code="200">Успешно</response>
-    /// <response code="403">Невалидный jwt токен, пользователь не состоит в чате или токен не валиден</response>
+    /// <response code="403">Невалидный jwt токен, пользователь не состоит в чате</response>
     /// <response code="404">Чат не найден</response>
     [Authorize]
     [ApiVersion("1.0")]
@@ -246,16 +246,22 @@ public class ChatsController(ILogger<ChatsController> logger, IChatService servi
 
         return Ok(response);
     }
-
+    
     /// <summary>
     /// Закрепляет сообщение для себя
     /// </summary>
     /// <param name="chatId">Идентификатор чата</param>
     /// <param name="messageId">Идентификатор сообщения</param>
     /// <returns></returns>
+    /// <response code="200">Успешно</response>
+    /// <response code="403">Невалидный jwt токен, пользователь не состоит в чате</response>
+    /// <response code="404">Чат или сообщение не найдено</response>
     [Authorize]
     [ApiVersion("1.0")]
     [HttpPost("{chatId}/messages/{messageId}/pinned")]
+    [ProducesResponseType(typeof(BaseResponse<string, string>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(BaseResponse<string, string>), StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(typeof(BaseResponse<string, string>), StatusCodes.Status404NotFound)]
     public async Task<IActionResult> PinnedMessage([Required] [FromRoute] string chatId, [Required] [FromRoute] string messageId)
     {
         logger.LogInformation("Начало обработки запроса: (закрепление сообщения)");
@@ -276,9 +282,15 @@ public class ChatsController(ILogger<ChatsController> logger, IChatService servi
     /// <param name="chatId">Идентификатор чата</param>
     /// <param name="messageId">Идентификатор сообщения</param>
     /// <returns></returns>
+    /// <response code="200">Успешно</response>
+    /// <response code="403">Невалидный jwt токен, пользователь не состоит в чате</response>
+    /// <response code="404">Чат или сообщение не найдено</response>
     [Authorize]
     [ApiVersion("1.0")]
     [HttpPost("{chatId}/messages/{messageId}/pinned/all")]
+    [ProducesResponseType(typeof(BaseResponse<string, string>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(BaseResponse<string, string>), StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(typeof(BaseResponse<string, string>), StatusCodes.Status404NotFound)]
     public async Task<IActionResult> PinnedMessageAll([Required] [FromRoute] string chatId, [Required] [FromRoute] string messageId)
     {
         logger.LogInformation("Начало обработки запроса: (закрепление сообщения для всех)");
@@ -299,9 +311,15 @@ public class ChatsController(ILogger<ChatsController> logger, IChatService servi
     /// <param name="chatId">Идентификатор чата</param>
     /// <param name="messageId">Идентификатор сообщения</param>
     /// <returns></returns>
+    /// <response code="200">Успешно</response>
+    /// <response code="403">Невалидный jwt токен, пользователь не состоит в чате</response>
+    /// <response code="404">Чат или сообщение не найдено</response>
     [Authorize]
     [ApiVersion("1.0")]
     [HttpDelete("{chatId}/messages/{messageId}/pinned")]
+    [ProducesResponseType(typeof(BaseResponse<string, string>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(BaseResponse<string, string>), StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(typeof(BaseResponse<string, string>), StatusCodes.Status404NotFound)]
     public async Task<IActionResult> UnPinnedMessage([Required] [FromRoute] string chatId, [Required] [FromRoute] string messageId)
     {
         logger.LogInformation("Начало обработки запроса: (открепление сообщения)");
@@ -322,9 +340,15 @@ public class ChatsController(ILogger<ChatsController> logger, IChatService servi
     /// <param name="chatId">Идентификатор чата</param>
     /// <param name="messageId">Идентификатор сообщения</param>
     /// <returns></returns>
+    /// <response code="200">Успешно</response>
+    /// <response code="403">Невалидный jwt токен, пользователь не состоит в чате</response>
+    /// <response code="404">Чат или сообщение не найдено</response>
     [Authorize]
     [ApiVersion("1.0")]
     [HttpDelete("{chatId}/messages/{messageId}/pinned/all")]
+    [ProducesResponseType(typeof(BaseResponse<string, string>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(BaseResponse<string, string>), StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(typeof(BaseResponse<string, string>), StatusCodes.Status404NotFound)]
     public async Task<IActionResult> UnPinnedMessageAll([Required] [FromRoute] string chatId, [Required] [FromRoute] string messageId)
     {
         logger.LogInformation("Начало обработки запроса: (открепление сообщения для всех)");
@@ -344,9 +368,15 @@ public class ChatsController(ILogger<ChatsController> logger, IChatService servi
     /// </summary>
     /// <param name="chatId">Идентификатор чата</param>
     /// <returns></returns>
+    /// <response code="200">Успешно</response>
+    /// <response code="403">Невалидный jwt токен, пользователь не состоит в чате</response>
+    /// <response code="404">Чат не найден</response>
     [Authorize]
     [ApiVersion("1.0")]
     [HttpGet("{chatId}/messages/{messageId}/pinned")]
+    [ProducesResponseType(typeof(BaseResponse<string, string>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(BaseResponse<string, string>), StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(typeof(BaseResponse<string, string>), StatusCodes.Status404NotFound)]
     public async Task<IActionResult> GetPinnedMessage([Required] [FromRoute] string chatId)
     {
         logger.LogInformation("Начало обработки запроса: (выдача закрепленных сообщений)");

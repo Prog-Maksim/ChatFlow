@@ -83,7 +83,7 @@ public class MessageService: IMessageService
             _ = _chatRepository.UpdateChatDataAsync(chat.ChatId, chat);
         }
         
-        _ = SendMessageUsersAsync(chat.Persons, messageData);
+        _ = _manager.SendMessageToUserAsync(messageData, chat.Persons);
         MetricsRegistry.MessagesSentCounter.Inc();
 
         return new BaseResponse<string, SendMessage>
@@ -284,8 +284,8 @@ public class MessageService: IMessageService
         
             if (!success)
                 return CreateErrorResponse<string, MessageData>("Сообщение не изменено", ResponseType.MessageNotModified, 400, "Bad Request");
-
-            _ = SendMessageUsersAsync(chat.Persons, updateMessage);
+            
+            _ = _manager.SendMessageToUserAsync(updateMessage, chat.Persons);
             return new BaseResponse<string, MessageData>
             {
                 Message = "Сообщение успешно изменено",
@@ -305,8 +305,8 @@ public class MessageService: IMessageService
         
             if (!success)
                 return CreateErrorResponse<string, MessageData>("Сообщение не изменено", ResponseType.MessageNotModified, 400, "Bad Request");
-
-            _ = SendMessageUsersAsync(chat.Persons, message);
+            
+            _ = _manager.SendMessageToUserAsync(message, chat.Persons);
             return new BaseResponse<string, MessageData>
             {
                 Message = "Сообщение успешно изменено",
@@ -452,17 +452,6 @@ public class MessageService: IMessageService
             .Select(DecryptAndVerify)
             .Where(m => m != null)
             .ToList()!;
-    }
-    
-    /// <summary>
-    /// Отправляет сообщение пользователям по WebSocket
-    /// </summary>
-    /// <param name="users"></param>
-    /// <param name="message"></param>
-    private async Task SendMessageUsersAsync(List<ChatUser> users, MessageData message)
-    {
-        foreach (var user in users)
-            await _manager.SendMessageToUserAsync(user.PersonId, message);
     }
     
     /// <summary>

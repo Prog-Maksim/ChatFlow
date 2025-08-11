@@ -48,7 +48,7 @@ public interface IWebSocketConnectionManager
     /// <param name="personId">Идентификатор пользователя</param>
     /// <param name="message">Объект сообщения</param>
     /// <returns></returns>
-    public Task SendMessageToUserAsync(string personId, MessageData message);
+    public Task SendMessageToUserAsync(MessageData message, List<ChatUser> persons);
 
     /// <summary>
     /// Отправляет сообщение пользователю об удалении сообщения

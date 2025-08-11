@@ -34,14 +34,14 @@ public class ProfileService: IProfileService
     {
         var dataToken = _jwtTokenService.GetJwtTokenData(accessToken);
         if (!await _jwtTokenService.ValidateJwtAccessToken(dataToken))
-            return new BaseResponse<string, SummaryDataPerson> { Message = "Не удалось проверить корректность jwt токена", Type = ResponseType.JwtTokenVerificationFailed, Errors = "Forbidden", Status = 403, Successfully = false, Data = null};
+            return CreateErrorResponse<string, SummaryDataPerson>("Не удалось проверить корректность jwt токена", ResponseType.JwtTokenVerificationFailed, 403, "Forbidden");
 
         if (personId is not null)
         {
             if (!await _profileRepository.UserExistsAsync(personId))
             {
                 _logger.LogError("Пользователь под id: {personId} не найден!", dataToken.PersonId);
-                return new BaseResponse<string, SummaryDataPerson> { Message = "Пользователь не найден!", Successfully = false, Status = 404, Type = ResponseType.ImageLimitReached, Errors = "Not Found", Data = null };
+                return CreateErrorResponse<string, SummaryDataPerson>("Пользователь не найден!", ResponseType.PersonNotFound, 404, "Not Found");
             }
 
             var data = await _profileRepository.GetSummaryPersonDataAsync(personId);
@@ -73,12 +73,12 @@ public class ProfileService: IProfileService
     {
         var dataToken = _jwtTokenService.GetJwtTokenData(accessToken);
         if (!await _jwtTokenService.ValidateJwtAccessToken(dataToken))
-            return new BaseResponse<string, DataPerson> { Message = "Не удалось проверить корректность jwt токена", Type = ResponseType.JwtTokenVerificationFailed, Errors = "Forbidden", Status = 403, Successfully = false, Data = null};
+            return CreateErrorResponse<string, DataPerson>("Не удалось проверить корректность jwt токена", ResponseType.JwtTokenVerificationFailed, 403, "Forbidden");
         
         if (personId is not null)
         {
             if (!await _profileRepository.UserExistsAsync(personId))
-                return new BaseResponse<string, DataPerson> { Message = "Пользователь не найден!", Successfully = false, Status = 404, Type = ResponseType.ImageLimitReached, Errors = "Not Found", Data = null };
+                return CreateErrorResponse<string, DataPerson>("Пользователь не найден!", ResponseType.PersonNotFound, 404, "Not Found");
         
             var data = await _profileRepository.GetPersonDataAsync(personId);
             return new BaseResponse<string, DataPerson>
@@ -108,14 +108,14 @@ public class ProfileService: IProfileService
     {
         var dataToken = _jwtTokenService.GetJwtTokenData(accessToken);
         if (!await _jwtTokenService.ValidateJwtAccessToken(dataToken))
-            return new BaseResponse<string, string> { Message = "Не удалось проверить корректность jwt токена", Type = ResponseType.JwtTokenVerificationFailed, Errors = "Forbidden", Status = 403, Successfully = false, Data = null};
+            return CreateErrorResponse<string, string>("Не удалось проверить корректность jwt токена", ResponseType.JwtTokenVerificationFailed, 403, "Forbidden");
         
         DataPersons? personTag = null;
         if (profile.Tag is not null)
             personTag = await _profileRepository.CheckTagAsync(profile.Tag);
         
-        if (profile.Tag is not null && (personTag != null && personTag.PersonId != dataToken.PersonId))
-            return new BaseResponse<string, string> { Message = "Данный тег занят", Type = ResponseType.TagAlreadyExists, Errors = "Conflict", Status = 409, Successfully = false, Data = null};
+        if (profile.Tag is not null && personTag != null && personTag.PersonId != dataToken.PersonId)
+            return CreateErrorResponse<string, string>("Данный тег занят!", ResponseType.TagAlreadyExists, 409, "Conflict");
         
         await _profileRepository.UpdateProfileDataAsync(dataToken.PersonId, profile);
         await _searchRepository.UpdatePersonAsync(new UserCreated
@@ -134,17 +134,16 @@ public class ProfileService: IProfileService
         };
     }
     
-    public async Task<BaseResponse<string, List<DataImage>>> GetProfileImages(string accessToken,
-        string? personId = null)
+    public async Task<BaseResponse<string, List<DataImage>>> GetProfileImages(string accessToken, string? personId = null)
     {
         var dataToken = _jwtTokenService.GetJwtTokenData(accessToken);
         if (!await _jwtTokenService.ValidateJwtAccessToken(dataToken))
-            return new BaseResponse<string, List<DataImage>> { Message = "Не удалось проверить корректность jwt токена", Type = ResponseType.JwtTokenVerificationFailed, Errors = "Forbidden", Status = 403, Successfully = false, Data = null};
+            return CreateErrorResponse<string, List<DataImage>>("Не удалось проверить корректность jwt токена", ResponseType.JwtTokenVerificationFailed, 403, "Forbidden");
 
         if (personId is not null)
         {
             if (!await _profileRepository.UserExistsAsync(personId))
-                return new BaseResponse<string, List<DataImage>> { Message = "Пользователь не найден!", Successfully = false, Status = 404, Type = ResponseType.ImageLimitReached, Errors = "Not Found", Data = null };
+                return CreateErrorResponse<string, List<DataImage>>("Пользователь не найден!", ResponseType.PersonNotFound, 404, "Not Found");
             
             var data = await _profileRepository.GetImagesPersonData(personId);
             return new BaseResponse<string, List<DataImage>>
@@ -192,7 +191,7 @@ public class ProfileService: IProfileService
         List<PublicKeyResponse> keysFromDb = await _otherPersonDataRepository.GetActivePublicKeys(personId);
         
         if (keysFromDb.Count == 0)
-            return new BaseResponse<string, List<PublicKeyResponse>> { Message = "Ключи не найдены", Successfully = false, Status = 404, Type = ResponseType.KeysNotFound, Errors = "Not Found", Data = null };
+            return CreateErrorResponse<string, List<PublicKeyResponse>>("Ключи не найдены", ResponseType.KeysNotFound, 404, "Not Found");
 
         var isSet = await _redis.StringSetAsync(cacheKey, JsonSerializer.Serialize(keysFromDb), TimeSpan.FromDays(1));
         if (!isSet)
@@ -206,6 +205,18 @@ public class ProfileService: IProfileService
             Type = ResponseType.Ok,
             Errors = null,
             Data = keysFromDb
+        };
+    }
+    private BaseResponse<TErrors, TData> CreateErrorResponse<TErrors, TData>(string message, ResponseType type, int status, TErrors errors)
+    {
+        return new BaseResponse<TErrors, TData>
+        {
+            Message = message,
+            Type = type,
+            Status = status,
+            Successfully = false,
+            Data = default,
+            Errors = errors
         };
     }
 }

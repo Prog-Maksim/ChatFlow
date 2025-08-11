@@ -1,12 +1,12 @@
 using System.Security.Cryptography;
 using ChatFlow.Enums;
-using ChatFlow.Models.DB;
 using ChatFlow.Models.DB.Other;
 using ChatFlow.Models.Requests;
 using ChatFlow.Models.Response;
 using ChatFlow.Monitoring;
 using ChatFlow.Repository.Interfaces;
 using ChatFlow.Scripts;
+using ChatFlow.Scripts.Interfaces;
 using ChatFlow.Service.Interfaces;
 
 namespace ChatFlow.Service;

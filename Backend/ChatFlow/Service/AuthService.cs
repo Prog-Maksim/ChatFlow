@@ -8,6 +8,7 @@ using ChatFlow.Models.Response;
 using ChatFlow.Monitoring;
 using ChatFlow.Repository.Interfaces;
 using ChatFlow.Scripts;
+using ChatFlow.Scripts.Interfaces;
 using ChatFlow.Service.Interfaces;
 using Microsoft.AspNetCore.Identity;
 using UAParser;
@@ -72,6 +73,12 @@ public class AuthService: IAuthService
         return ResponseFactory.BadRequest<AuthTokens>("Некорректный логин");
     }
     
+    
+    /// <summary>
+    /// Проверяет переданный ключ
+    /// </summary>
+    /// <param name="base64Key">Ключ</param>
+    /// <returns></returns>
     private bool IsValidRsaPublicKey(string base64Key)
     {
         try
@@ -87,6 +94,11 @@ public class AuthService: IAuthService
         }
     }
     
+    /// <summary>
+    /// Проверяет что ключ приватный
+    /// </summary>
+    /// <param name="base64Key">Ключ</param>
+    /// <returns></returns>
     private bool IsPrivateKey(string base64Key)
     {
         try
@@ -143,6 +155,10 @@ public class AuthService: IAuthService
         return user;
     }
 
+    /// <summary>
+    /// Добавляет пользователя в сервис поиска
+    /// </summary>
+    /// <param name="data">Данные пользователя</param>
     private async Task AddUserToSearch(DataPersons data)
     {
         UserCreated user = new UserCreated
@@ -228,6 +244,14 @@ public class AuthService: IAuthService
         }
     }
     
+    /// <summary>
+    /// Собирает об]ект AuthTokens
+    /// </summary>
+    /// <param name="personId">Идентификатор пользователя</param>
+    /// <param name="passwordVersion">Версия пароля</param>
+    /// <param name="deviceId">Идентификатор устройства</param>
+    /// <param name="session">Объект сессии</param>
+    /// <returns></returns>
     private AuthTokens GenerateToken(string personId, int passwordVersion, string deviceId, Sessions session)
     {
         var tokens = _jwtTokenService.CreateJwtToken(

@@ -4,6 +4,7 @@ using ChatFlow.Models.Other;
 using ChatFlow.Models.Response;
 using ChatFlow.Repository.Interfaces;
 using ChatFlow.Scripts;
+using ChatFlow.Scripts.Interfaces;
 
 namespace ChatFlow.Service;
 

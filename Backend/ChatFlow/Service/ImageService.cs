@@ -2,7 +2,7 @@ using ChatFlow.Enums;
 using ChatFlow.Models.DB;
 using ChatFlow.Models.Response;
 using ChatFlow.Repository.Interfaces;
-using ChatFlow.Scripts;
+using ChatFlow.Scripts.Interfaces;
 using ChatFlow.Service.Interfaces;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.Processing;

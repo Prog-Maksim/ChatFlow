@@ -2,7 +2,7 @@ using ChatFlow.Enums;
 using ChatFlow.Models.Response;
 using ChatFlow.Models.Response.SearchObject;
 using ChatFlow.Repository.Interfaces;
-using ChatFlow.Scripts;
+using ChatFlow.Scripts.Interfaces;
 using ChatFlow.Service.Interfaces;
 
 namespace ChatFlow.Service;

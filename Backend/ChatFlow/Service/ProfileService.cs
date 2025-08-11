@@ -5,7 +5,7 @@ using ChatFlow.Models.Other;
 using ChatFlow.Models.Requests;
 using ChatFlow.Models.Response;
 using ChatFlow.Repository.Interfaces;
-using ChatFlow.Scripts;
+using ChatFlow.Scripts.Interfaces;
 using ChatFlow.Service.Interfaces;
 using StackExchange.Redis;
 

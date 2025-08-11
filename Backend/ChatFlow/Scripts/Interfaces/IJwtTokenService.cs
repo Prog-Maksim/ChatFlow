@@ -1,7 +1,7 @@
 using ChatFlow.Models.DB;
 using ChatFlow.Models.Other;
 
-namespace ChatFlow.Scripts;
+namespace ChatFlow.Scripts.Interfaces;
 
 public interface IJwtTokenService
 {

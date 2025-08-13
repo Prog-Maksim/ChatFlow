@@ -106,7 +106,6 @@ public class MessageService: IMessageService
 
             if (message is null)
                 return CreateErrorResponse<string, MessageData>("Сообщения не найдены!", ResponseType.MessageNotFound, 404, "Not Found");
-            
             message = DecryptAndVerify(message);
         }
         if (chat.Type == ChatType.SecretPrivate)
@@ -348,10 +347,11 @@ public class MessageService: IMessageService
             if (personRole is null || personRole.Role == Roles.User)
                 return CreateErrorResponse<string, SendMessage>("Вам запрещено отправлять сообщения в этот чат", ResponseType.AccessDenied, 403, "Forbidden");
         }
-        
+
+        MessageData? searchMessage = null;
         if (replyMessageId is not null)
         {
-            var searchMessage = await _messageRepository.GetMessageByIdAsync(chat.ChatId, replyMessageId, dataToken.PersonId);
+            searchMessage = await _messageRepository.GetMessageByIdAsync(chat.ChatId, replyMessageId, dataToken.PersonId);
             if (searchMessage is null)
                 return CreateErrorResponse<string, SendMessage>("Сообщение не найдено!", ResponseType.MessageNotFound, 404, "Not Found");
         }
@@ -423,24 +423,32 @@ public class MessageService: IMessageService
         var searchMessage = await _messageRepository.GetMessageByIdAsync(chat.ChatId, forwardFromMessageId, dataToken.PersonId);
         if (searchMessage is null)
             return CreateErrorResponse<string, SendMessage>("Сообщение не найдено!", ResponseType.MessageNotFound, 404, "Not Found");
-
+        
+        searchMessage = DecryptAndVerify(searchMessage);
+        if (searchMessage is null)
+            return CreateErrorResponse<string, SendMessage>("Сообщение не найдено!", ResponseType.MessageNotFound, 404, "Not Found");
+        
         ForwardInfo forwardInfo = new ForwardInfo
         {
             OriginalChatId = chatId,
             OriginalMessageId = forwardFromMessageId,
             OriginalSenderId = searchMessage.OwnerId
         };
-        
         MessageData mainForwardMessage = new MessageData
         {
             MessageId = Guid.NewGuid().ToString(),
             ChatId = forwardToChatId,
+            Text = searchMessage.Text,
             ForwardedFrom = forwardInfo,
             Created = DateTime.UtcNow,
             MessageType = MessageStatus.Send,
             OwnerId = searchMessage.OwnerId
         };
-        await _messageRepository.SaveMessageAsync(mainForwardMessage, cancellationToken);
+        
+        var copyMessage = (MessageData)mainForwardMessage.Clone();
+        SaveMessageAsync(copyMessage);
+        await _messageRepository.SaveMessageAsync(copyMessage, cancellationToken);
+        
         _ = _manager.SendMessageToUserAsync(mainForwardMessage, chat.Persons);
         MetricsRegistry.MessagesSentCounter.Inc();
 
@@ -450,9 +458,9 @@ public class MessageService: IMessageService
             addMessage = CreateMessageAsync(message, chatId, dataToken.PersonId);
             addMessage.ReplyMessageId = mainForwardMessage.MessageId;
             
-            var copyMessage = (MessageData)addMessage.Clone();
-            SaveMessageAsync(copyMessage);
-            await _messageRepository.SaveMessageAsync(copyMessage, cancellationToken);
+            var copyMessage1 = (MessageData)addMessage.Clone();
+            SaveMessageAsync(copyMessage1);
+            await _messageRepository.SaveMessageAsync(copyMessage1, cancellationToken);
             _ = _manager.SendMessageToUserAsync(addMessage, chat.Persons);
             MetricsRegistry.MessagesSentCounter.Inc();
         }
@@ -523,11 +531,8 @@ public class MessageService: IMessageService
 
     private MessageData? DecryptAndVerify(MessageData messageData)
     {
-        if (messageData.ForwardedFrom is not null)
-            return messageData;
-        
         IHmacService hmacService = new HmacService(_hmacKey);
-        var result = hmacService.VerifyHmac(messageData.Text!, messageData.HMAC!);
+        var result = hmacService.VerifyHmac(messageData.Text, messageData.HMAC!);
 
         if (!result)
         {
@@ -537,7 +542,7 @@ public class MessageService: IMessageService
         
         var iv = Convert.FromBase64String(messageData.IV!);
         IMessageEncryptionService encryption = new MessageEncryptionService(_aesKey, iv);
-        var decryptedText = encryption.Decrypt(messageData.Text!);
+        var decryptedText = encryption.Decrypt(messageData.Text);
         messageData.Text = decryptedText;
         return messageData;
     }
@@ -580,10 +585,7 @@ public class MessageService: IMessageService
     /// <param name="messageData"></param>
     private void SaveMessageAsync(MessageData messageData)
     {
-        if (messageData.ForwardedFrom is not null)
-            return;
-        
-        (string EncryptedText, string IV, string Hmac) dataEncrypt = EncryptAndSign(messageData.Text!);
+        (string EncryptedText, string IV, string Hmac) dataEncrypt = EncryptAndSign(messageData.Text);
         messageData.Text = dataEncrypt.EncryptedText;
         messageData.IV = dataEncrypt.IV;
         messageData.HMAC = dataEncrypt.Hmac;

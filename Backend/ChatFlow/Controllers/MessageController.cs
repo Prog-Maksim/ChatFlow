@@ -267,7 +267,7 @@ public class MessagesController(ILogger<MessagesController> logger, IMessageServ
             var authHeader = HttpContext.Request.Headers["Authorization"].ToString();
             var token = authHeader.Substring("Bearer ".Length);
 
-            var response = await service.SendMessageAsync(token, chatId, new Message {Text = ""}, cancellationToken);
+            var response = await service.SendForwardMessageAsync(token, chatId, messageId, request, cancellationToken);
 
             if (!response.Successfully)
                 return StatusCode(response.Status, response);

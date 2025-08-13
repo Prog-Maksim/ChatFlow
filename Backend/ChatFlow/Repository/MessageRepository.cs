@@ -236,4 +236,18 @@ public class MessageRepository: IMessageRepository
             return false;
         }
     }
+
+    public async Task<int> GetCountMessageView(string chatId, string messageId)
+    {
+        var filter = Builders<MessageData>.Filter.And(
+            Builders<MessageData>.Filter.Eq(m => m.ChatId, chatId),
+            Builders<MessageData>.Filter.Eq(m => m.MessageId, messageId)
+        );
+
+        var message = await _messageCollections
+            .Find(filter)
+            .FirstOrDefaultAsync();
+
+        return message?.Views?.Count ?? 0;
+    }
 }

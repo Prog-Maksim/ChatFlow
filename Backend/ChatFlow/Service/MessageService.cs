@@ -123,7 +123,35 @@ public class MessageService: IMessageService
             Errors = null, Data = message
         };
     }
-    
+
+    public async Task<BaseResponse<string, MessageData>> GetMessageDataAsync(string accessToken, string chatId, string messageId)
+    {
+        var dataToken = _jwtTokenService.GetJwtTokenData(accessToken);
+        if (!await _jwtTokenService.ValidateJwtAccessToken(dataToken))
+            return CreateErrorResponse<string, MessageData>("Не удалось проверить корректность jwt токена", ResponseType.JwtTokenVerificationFailed, 403, "Forbidden");
+        
+        ChatDocument? chat = await _messageRepository.GetChatAsync(chatId);
+        
+        if (chat is null || chat.HiddenForUsers.Contains(dataToken.PersonId))
+            return CreateErrorResponse<string, MessageData>("Данный чат не найден", ResponseType.ChatNotFound, 404, "Not Found");
+
+        if (chat.Persons.All(p => p.PersonId != dataToken.PersonId))
+            return CreateErrorResponse<string, MessageData>("Вы не состоите в этом чате", ResponseType.UserNotInChat, 403, "Forbidden");
+        
+        var message = await _messageRepository.GetMessageByIdAsync(chatId, messageId, dataToken.PersonId);
+        
+        if (message is null)
+            return CreateErrorResponse<string, MessageData>("Сообщение не найдено!", ResponseType.MessageNotFound, 404, "Not Found");
+        
+        message = DecryptAndVerify(message);
+        
+        return new BaseResponse<string, MessageData>
+        {
+            Message = "Данные сообщения",
+            Type = ResponseType.Ok, Status = 200, Successfully = true, Errors = null, Data = message
+        };
+    }
+
     public async Task<BaseResponse<string, MessageData>> DeleteMessageAsync(string accessToken, string chatId, string messageId)
     {
         var dataToken = _jwtTokenService.GetJwtTokenData(accessToken);
@@ -564,6 +592,11 @@ public class MessageService: IMessageService
         return (encryptedText, ivBase64, hmac);
     }
 
+    /// <summary>
+    /// Проверяет подпись и расшифровывает сообщение
+    /// </summary>
+    /// <param name="messageData">Данные сообщения</param>
+    /// <returns></returns>
     private MessageData? DecryptAndVerify(MessageData messageData)
     {
         IHmacService hmacService = new HmacService(_hmacKey);

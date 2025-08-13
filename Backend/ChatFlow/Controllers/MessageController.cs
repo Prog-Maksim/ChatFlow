@@ -91,9 +91,18 @@ public class MessagesController(ILogger<MessagesController> logger, IMessageServ
     [Authorize]
     [ApiVersion("1.0")]
     [HttpGet("{chatId}/messages/{messageId}")]
-    public async Task<IActionResult> GetMessage([Required] string chatId, [Required] string messageId)
+    public async Task<IActionResult> GetMessage([Required] [FromRoute] string chatId, [Required] [FromRoute] string messageId)
     {
-        return Ok();
+        logger.LogInformation("Начало обработки запроса: (данные сообщения)");
+        var authHeader = HttpContext.Request.Headers["Authorization"].ToString();
+        var token = authHeader.Substring("Bearer ".Length);
+
+        var response = await service.GetMessageDataAsync(token, chatId, messageId);
+
+        if (!response.Successfully)
+            return StatusCode(response.Status, response);
+
+        return Ok(response);
     }
 
     

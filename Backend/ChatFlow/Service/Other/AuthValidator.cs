@@ -15,7 +15,7 @@ public class AuthValidator
         {
             byte[] keyBytes = Convert.FromBase64String(base64Key);
             using var rsa = RSA.Create();
-            rsa.ImportRSAPublicKey(keyBytes, out _);
+            rsa.ImportSubjectPublicKeyInfo(keyBytes, out _); // SPKI
             return true;
         }
         catch
@@ -35,7 +35,7 @@ public class AuthValidator
         {
             byte[] keyBytes = Convert.FromBase64String(base64Key);
             using var rsa = RSA.Create();
-            rsa.ImportRSAPrivateKey(keyBytes, out _);
+            rsa.ImportPkcs8PrivateKey(keyBytes, out _); // PKCS#8
             return true;
         }
         catch

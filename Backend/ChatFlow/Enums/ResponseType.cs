@@ -88,6 +88,16 @@ public enum ResponseType
     ChatNotFound,
     
     /// <summary>
+    /// Отказано в переадресации из секретного чата
+    /// </summary>
+    DeniedForwardFromSecretChat,
+    
+    /// <summary>
+    /// Запрещено изменять пересланное сообщение
+    /// </summary>
+    DeniedForwardMessageUpdated,
+    
+    /// <summary>
     /// Пользователь не состоит в этом чате 
     /// </summary>
     UserNotInChat,

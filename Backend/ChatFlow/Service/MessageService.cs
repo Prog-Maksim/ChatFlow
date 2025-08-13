@@ -36,12 +36,15 @@ public class MessageService: IMessageService
         _hmacKey = Convert.FromBase64String(configuration["MessageEncryption:Hmac"]!);
     }
     
-    public async Task<BaseResponse<string, SendMessage>> SendMessageAsync(string accessToken, Message message, CancellationToken cancellationToken)
-        => await ProcessMessageAsync(accessToken, message, cancellationToken);
+    public async Task<BaseResponse<string, SendMessage>> SendMessageAsync(string accessToken, string chatId, Message message, CancellationToken cancellationToken)
+        => await ProcessMessageAsync(accessToken, chatId, message, cancellationToken);
 
-    public async Task<BaseResponse<string, SendMessage>> SendReplyMessageAsync(string accessToken, string replyMessageId, Message message,
-        CancellationToken cancellationToken) => await ProcessMessageAsync(accessToken, message, cancellationToken, replyMessageId: replyMessageId);
-    
+    public async Task<BaseResponse<string, SendMessage>> SendReplyMessageAsync(string accessToken, string chatId, string replyMessageId, Message message,
+        CancellationToken cancellationToken) => await ProcessMessageAsync(accessToken, chatId, message, cancellationToken, replyMessageId: replyMessageId);
+
+    public async Task<BaseResponse<string, SendMessage>> SendForwardMessageAsync(string accessToken, string chatId,
+        string messageId, ForwardMessageRequest request,
+        CancellationToken cancellationToken) => await ProcessForwardMessageAsync(accessToken, chatId, cancellationToken, request.ToChatId, messageId, request.Message);
     public async Task<BaseResponse<string, MessagesPagination>> GetMessagesChatAsync(string accessToken, string chatId, int limit, int offset)
     {
         var dataToken = _jwtTokenService.GetJwtTokenData(accessToken);
@@ -103,7 +106,6 @@ public class MessageService: IMessageService
 
             if (message is null)
                 return CreateErrorResponse<string, MessageData>("Сообщения не найдены!", ResponseType.MessageNotFound, 404, "Not Found");
-            
             message = DecryptAndVerify(message);
         }
         if (chat.Type == ChatType.SecretPrivate)
@@ -172,6 +174,9 @@ public class MessageService: IMessageService
         
         if (message is null)
             return CreateErrorResponse<string, MessageData>("Сообщение не найдено!", ResponseType.MessageNotFound, 404, "Not Found");
+        
+        if (message.ForwardedFrom is not null)
+            return CreateErrorResponse<string, MessageData>("Пересланное сообщение нельзя изменить", ResponseType.DeniedForwardMessageUpdated, 403, "Forbidden");
         
         if (chat.Type == ChatType.Private)
         {
@@ -322,14 +327,14 @@ public class MessageService: IMessageService
         };
     }
 
-    private async Task<BaseResponse<string, SendMessage>> ProcessMessageAsync(string accessToken, Message message, 
+    private async Task<BaseResponse<string, SendMessage>> ProcessMessageAsync(string accessToken, string chatId, Message message, 
         CancellationToken cancellationToken, string? replyMessageId = null)
     {
         var dataToken = _jwtTokenService.GetJwtTokenData(accessToken);
         if (!await _jwtTokenService.ValidateJwtAccessToken(dataToken))
             return CreateErrorResponse<string, SendMessage>("Не удалось проверить корректность jwt токена", ResponseType.JwtTokenVerificationFailed, 403, "Forbidden");
 
-        var chat = await _messageRepository.GetChatAsync(message.ChatId);
+        var chat = await _messageRepository.GetChatAsync(chatId);
         if (chat is null || chat.HiddenForUsers.Contains(dataToken.PersonId))
             return CreateErrorResponse<string, SendMessage>("Данный чат не найден", ResponseType.ChatNotFound, 404, "Not Found");
 
@@ -340,17 +345,17 @@ public class MessageService: IMessageService
         {
             var personRole = chat.Persons.FirstOrDefault(p => p.PersonId == dataToken.PersonId);
             if (personRole is null || personRole.Role == Roles.User)
-                return CreateErrorResponse<string, SendMessage>("Вам запрещено отправлять сообщения в этот чат", ResponseType.ChatNotFound, 403, "Forbidden");
+                return CreateErrorResponse<string, SendMessage>("Вам запрещено отправлять сообщения в этот чат", ResponseType.AccessDenied, 403, "Forbidden");
         }
-        
+
+        MessageData? searchMessage = null;
         if (replyMessageId is not null)
         {
-            var searchMessage = await _messageRepository.GetMessageByIdAsync(chat.ChatId, replyMessageId, dataToken.PersonId);
+            searchMessage = await _messageRepository.GetMessageByIdAsync(chat.ChatId, replyMessageId, dataToken.PersonId);
             if (searchMessage is null)
                 return CreateErrorResponse<string, SendMessage>("Сообщение не найдено!", ResponseType.MessageNotFound, 404, "Not Found");
         }
-
-        var messageData = CreateMessageAsync(message, dataToken.PersonId);
+        var messageData = CreateMessageAsync(message, chatId, dataToken.PersonId);
 
         if (replyMessageId is not null)
             messageData.ReplyMessageId = replyMessageId;
@@ -361,7 +366,8 @@ public class MessageService: IMessageService
                 return CreateErrorResponse<string, SendMessage>("Использование полей 'Signature' и 'Keys' запрещено для данного типа чата.", ResponseType.InvalidMessageFields, 400, "Bad Request");
 
             var copyMessage = (MessageData)messageData.Clone();
-            await SaveMessageAsync(copyMessage, cancellationToken);
+            SaveMessageAsync(copyMessage);
+            await _messageRepository.SaveMessageAsync(copyMessage, cancellationToken);
         }
         else if (chat.Type == ChatType.SecretPrivate)
         {
@@ -387,6 +393,85 @@ public class MessageService: IMessageService
             Status = 200,
             Successfully = true,
             Data = new SendMessage { Message = messageData }
+        };
+    }
+    
+    private async Task<BaseResponse<string, SendMessage>> ProcessForwardMessageAsync(string accessToken, string chatId, 
+        CancellationToken cancellationToken, string forwardToChatId, string forwardFromMessageId, Message? message = null)
+    {
+        var dataToken = _jwtTokenService.GetJwtTokenData(accessToken);
+        if (!await _jwtTokenService.ValidateJwtAccessToken(dataToken))
+            return CreateErrorResponse<string, SendMessage>("Не удалось проверить корректность jwt токена", ResponseType.JwtTokenVerificationFailed, 403, "Forbidden");
+
+        var chat = await _messageRepository.GetChatAsync(chatId);
+        if (chat is null || chat.HiddenForUsers.Contains(dataToken.PersonId))
+            return CreateErrorResponse<string, SendMessage>("Данный чат не найден", ResponseType.ChatNotFound, 404, "Not Found");
+
+        if (chat.Persons.All(p => p.PersonId != dataToken.PersonId))
+            return CreateErrorResponse<string, SendMessage>("Вы не состоите в этом чате", ResponseType.UserNotInChat, 403, "Forbidden");
+
+        if (chat.Type == ChatType.SecretPrivate)
+            return CreateErrorResponse<string, SendMessage>("Запрещено пересылать сообщения из секретного чата", ResponseType.DeniedForwardFromSecretChat, 403, "Forbidden");
+        
+        if (chat.Type != ChatType.Private)
+        {
+            var personRole = chat.Persons.FirstOrDefault(p => p.PersonId == dataToken.PersonId);
+            if (personRole is null || personRole.Role == Roles.User)
+                return CreateErrorResponse<string, SendMessage>("Вам запрещено отправлять сообщения в этот чат", ResponseType.AccessDenied, 403, "Forbidden");
+        }
+        
+        var searchMessage = await _messageRepository.GetMessageByIdAsync(chat.ChatId, forwardFromMessageId, dataToken.PersonId);
+        if (searchMessage is null)
+            return CreateErrorResponse<string, SendMessage>("Сообщение не найдено!", ResponseType.MessageNotFound, 404, "Not Found");
+        
+        searchMessage = DecryptAndVerify(searchMessage);
+        if (searchMessage is null)
+            return CreateErrorResponse<string, SendMessage>("Сообщение не найдено!", ResponseType.MessageNotFound, 404, "Not Found");
+        
+        ForwardInfo forwardInfo = new ForwardInfo
+        {
+            OriginalChatId = chatId,
+            OriginalMessageId = forwardFromMessageId,
+            OriginalSenderId = searchMessage.OwnerId
+        };
+        MessageData mainForwardMessage = new MessageData
+        {
+            MessageId = Guid.NewGuid().ToString(),
+            ChatId = forwardToChatId,
+            Text = searchMessage.Text,
+            ForwardedFrom = forwardInfo,
+            Created = DateTime.UtcNow,
+            MessageType = MessageStatus.Send,
+            OwnerId = searchMessage.OwnerId
+        };
+        
+        var copyMessage = (MessageData)mainForwardMessage.Clone();
+        SaveMessageAsync(copyMessage);
+        await _messageRepository.SaveMessageAsync(copyMessage, cancellationToken);
+        
+        _ = _manager.SendMessageToUserAsync(mainForwardMessage, chat.Persons);
+        MetricsRegistry.MessagesSentCounter.Inc();
+
+        MessageData? addMessage = null;
+        if (message is not null)
+        {
+            addMessage = CreateMessageAsync(message, chatId, dataToken.PersonId);
+            addMessage.ReplyMessageId = mainForwardMessage.MessageId;
+            
+            var copyMessage1 = (MessageData)addMessage.Clone();
+            SaveMessageAsync(copyMessage1);
+            await _messageRepository.SaveMessageAsync(copyMessage1, cancellationToken);
+            _ = _manager.SendMessageToUserAsync(addMessage, chat.Persons);
+            MetricsRegistry.MessagesSentCounter.Inc();
+        }
+        
+        return new BaseResponse<string, SendMessage>
+        {
+            Message = "Сообщение успешно переслано",
+            Type = ResponseType.Ok,
+            Status = 200,
+            Successfully = true,
+            Data = addMessage is not null ? new SendMessage { Message = addMessage } : new SendMessage { Message = mainForwardMessage}
         };
     }
     
@@ -469,19 +554,20 @@ public class MessageService: IMessageService
             .Where(m => m != null)
             .ToList()!;
     }
-    
+
     /// <summary>
     /// Создает объект сообщения
     /// </summary>
     /// <param name="message">Данные сообщения</param>
+    /// <param name="chatId">Идентификатор чата</param>
     /// <param name="ownerPersonId">Автор сообщения</param>
     /// <returns></returns>
-    private MessageData CreateMessageAsync(Message message, string ownerPersonId)
+    private MessageData CreateMessageAsync(Message message, string chatId, string ownerPersonId)
     {
         MessageData messageData = new MessageData
         {
             MessageId = Guid.NewGuid().ToString(),
-            ChatId = message.ChatId,
+            ChatId = chatId,
             Text = message.Text,
             Created = DateTime.UtcNow,
             MessageType = MessageStatus.Send,
@@ -494,16 +580,14 @@ public class MessageService: IMessageService
     }
 
     /// <summary>
-    /// Шифрует и сохраняет сообщение в БД
+    /// Шифрует сообщение 
     /// </summary>
     /// <param name="messageData"></param>
-    /// <param name="cancellationToken"></param>
-    private async Task SaveMessageAsync(MessageData messageData, CancellationToken cancellationToken)
+    private void SaveMessageAsync(MessageData messageData)
     {
         (string EncryptedText, string IV, string Hmac) dataEncrypt = EncryptAndSign(messageData.Text);
         messageData.Text = dataEncrypt.EncryptedText;
         messageData.IV = dataEncrypt.IV;
         messageData.HMAC = dataEncrypt.Hmac;
-        await _messageRepository.SaveMessageAsync(messageData, cancellationToken);
     }
 }

@@ -5,12 +5,6 @@ namespace ChatFlow.Models.Requests;
 public class Message
 {
     /// <summary>
-    /// Идентификатор чата
-    /// </summary>
-    [JsonPropertyName("chatId")]
-    public required string ChatId { get; set; }
-    
-    /// <summary>
     /// Текст сообщения
     /// </summary>
     [JsonPropertyName("text")]
@@ -24,6 +18,7 @@ public class Message
     
     /// <summary>
     /// Ключи шифрования
+    /// Key = идентификатор устройства, Value = зашифрованный симметричный ключ
     /// </summary>
     [JsonPropertyName("keys")]
     public Dictionary<string, string>? Keys { get; set; }

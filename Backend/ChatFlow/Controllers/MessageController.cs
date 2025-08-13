@@ -80,6 +80,24 @@ public class MessagesController(ILogger<MessagesController> logger, IMessageServ
     }
 
     /// <summary>
+    /// Возвращает информацию о сообщении
+    /// </summary>
+    /// <remarks>
+    /// Нужна например, чтобы узнать содержимое пересылаемого сообщения
+    /// </remarks>
+    /// <param name="chatId">Идентификатор чата</param>
+    /// <param name="messageId">Идентификатор сообщения</param>
+    /// <returns></returns>
+    [Authorize]
+    [ApiVersion("1.0")]
+    [HttpGet("{chatId}/messages/{messageId}")]
+    public async Task<IActionResult> GetMessage([Required] string chatId, [Required] string messageId)
+    {
+        return Ok();
+    }
+
+    
+    /// <summary>
     /// Позволяет изменить сообщение
     /// </summary>
     /// <remarks>

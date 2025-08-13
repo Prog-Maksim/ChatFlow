@@ -374,9 +374,9 @@ public class ChatsController(ILogger<ChatsController> logger, IChatService servi
     [Authorize]
     [ApiVersion("1.0")]
     [HttpGet("{chatId}/messages/{messageId}/pinned")]
-    [ProducesResponseType(typeof(BaseResponse<string, string>), StatusCodes.Status200OK)]
-    [ProducesResponseType(typeof(BaseResponse<string, string>), StatusCodes.Status403Forbidden)]
-    [ProducesResponseType(typeof(BaseResponse<string, string>), StatusCodes.Status404NotFound)]
+    [ProducesResponseType(typeof(BaseResponse<string, PinnedMessage>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(BaseResponse<string, PinnedMessage>), StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(typeof(BaseResponse<string, PinnedMessage>), StatusCodes.Status404NotFound)]
     public async Task<IActionResult> GetPinnedMessage([Required] [FromRoute] string chatId)
     {
         logger.LogInformation("Начало обработки запроса: (выдача закрепленных сообщений)");

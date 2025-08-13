@@ -80,23 +80,6 @@ public class MessagesController(ILogger<MessagesController> logger, IMessageServ
     }
 
     /// <summary>
-    /// Возвращает информацию о сообщении
-    /// </summary>
-    /// <remarks>
-    /// Нужна например, чтобы узнать содержимое пересылаемого сообщения
-    /// </remarks>
-    /// <param name="chatId">Идентификатор чата</param>
-    /// <param name="messageId">Идентификатор сообщения</param>
-    /// <returns></returns>
-    [Authorize]
-    [ApiVersion("1.0")]
-    [HttpGet("{chatId}/messages/{messageId}")]
-    public async Task<IActionResult> GetMessage([Required] string chatId, [Required] string messageId)
-    {
-        return Ok();
-    }
-
-    /// <summary>
     /// Позволяет изменить сообщение
     /// </summary>
     /// <remarks>
@@ -288,7 +271,7 @@ public class MessagesController(ILogger<MessagesController> logger, IMessageServ
     /// <returns></returns>
     /// <response code="200">Успешно</response>
     /// <response code="403">Невалидный jwt токен, не состоишь в чате, запрещено для этого сообщения</response>
-    /// <response code="404">Чат или сообщение не найден</response>
+    /// <response code="404">Чат или сообщение не найдено</response>
     [Authorize]
     [ApiVersion("1.0")]
     [HttpPost("{chatId}/messages/{messageId}/view")]
@@ -306,7 +289,7 @@ public class MessagesController(ILogger<MessagesController> logger, IMessageServ
         if (!response.Successfully)
             return StatusCode(response.Status, response);
 
-        return Ok(response);;
+        return Ok(response);
     }
     
     /// <summary>
@@ -317,7 +300,7 @@ public class MessagesController(ILogger<MessagesController> logger, IMessageServ
     /// <returns></returns>
     /// <response code="200">Успешно</response>
     /// <response code="403">Невалидный jwt токен, не состоишь в чате, запрещено для этого сообщения</response>
-    /// <response code="404">Чат или сообщение не найден</response>
+    /// <response code="404">Чат или сообщение не найдено</response>
     [Authorize]
     [ApiVersion("1.0")]
     [HttpGet("{chatId}/messages/{messageId}/view")]
@@ -331,6 +314,36 @@ public class MessagesController(ILogger<MessagesController> logger, IMessageServ
         var token = authHeader.Substring("Bearer ".Length);
 
         var response = await service.GetTheReadMessage(token, chatId, messageId);
+
+        if (!response.Successfully)
+            return StatusCode(response.Status, response);
+
+        return Ok(response);
+    }
+
+    /// <summary>
+    /// Выдача кол-ва просмотров для сообщения
+    /// </summary>
+    /// <param name="chatId">Идентификатор чата</param>
+    /// <param name="messageId">Идентификатор сообщения</param>
+    /// <returns></returns>
+    /// <response code="200">Успешно</response>
+    /// <response code="403">Невалидный jwt токен, не состоишь в чате</response>
+    /// <response code="404">Чат или сообщение не найдено</response>
+    [Authorize]
+    [ApiVersion("1.0")]
+    [HttpGet("{chatId}/messages/{messageId}/view/count")]
+    [ProducesResponseType(typeof(BaseResponse<string, CountReadMessage>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(BaseResponse<string, CountReadMessage>), StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(typeof(BaseResponse<string, CountReadMessage>), StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> GetCountViewTheMessageAsync([Required] [FromRoute] string chatId,
+        [Required] [FromRoute] string messageId)
+    {
+        logger.LogInformation("Начало обработки запроса: (выдача кол-ва просмотров для сообщения)");
+        var authHeader = HttpContext.Request.Headers["Authorization"].ToString();
+        var token = authHeader.Substring("Bearer ".Length);
+
+        var response = await service.GetTheCountReadMessage(token, chatId, messageId);
 
         if (!response.Successfully)
             return StatusCode(response.Status, response);

@@ -96,4 +96,13 @@ public interface IMessageService
     /// <param name="messageId">Идентификатор сообщения</param>
     /// <returns></returns>
     public Task<BaseResponse<string, List<PersonReadMessage>>> GetTheReadMessage(string accessToken, string chatId, string messageId);
+    
+    /// <summary>
+    /// Выдает информации о прочтении сообщения
+    /// </summary>
+    /// <param name="accessToken">Токен пользователя</param>
+    /// <param name="chatId">Идентификатор чата</param>
+    /// <param name="messageId">Идентификатор сообщения</param>
+    /// <returns></returns>
+    public Task<BaseResponse<string, CountReadMessage>> GetTheCountReadMessage(string accessToken, string chatId, string messageId);
 }

@@ -327,6 +327,35 @@ public class MessageService: IMessageService
         };
     }
 
+    public async Task<BaseResponse<string, CountReadMessage>> GetTheCountReadMessage(string accessToken, string chatId, string messageId)
+    {
+        var dataToken = _jwtTokenService.GetJwtTokenData(accessToken);
+        if (!await _jwtTokenService.ValidateJwtAccessToken(dataToken))
+            return CreateErrorResponse<string, CountReadMessage>("Не удалось проверить корректность jwt токена", ResponseType.JwtTokenVerificationFailed, 403, "Forbidden");
+
+        ChatDocument? chat = await _messageRepository.GetChatAsync(chatId);
+        
+        if (chat is null || chat.HiddenForUsers.Contains(dataToken.PersonId))
+            return CreateErrorResponse<string, CountReadMessage>("Данный чат не найден", ResponseType.ChatNotFound, 404, "Not Found");
+
+        if (chat.Persons.All(p => p.PersonId != dataToken.PersonId))
+            return CreateErrorResponse<string, CountReadMessage>("Вы не состоите в этом чате", ResponseType.UserNotInChat, 403, "Forbidden");
+        
+        var message = await _messageRepository.GetMessageByIdAsync(chatId, messageId, dataToken.PersonId);
+        
+        if (message is null)
+            return CreateErrorResponse<string, CountReadMessage>("Сообщение не найдено!", ResponseType.MessageNotFound, 404, "Not Found");
+        
+        return new BaseResponse<string, CountReadMessage>
+        {
+            Message = "Просмотры сообщения",
+            Type = ResponseType.Ok,
+            Status = 200,
+            Successfully = true,
+            Data = new CountReadMessage{ Count = message.Views.Count }
+        };
+    }
+
     private async Task<BaseResponse<string, SendMessage>> ProcessMessageAsync(string accessToken, string chatId, Message message, 
         CancellationToken cancellationToken, string? replyMessageId = null)
     {
@@ -348,7 +377,7 @@ public class MessageService: IMessageService
                 return CreateErrorResponse<string, SendMessage>("Вам запрещено отправлять сообщения в этот чат", ResponseType.AccessDenied, 403, "Forbidden");
         }
 
-        MessageData? searchMessage = null;
+        MessageData? searchMessage;
         if (replyMessageId is not null)
         {
             searchMessage = await _messageRepository.GetMessageByIdAsync(chat.ChatId, replyMessageId, dataToken.PersonId);
@@ -455,6 +484,12 @@ public class MessageService: IMessageService
         MessageData? addMessage = null;
         if (message is not null)
         {
+            if ((message.Keys is not null || message.Signature is not null) && chat.Type != ChatType.SecretPrivate)
+                return CreateErrorResponse<string, SendMessage>("Использование полей 'Signature' и 'Keys' запрещено для данного типа чата.", ResponseType.InvalidMessageFields, 400, "Bad Request");
+            if (message.Keys is null || message.Signature is null && chat.Type == ChatType.SecretPrivate)
+                return CreateErrorResponse<string, SendMessage>("У сообщения отсутствуют обязательные поля 'Signature' или 'Keys'", ResponseType.MissingRequiredFields, 400, "Bad Request");
+
+            
             addMessage = CreateMessageAsync(message, chatId, dataToken.PersonId);
             addMessage.ReplyMessageId = mainForwardMessage.MessageId;
             

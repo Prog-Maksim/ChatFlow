@@ -87,4 +87,12 @@ public interface  IMessageRepository
     /// <param name="chatId">Идентификатор чата</param>
     /// <returns></returns>
     public Task<bool> DeleteAllMessageAsync(string chatId);
+
+    /// <summary>
+    /// Возвращает кол-во просмотров для сообщения
+    /// </summary>
+    /// <param name="chatId">Идентификатор чата</param>
+    /// <param name="messageId">Идентификатор сообщения</param>
+    /// <returns></returns>
+    public Task<int> GetCountMessageView(string chatId, string messageId);
 }

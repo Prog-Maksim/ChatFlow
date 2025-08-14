@@ -3,6 +3,7 @@ import { useForm, type SubmitHandler } from 'react-hook-form';
 import { Button } from '../../../../shared/ui/Button/Button';
 import type { ILoginInput } from '../../types/login.types';
 import { useLoginMutation } from '../../model/useLoginMutation';
+import { getItem } from '../../../../shared/storage/secureStore';
 
 export function LoginForm() {
 	const {
@@ -13,8 +14,23 @@ export function LoginForm() {
 
 	const loginMutation = useLoginMutation();
 
-	const onSubmit: SubmitHandler<ILoginInput> = (data) => {
-		loginMutation.mutate(data);
+	const onSubmit: SubmitHandler<ILoginInput> = async (data) => {
+		try {
+			const publicKey = await getItem(`publicKey:${data.login}`);
+
+
+			if (!publicKey || typeof publicKey !== 'string') {
+				console.error('Public key not found in IndexedDB');
+				return;
+			}
+
+			loginMutation.mutate({
+				...data,
+				publicKey,
+			});
+		} catch (err) {
+			console.error('Failed to get publicKey from IndexedDB', err);
+		}
 	};
 
 	return (

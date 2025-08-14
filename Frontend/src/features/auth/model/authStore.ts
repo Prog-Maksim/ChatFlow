@@ -3,20 +3,16 @@ import { makeAutoObservable } from 'mobx';
 class AuthStore {
 	isAuthenticated = false;
 	user: string | null = null;
+	token: string | null = null;
 
-	constructor() {
-		makeAutoObservable(this);
-	}
+	privateKey: CryptoKey | null = null;
 
-	login(user: string) {
-		this.user = user;
-		this.isAuthenticated = true;
-	}
+	constructor() { makeAutoObservable(this); }
 
-	logout() {
-		this.user = null;
-		this.isAuthenticated = false;
-	}
+	setToken(t: string) { this.token = t; }
+	login(user: string) { this.user = user; this.isAuthenticated = true; }
+	logout() { this.user = null; this.isAuthenticated = false; this.token = null; this.privateKey = null; }
+	setPrivateKey(k: CryptoKey) { this.privateKey = k; }
 }
 
 export const authStore = new AuthStore();

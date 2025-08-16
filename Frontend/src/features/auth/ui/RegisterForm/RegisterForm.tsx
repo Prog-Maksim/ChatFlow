@@ -1,16 +1,11 @@
-import { Link } from '@tanstack/react-router';
 import { useForm, Controller, type SubmitHandler } from 'react-hook-form';
 import { IMaskInput } from 'react-imask';
 import { Button } from '../../../../shared/ui/Button/Button';
 import { useRegister } from '../../model/useRegister';
-
-interface IFormInput {
-	surname: string;
-	name: string;
-	login: string;
-	password: string;
-	confirmPassword: string;
-}
+import type { IRegistrationInput } from '../../types/register.types';
+import { Link, useNavigate } from '@tanstack/react-router';
+import { ROUTES } from '../../../../shared/config/routes';
+import { useState } from 'react';
 
 export function RegisterForm() {
 	const {
@@ -20,18 +15,14 @@ export function RegisterForm() {
 		control,
 		formState: { errors },
 		reset,
-	} = useForm<IFormInput>();
+	} = useForm<IRegistrationInput>();
 
 	const password = watch('password');
+	const { mutate, isPending, error } = useRegister();
+	const [isSuccess, setIsSuccess] = useState(false);
+	const navigate = useNavigate();
 
-	const { mutate, isPending, isSuccess, error, data } = useRegister();
-
-	if (isSuccess) {
-		console.log(data);
-	}
-
-	// eslint-disable-next-line @typescript-eslint/no-unused-vars
-	const onSubmit: SubmitHandler<IFormInput> = ({ confirmPassword, ...rest }) => {
+	const onSubmit: SubmitHandler<IRegistrationInput> = ({ ...rest }) => {
 		let formattedLogin = rest.login;
 		if (formattedLogin.startsWith('9')) {
 			formattedLogin = '8' + formattedLogin;
@@ -40,7 +31,11 @@ export function RegisterForm() {
 		mutate(
 			{ ...rest, login: formattedLogin },
 			{
-				onSuccess: () => reset(),
+				onSuccess: () => {
+					reset();
+					setIsSuccess(true);
+					setTimeout(() => navigate({ to: ROUTES.login }), 1500);
+				},
 			}
 		);
 	};
@@ -48,7 +43,9 @@ export function RegisterForm() {
 	return (
 		<form
 			onSubmit={handleSubmit(onSubmit)}
-			className="flex flex-col justify-center gap-5 w-[400px] rounded-2xl shadow-[0_0_19.7px_0_rgba(0,0,0,0.25)] px-7 py-5"
+			className={`flex flex-col justify-center gap-5 w-[400px] rounded-2xl shadow-[0_0_19.7px_0_rgba(0,0,0,0.25)] px-7 py-5 ${
+				isPending ? 'opacity-70 pointer-events-none' : ''
+			}`}
 		>
 			<p className="text-2xl font-extrabold text-center">Регистрация</p>
 
@@ -57,6 +54,8 @@ export function RegisterForm() {
 					{...register('surname', { required: 'Фамилия обязательна' })}
 					placeholder="Фамилия"
 					className="input_border"
+					autoComplete="family-name"
+					disabled={isPending}
 				/>
 				{errors.surname && (
 					<span className="text-red-500 text-sm">{errors.surname.message}</span>
@@ -68,6 +67,8 @@ export function RegisterForm() {
 					{...register('name', { required: 'Имя обязательно' })}
 					placeholder="Имя"
 					className="input_border"
+					autoComplete="given-name"
+					disabled={isPending}
 				/>
 				{errors.name && (
 					<span className="text-red-500 text-sm">{errors.name.message}</span>
@@ -96,6 +97,8 @@ export function RegisterForm() {
 							inputRef={ref}
 							placeholder="+7 (900) 000-00-00"
 							className="input_border"
+							autoComplete="tel"
+							disabled={isPending}
 						/>
 					)}
 				/>
@@ -113,6 +116,8 @@ export function RegisterForm() {
 					})}
 					placeholder="Пароль"
 					className="input_border"
+					autoComplete="new-password"
+					disabled={isPending}
 				/>
 				{errors.password && (
 					<span className="text-red-500 text-sm">{errors.password.message}</span>
@@ -128,6 +133,8 @@ export function RegisterForm() {
 					})}
 					placeholder="Повтор пароля"
 					className="input_border"
+					autoComplete="new-password"
+					disabled={isPending}
 				/>
 				{errors.confirmPassword && (
 					<span className="text-red-500 text-sm">{errors.confirmPassword.message}</span>
@@ -141,21 +148,21 @@ export function RegisterForm() {
 			</div>
 
 			{isSuccess && (
-				<p className="text-green text-sm text-center">
-					✅ Успешно! Код подтверждения: {data?.data.code}
+				<p className="font-semibold text-sm text-center">
+					Регистрация успешна!
 				</p>
 			)}
 
 			{error instanceof Error && (
-				<p className="text-redtext-sm text-center">❌ {error.message}</p>
+				<p className="text-red-500 text-sm text-center">❌ {error.message}</p>
 			)}
-
 			<div className="flex justify-between text-sm text-blue-600 mt-1">
-				<Link to="/login" className="hover:underline">
-					Есть аккаунт?
+				<Link to={ROUTES.login} className="hover:underline">
+								Есть аккаунт?
 				</Link>
 				<span className="cursor-pointer hover:underline">Вход по QR-коду</span>
 			</div>
 		</form>
+		
 	);
 }

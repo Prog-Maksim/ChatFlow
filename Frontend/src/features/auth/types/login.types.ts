@@ -1,7 +1,6 @@
 export interface LoginRequest {
 	login: string;
 	password: string;
-	publicKey: string;
 }
 
 export interface LoginResponse {
@@ -15,8 +14,6 @@ export interface LoginResponse {
 	};
 }
 
-export interface ILoginInput {
-	login: string;
-	password: string;
-	publicKey: string;
+export interface ILoginInput  extends LoginRequest {
+  publicKey: string;
 }

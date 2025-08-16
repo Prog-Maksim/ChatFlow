@@ -1,20 +1,9 @@
-import { api } from '../../../shared/api/baseQuery';
-import type { ILoginInput, LoginResponse } from '../types/login.types';
-import { generateKeyPairSPKI } from '../../../shared/crypto/webcrypto';
+import { useMutation } from '@tanstack/react-query';
+import { loginUser } from '../api/loginApi';
+import type { LoginRequest, LoginResponse } from '../types/login.types';
 
-export const loginApi = async (data: ILoginInput) => {
-	const { publicKeySPKI } = await generateKeyPairSPKI();
-
-	const payload = {
-		...data,
-		publicKey: publicKeySPKI,
-	};
-
-	console.log('Отправка на сервер:', payload);
-
-	return api.post<LoginResponse>('/auth/authorization', payload, {
-		headers: {
-			'User-Agent': navigator.userAgent,
-		},
+export const useLogin = () => {
+	return useMutation<LoginResponse, Error, LoginRequest>({
+		mutationFn: loginUser, 
 	});
 };

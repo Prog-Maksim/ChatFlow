@@ -17,7 +17,7 @@ export const loginUser = async (data: LoginRequest): Promise<LoginResponse> => {
 
 	const response = await api.post<LoginResponse>('/auth/authorization', payload);
 	console.log('Ответ от сервера (loginUser):', response.data);
-
+	
 	return response.data;
 };
 
@@ -26,6 +26,5 @@ export const loginUserWithKeys = async (data: ILoginInput): Promise<LoginRespons
 
 	const response = await api.post<LoginResponse>('/auth/authorization', data);
 	console.log('Ответ от сервера (loginUserWithKeys):', response.data);
-
 	return response.data;
 };

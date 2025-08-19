@@ -2,6 +2,7 @@ import { useMutation } from '@tanstack/react-query';
 import { getItem } from '../../../shared/storage/secureStore';
 import { loginUserWithKeys } from '../api/loginApi';
 import { createAndStoreKeys } from '../../../shared/crypto/createAndStoreKeys';
+import { setAuthData } from '../model/auth';
 import type { ILoginInput, LoginResponse } from '../types/login.types';
 
 type LoginFormInput = Omit<ILoginInput, 'publicKey'>;
@@ -20,20 +21,27 @@ export const useLoginMutation = () => {
 				}
 			}
 
-			const res = await loginUserWithKeys({
+			return loginUserWithKeys({
 				login: data.login,
 				password: data.password,
 				publicKey,
 			});
+		},
 
-			return res;
+		onSuccess: (response) => {
+			const { data } = response;
+
+			setAuthData({
+				personId: data.personId,
+				deviceId: data.deviceId,
+				accessToken: data.accessToken,
+				refreshToken: data.refreshToken,
+				accessExpiresAt: data['access-expires-at'],
+			});
 		},
-		onSuccess: (data) => {
-			console.log('✅ Успешный вход, код:', data.data);
-		},
-		onError: (error: Error) => {
+
+		onError: (error) => {
 			console.error('❌ Ошибка входа:', error.message);
 		},
-
 	});
 };

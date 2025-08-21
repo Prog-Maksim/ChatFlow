@@ -32,3 +32,13 @@ export async function getItem<T = unknown>(key: string): Promise<T | undefined> 
 		req.onerror = () => rej(req.error);
 	});
 }
+
+export async function removeItem(key: string) {
+	const db = await openDB();
+	return new Promise<void>((res, rej) => {
+		const tx = db.transaction(STORE, 'readwrite');
+		tx.objectStore(STORE).delete(key);
+		tx.oncomplete = () => res();
+		tx.onerror = () => rej(tx.error);
+	});
+}

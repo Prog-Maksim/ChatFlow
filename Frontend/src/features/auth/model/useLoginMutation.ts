@@ -4,6 +4,7 @@ import { loginUserWithKeys } from '../api/loginApi';
 import { createAndStoreKeys } from '../../../shared/crypto/createAndStoreKeys';
 import { setAuthData } from '../model/auth';
 import type { ILoginInput, LoginResponse } from '../types/login.types';
+import { loadRefreshToken, saveRefreshToken } from '../../../shared/storage/tokenStore';
 
 type LoginFormInput = Omit<ILoginInput, 'publicKey'>;
 
@@ -28,8 +29,11 @@ export const useLoginMutation = () => {
 			});
 		},
 
-		onSuccess: (response) => {
+		onSuccess: async (response) => {
+			console.log('🔑 Login response:', response);
+
 			const { data } = response;
+			console.log('📦 Refresh from backend:', data.refreshToken);
 
 			setAuthData({
 				personId: data.personId,
@@ -38,7 +42,13 @@ export const useLoginMutation = () => {
 				refreshToken: data.refreshToken,
 				accessExpiresAt: data['access-expires-at'],
 			});
+
+			await saveRefreshToken(data.refreshToken);
+
+			const check = await loadRefreshToken();
+			console.log('✅ Проверка сохранения:', check);
 		},
+
 
 		onError: (error) => {
 			console.error('❌ Ошибка входа:', error.message);

@@ -1,66 +1,63 @@
-import axios, { AxiosError, type InternalAxiosRequestConfig } from 'axios';
-import { $auth, setAuthData, clearAuthData } from '../../features/auth/model/auth';
+import axios, { AxiosError } from 'axios';
+import { $auth, patchAuthData, clearAuthData } from '../../features/auth/model/auth';
+import { saveRefreshToken, clearRefreshToken } from '../../shared/storage/tokenStore';
+import { refreshTokenApi } from '../../features/auth/api/authApi';
+import { redirect } from '@tanstack/react-router';
+import type { AxiosRequestConfig } from 'axios';
+
+interface CustomAxiosRequestConfig extends AxiosRequestConfig {
+	_retry?: boolean;
+}
+
+const BASE_URL = 'https://api.chatflowonline.ru/v1';
 
 export const api = axios.create({
-	baseURL: 'https://api.chatflowonline.ru/v1',
-	headers: {
-		'Content-Type': 'application/json',
-	},
+	baseURL: BASE_URL,
+	headers: { 'Content-Type': 'application/json' },
 });
 
-// ===== REQUEST INTERCEPTOR =====
-api.interceptors.request.use((config: InternalAxiosRequestConfig) => {
-	const auth = $auth.getState();
-	if (auth?.accessToken) {
-		config.headers.Authorization = `Bearer ${auth.accessToken}`;
-	}
+api.interceptors.request.use(config => {
+	const token = $auth.getState()?.accessToken;
+	if (token) config.headers.Authorization = `Bearer ${token}`;
 	return config;
 });
 
-// ===== RESPONSE INTERCEPTOR =====
+
 api.interceptors.response.use(
-	(res) => res,
+	res => res,
 	async (error: AxiosError) => {
-		const originalRequest = error.config as InternalAxiosRequestConfig & { _retry?: boolean };
+		const originalRequest = error.config as CustomAxiosRequestConfig;
 
 		if (error.response?.status === 401 && !originalRequest._retry) {
 			originalRequest._retry = true;
 
+			const auth = $auth.getState();
+			if (!auth?.refreshToken) {
+				clearAuthData();
+				await clearRefreshToken();
+				throw redirect({ to: '/login' });
+			}
+
 			try {
-				const auth = $auth.getState();
-				if (!auth?.refreshToken) {
-					clearAuthData();
-					return Promise.reject(error);
-				}
+				const newData = await refreshTokenApi(auth.refreshToken);
 
-				// запрос на refresh
-				const res = await axios.post(
-					'https://api.chatflowonline.ru/v1/token/refresh',
-					{ refreshToken: auth.refreshToken },
-					{
-						headers: {
-							'Content-Type': 'application/json',
-							'User-Agent': 'ChatFlow-Frontend',
-						},
-					}
-				);
-
-				const newData = res.data.data;
-
-				// обновляем store
-				setAuthData({
-					...auth,
+				patchAuthData({
 					accessToken: newData.accessToken,
 					refreshToken: newData.refreshToken,
-					accessExpiresAt: newData['access-expires-at'],
+					accessExpiresAt: newData.accessExpiresAt,
 				});
+				await saveRefreshToken(newData.refreshToken);
 
-				// повторяем запрос с новым accessToken
-				originalRequest.headers.Authorization = `Bearer ${newData.accessToken}`;
+				originalRequest.headers = {
+					...originalRequest.headers,
+					Authorization: `Bearer ${newData.accessToken}`,
+				};
+
 				return api(originalRequest);
-			} catch (refreshError) {
+			} catch {
 				clearAuthData();
-				return Promise.reject(refreshError);
+				await clearRefreshToken();
+				throw redirect({ to: '/login' });
 			}
 		}
 

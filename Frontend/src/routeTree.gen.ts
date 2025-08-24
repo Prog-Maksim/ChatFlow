@@ -10,18 +10,12 @@
 
 import { Route as rootRouteImport } from './app/routes/__root'
 import { Route as RegistrationRouteImport } from './app/routes/registration'
-import { Route as ProtectedRouteImport } from './app/routes/protected'
 import { Route as LoginRouteImport } from './app/routes/login'
 import { Route as IndexRouteImport } from './app/routes/index'
 
 const RegistrationRoute = RegistrationRouteImport.update({
   id: '/registration',
   path: '/registration',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ProtectedRoute = ProtectedRouteImport.update({
-  id: '/protected',
-  path: '/protected',
   getParentRoute: () => rootRouteImport,
 } as any)
 const LoginRoute = LoginRouteImport.update({
@@ -38,34 +32,30 @@ const IndexRoute = IndexRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/login': typeof LoginRoute
-  '/protected': typeof ProtectedRoute
   '/registration': typeof RegistrationRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/login': typeof LoginRoute
-  '/protected': typeof ProtectedRoute
   '/registration': typeof RegistrationRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/login': typeof LoginRoute
-  '/protected': typeof ProtectedRoute
   '/registration': typeof RegistrationRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/login' | '/protected' | '/registration'
+  fullPaths: '/' | '/login' | '/registration'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/login' | '/protected' | '/registration'
-  id: '__root__' | '/' | '/login' | '/protected' | '/registration'
+  to: '/' | '/login' | '/registration'
+  id: '__root__' | '/' | '/login' | '/registration'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   LoginRoute: typeof LoginRoute
-  ProtectedRoute: typeof ProtectedRoute
   RegistrationRoute: typeof RegistrationRoute
 }
 
@@ -76,13 +66,6 @@ declare module '@tanstack/react-router' {
       path: '/registration'
       fullPath: '/registration'
       preLoaderRoute: typeof RegistrationRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/protected': {
-      id: '/protected'
-      path: '/protected'
-      fullPath: '/protected'
-      preLoaderRoute: typeof ProtectedRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/login': {
@@ -105,7 +88,6 @@ declare module '@tanstack/react-router' {
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   LoginRoute: LoginRoute,
-  ProtectedRoute: ProtectedRoute,
   RegistrationRoute: RegistrationRoute,
 }
 export const routeTree = rootRouteImport

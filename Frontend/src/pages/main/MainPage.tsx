@@ -1,10 +1,14 @@
-import { Link } from '@tanstack/react-router';
+import { ChatArea, Sidebar } from './ui';
 
 export function MainPage() {
 	return (
-		<div className='h-[100vh] w-[100vw] bg-[black] text-[white] text-5xl flex justify-center text-center flex-col gap-20'>
-			<Link to='/login'>login</Link>
-			<Link to='/registration'>registration</Link>
+		<div className='flex h-[100vh]'>
+			<div className='w-[20vw]'>
+				<Sidebar/>
+			</div>
+			<div className='w-[80vw]'>
+				<ChatArea/>
+			</div>
 		</div>
 	);
 }

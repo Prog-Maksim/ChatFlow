@@ -1,4 +1,6 @@
-import { ChatArea, Sidebar } from './ui';
+import { ChatArea } from '../../features/chatarea/ChatArea';
+import { Sidebar } from '../../features/sidebar/ui/Sidebar';
+
 
 export function MainPage() {
 	return (

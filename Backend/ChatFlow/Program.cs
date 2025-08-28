@@ -211,6 +211,7 @@ builder.Services.AddDbContext<ApplicationContext>(options => options.UseMySql(co
 var app = builder.Build();
 
 app.UseMiddleware<RequestIdMiddleware>();
+app.UseMiddleware<ErrorHandlingMiddleware>();
 
 app.UseCors("AllowLocalhost5173");
 

@@ -17,16 +17,11 @@ build-chatflow-service-job:
 
 # ──────── DEPLOY JOB ────────
 
-
 deploy-job:
   stage: deploy
   tags:
     - dev
   script:
-    - echo "VAULT_ADDR=$VAULT_ADDR"
-    - echo "VAULT_ROLE_ID=$VAULT_ROLE_ID"
-    - echo "VAULT_SECRET_ID=$VAULT_SECRET_ID"
-      
     - export Vault__Address=$VAULT_ADDR
     - export Vault__RoleId=$VAULT_ROLE_ID
     - export Vault__SecretId=$VAULT_SECRET_ID

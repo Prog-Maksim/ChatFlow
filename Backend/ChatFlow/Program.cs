@@ -2,6 +2,7 @@ using System.Net;
 using System.Reflection;
 using System.Text.Json.Serialization;
 using ChatFlow;
+using ChatFlow.Configuration;
 using ChatFlow.Models.DB;
 using ChatFlow.Repository;
 using ChatFlow.Repository.Interfaces;
@@ -26,11 +27,10 @@ using StackExchange.Redis;
 using ServerVersion = Microsoft.EntityFrameworkCore.ServerVersion;
 
 var builder = WebApplication.CreateBuilder(args);
+await builder.Configuration.AddVaultSecrets();
 
 // Настройка логирования
-var elasticSection = builder.Configuration.GetSection("ElasticSearch");
-var uri = elasticSection.GetValue<string>("Uri");
-
+var uri = builder.Configuration["ElasticSearch:Uri"];
 if (uri is null)
     throw new NullReferenceException("ElasticSearch uri is null");
 
@@ -127,14 +127,18 @@ builder.Services.AddVersionedApiExplorer(options =>
 builder.Services.AddAuthorization();
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme).AddJwtBearer(options => 
 {
-    var authOptions = builder.Configuration.GetSection("Auth").Get<AuthOptions>()!;
+    var authOptions = builder.Configuration
+        .GetSection("Auth")
+        .Get<AuthOptions>()!;
     
     options.TokenValidationParameters = new TokenValidationParameters
     {
         ValidateIssuer = true,
         ValidIssuer = authOptions.Issuer,
+
         ValidateAudience = true,
         ValidAudience = authOptions.Audience,
+
         ValidateLifetime = true,
         IssuerSigningKey = authOptions.GetSymmetricSecurityKey(),
         ValidateIssuerSigningKey = true
@@ -163,7 +167,7 @@ builder.Services.AddCors(options =>
     {
         policy.WithOrigins("http://localhost:5173")
             .AllowAnyHeader()
-            .AllowAnyMethod(); // разрешить все методы
+            .AllowAnyMethod();
     });
 });
 
@@ -193,18 +197,18 @@ builder.Services.AddSwaggerGen(options => {
 builder.Services.ConfigureOptions<ConfigureSwaggerOptions>();
 
 // Подключаем MongoDB
-var mongoDbConnectionString = builder.Configuration.GetConnectionString("MongoDBConnection");
+var mongoDbConnectionString = builder.Configuration["MongoDB"];
 builder.Services.AddSingleton(new MongoClient(mongoDbConnectionString));
 builder.Services.AddSingleton<IMongoClient>(new MongoClient(mongoDbConnectionString));
 
 // Подключаем Redis
-var redisDefault = builder.Configuration.GetConnectionString("RedisDefault")
+var redisDefault = builder.Configuration["RedisDefault"]
                    ?? throw new InvalidOperationException("Default Redis connection is missing.");
 
 builder.Services.AddSingleton<IConnectionMultiplexer>(ConnectionMultiplexer.Connect(redisDefault));
 
 // Подключает БД
-string? connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
+string? connectionString = builder.Configuration["MySql"];
 builder.Services.AddDbContext<ApplicationContext>(options => options.UseMySql(connectionString, ServerVersion.AutoDetect(connectionString)));
 
 
@@ -249,8 +253,8 @@ app.UseWhen(ctx => ctx.Request.Path.StartsWithSegments("/metrics"), appBuilder =
 {
     appBuilder.Use(async (context, next) =>
     {
-        var username = builder.Configuration["MetricsAuth:Username"];
-        var password = builder.Configuration["MetricsAuth:Password"];
+        var username = builder.Configuration["Metrics:UserName"];
+        var password = builder.Configuration["Metrics:Password"];
         
         var headers = context.Request.Headers;
         if (!headers.ContainsKey("Authorization"))

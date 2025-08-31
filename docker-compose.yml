@@ -1,48 +1,10 @@
 version: '3.8'
 
-networks:
-  net:
-    
-volumes:
-  nginx_log_volume:
-    
 services:
-  nginx:
-    build:
-      context: .
-      dockerfile: Dockerfile
-    ports:
-      - "80:80"
-      - "443:443"
-    restart: always
-    volumes:
-      - /etc/letsencrypt/live:/etc/letsencrypt/live:ro
-      - /etc/letsencrypt/archive:/etc/letsencrypt/archive:ro
-      - /etc/letsencrypt/options-ssl-nginx.conf:/etc/letsencrypt/options-ssl-nginx.conf:ro
-      - /etc/letsencrypt/ssl-dhparams.pem:/etc/letsencrypt/ssl-dhparams.pem:ro
-      - nginx_log_volume:/var/log/nginx/
-    depends_on:
-      - chat-flow
-    networks:
-      - net
-        
-  nginx-exporter:
-    build:
-      context: .
-      dockerfile: Dockerfile.nginx-exporter
-    ports:
-      - "4040:4040"
-    volumes:
-      - nginx_log_volume:/var/log/nginx/
-    networks:
-      - net
-    
-  chat-flow:
+  debug:
+    image: alpine
+    command: ["sh", "-c", "env | grep VAULT || echo 'No VAULT vars'"]
     environment:
       - Vault__Address=${VAULT_ADDR}
       - Vault__RoleId=${VAULT_ROLE_ID}
       - Vault__SecretId=${VAULT_SECRET_ID}
-    image: chatflow-service:latest
-    restart: always
-    networks:
-      - net

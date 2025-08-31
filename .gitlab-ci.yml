@@ -22,6 +22,10 @@ deploy-job:
   tags:
     - dev
   script:
+    - export Vault__Address=$VAULT_ADDR
+    - export Vault__RoleId=$VAULT_ROLE_ID
+    - export Vault__SecretId=$VAULT_SECRET_ID
+      
     - docker compose down
     - docker compose build --no-cache
     - docker compose up -d --force-recreate

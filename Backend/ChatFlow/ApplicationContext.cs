@@ -55,7 +55,7 @@ public class DesignTimeDbContextFactory : IDesignTimeDbContextFactory<Applicatio
             .AddJsonFile("appsettings.json")
             .Build();
 
-        var connectionString = configuration.GetConnectionString("DefaultConnection");
+        var connectionString = configuration["MySql"];
         optionsBuilder.UseMySql(connectionString, ServerVersion.AutoDetect(connectionString));
 
         return new ApplicationContext(optionsBuilder.Options);

@@ -10,7 +10,7 @@ public class EncryptionService: IEncryptionService
 
     public EncryptionService(IConfiguration configuration)
     {
-        string? keyString = configuration["Encryption:Key"];
+        string? keyString = configuration["Encryption"];
         if (string.IsNullOrEmpty(keyString) || keyString.Length != 32)
             throw new ArgumentException("Encryption key must be 32 characters long.");
         

@@ -38,6 +38,10 @@ services:
       - net
     
   chat-flow:
+    environment:
+      - Vault__Address=${Vault__Address}
+      - Vault__RoleId=${Vault__RoleId}
+      - Vault__SecretId=${Vault__SecretId}
     image: chatflow-service:latest
     restart: always
     networks:

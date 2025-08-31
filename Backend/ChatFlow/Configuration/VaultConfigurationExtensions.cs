@@ -12,6 +12,7 @@ public static class VaultConfigurationExtensions
         var address = config.GetSection("Vault:Address").Value!;
         var roleId = config.GetSection("Vault:RoleId").Value!;
         var secretId = config.GetSection("Vault:SecretId").Value!;
+        Console.WriteLine($"Address: {address} || RoleId: {roleId} || SecretId: {secretId}");
 
         var authMethod = new AppRoleAuthMethodInfo(roleId, secretId);
         var vaultClientSettings = new VaultClientSettings(address, authMethod);

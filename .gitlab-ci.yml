@@ -17,6 +17,7 @@ build-chatflow-service-job:
 
 # ──────── DEPLOY JOB ────────
 
+
 deploy-job:
   stage: deploy
   tags:

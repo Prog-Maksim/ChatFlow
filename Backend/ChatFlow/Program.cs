@@ -163,9 +163,12 @@ builder.Services.Configure<ForwardedHeadersOptions>(options =>
 
 builder.Services.AddCors(options =>
 {
-    options.AddPolicy("AllowLocalhost5173", policy =>
+    options.AddPolicy("AllowFrontend", policy =>
     {
-        policy.WithOrigins("http://localhost:5173")
+        policy.WithOrigins(
+                "http://localhost:5173",
+                "https://chatflowonline.ru"
+            )
             .AllowAnyHeader()
             .AllowAnyMethod();
     });
@@ -217,7 +220,7 @@ var app = builder.Build();
 app.UseMiddleware<RequestIdMiddleware>();
 app.UseMiddleware<ErrorHandlingMiddleware>();
 
-app.UseCors("AllowLocalhost5173");
+app.UseCors("AllowFrontend");
 
 // Настройки среды
 if (app.Environment.IsDevelopment())

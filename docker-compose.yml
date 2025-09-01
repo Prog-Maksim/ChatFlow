@@ -16,10 +16,10 @@ services:
       - "443:443"
     restart: always
     volumes:
+      - /etc/letsencrypt/options-ssl-nginx.conf:/etc/ssl/options-ssl-nginx.conf:ro
+      - /etc/letsencrypt/ssl-dhparams.pem:/etc/ssl/ssl-dhparams.pem:ro
       - /etc/letsencrypt/live:/etc/letsencrypt/live:ro
       - /etc/letsencrypt/archive:/etc/letsencrypt/archive:ro
-      - /etc/letsencrypt/options-ssl-nginx.conf:/etc/nginx/options-ssl-nginx.conf:ro
-      - /etc/letsencrypt/ssl-dhparams.pem:/etc/letsencrypt/ssl-dhparams.pem:ro
       - nginx_log_volume:/var/log/nginx/
     depends_on:
       - chat-flow

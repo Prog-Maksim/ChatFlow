@@ -21,12 +21,12 @@ export function SidebarMenu() {
 						onClick={close}
 					/>
 
-					{/* Sidebar menu */}
 					<motion.aside
-						className="fixed top-0 left-0 h-full w-[280px] bg-white shadow-lg z-50 flex flex-col"
-						initial={{ x: -300 }}
+						className="fixed top-0 left-0 h-[93vh] mt-[7vh] w-[291px] bg-white shadow-lg z-50 flex flex-col 
+             mr-[8px]  rounded-r-xl"
+						initial={{ x: '-100%' }}
 						animate={{ x: 0 }}
-						exit={{ x: -300 }}
+						exit={{ x: '-100%' }}
 						transition={{ type: 'tween', duration: 0.3 }}
 					>
 						<div className="p-4 border-b">
@@ -36,19 +36,19 @@ export function SidebarMenu() {
 
 						<nav className="flex flex-col gap-4 p-4">
 							<Link to={ROUTES.profile} onClick={close} className="flex items-center gap-2">
-                Профиль
+      Профиль
 							</Link>
 							<Link to={ROUTES.group_create} onClick={close} className="flex items-center gap-2">
-                Создать группу
+      Создать группу
 							</Link>
 							<Link to={ROUTES.calls} onClick={close} className="flex items-center gap-2">
-                Звонки
+      Звонки
 							</Link>
 							<Link to={ROUTES.favorites} onClick={close} className="flex items-center gap-2">
-                Избранное
+      Избранное
 							</Link>
 							<Link to={ROUTES.settings} onClick={close} className="flex items-center gap-2">
-                Настройки
+      Настройки
 							</Link>
 						</nav>
 
@@ -56,8 +56,9 @@ export function SidebarMenu() {
 							<span>Ночной режим</span>
 							<Switch />
 						</div>
-
 					</motion.aside>
+
+
 				</>
 			)}
 		</AnimatePresence>

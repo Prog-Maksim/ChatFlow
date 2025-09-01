@@ -1,4 +1,4 @@
-import { Link } from '@tanstack/react-router';
+import { Link, useNavigate } from '@tanstack/react-router';
 import { useForm, type SubmitHandler } from 'react-hook-form';
 import { Button } from '../../../../shared/ui/Button/Button';
 import type { ILoginInput } from '../../types/login.types';
@@ -13,12 +13,15 @@ export function LoginForm() {
 		reset,
 	} = useForm<ILoginInput>();
 
+	const navigate = useNavigate();
+
 	const { mutate, isPending, isSuccess, error } = useLoginMutation();
 
 	const onSubmit: SubmitHandler<ILoginInput> = (formData) => {
 		mutate(formData, {
 			onSuccess: () => reset(),
 		});
+		setTimeout(() => navigate({ to: ROUTES.chats }), 1500);
 	};
 
 	return (

@@ -9,7 +9,7 @@ stages:
 build-chatflow-service-job:
   stage: build
   tags:
-    - dev
+    - chatFlow
   script:
     - docker build -t chatflow-service -f Backend/ChatFlow/Dockerfile Backend/ChatFlow
   rules:
@@ -20,7 +20,7 @@ build-chatflow-service-job:
 deploy-job:
   stage: deploy
   tags:
-    - dev
+    - chatFlow
   script:
     - export Vault__Address=$VAULT_ADDR
     - export Vault__RoleId=$VAULT_ROLE_ID

@@ -46,3 +46,10 @@ services:
     restart: always
     networks:
       - net
+  frontend:
+    build:
+      context: .
+      dockerfile: Frontend/Dockerfile
+    restart: always
+    networks:
+      - net

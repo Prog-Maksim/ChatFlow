@@ -15,4 +15,12 @@ export default defineConfig({
 		react(),
 		svgr(),
 	],
+	server: {
+		host: '0.0.0.0',          // слушать все интерфейсы внутри контейнера
+		allowedHosts: [
+			'chatflowonline.ru',    // разрешаем твой домен
+			'www.chatflowonline.ru' // если будет использоваться
+		],
+		port: 5173
+	}
 });

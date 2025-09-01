@@ -48,8 +48,8 @@ services:
       - net
   frontend:
     build:
-      context: .
-      dockerfile: Frontend/Dockerfile
+      context: ./Frontend
+      dockerfile: Dockerfile
     restart: always
     networks:
       - net
